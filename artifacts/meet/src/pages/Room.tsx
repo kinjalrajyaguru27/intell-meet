@@ -2,11 +2,12 @@ import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useRoute, useLocation } from "wouter";
 import { useGetRoom } from "@workspace/api-client-react";
 import { useWebRTC } from "@/hooks/useWebRTC";
+import { useRecording } from "@/hooks/useRecording";
 import { VideoTile } from "@/components/VideoTile";
 import { Button } from "@/components/ui/button";
 import {
   Mic, MicOff, Video, VideoOff, MonitorUp, PhoneOff,
-  Copy, Users, Activity, MessageSquare, Send, X,
+  Copy, Users, Activity, MessageSquare, Send, X, Circle, Square,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -62,6 +63,19 @@ export default function Room() {
     toggleScreenShare,
     sendMessage,
   } = useWebRTC(roomId, userId, displayName);
+
+  const {
+    isRecording,
+    durationLabel,
+    startRecording,
+    stopRecording,
+  } = useRecording({
+    localStream,
+    remoteStreams,
+    displayName,
+    participants,
+    roomName: roomInfo?.name,
+  });
 
   // Chat state
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -183,6 +197,14 @@ export default function Room() {
           </div>
         </div>
         <div className="flex items-center space-x-4">
+          {isRecording && (
+            <div className="flex items-center space-x-2 bg-red-600/20 border border-red-600/40 px-3 py-1 rounded-full">
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+              <span className="text-red-400 text-xs font-mono font-semibold tracking-wider">
+                REC {durationLabel}
+              </span>
+            </div>
+          )}
           <div className="flex items-center space-x-2 text-sm font-medium">
             <Users className="w-4 h-4 text-muted-foreground" />
             <span data-testid="participant-count">{participantList.length + 1}</span>
@@ -312,8 +334,28 @@ export default function Room() {
 
       {/* Control Bar */}
       <footer className="h-24 shrink-0 bg-card border-t border-border flex items-center justify-between px-6 z-10">
-        {/* Left side spacer */}
-        <div className="flex-1" />
+        {/* Left side: record button */}
+        <div className="flex-1 flex justify-start">
+          <Button
+            data-testid="button-toggle-recording"
+            variant={isRecording ? "destructive" : "secondary"}
+            size="sm"
+            className="h-10 px-4 rounded-full font-medium gap-2"
+            onClick={isRecording ? stopRecording : startRecording}
+          >
+            {isRecording ? (
+              <>
+                <Square className="w-3.5 h-3.5 fill-current" />
+                Stop
+              </>
+            ) : (
+              <>
+                <Circle className="w-3.5 h-3.5 fill-red-500 text-red-500" />
+                Record
+              </>
+            )}
+          </Button>
+        </div>
 
         {/* Center controls */}
         <div className="flex items-center space-x-4">
