@@ -2,6 +2,18 @@ import { Server as HttpServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import { logger } from "./lib/logger";
 
+// Browser WebRTC types used in signaling messages (not available in Node.js @types)
+interface RTCSessionDescriptionInit {
+  type: "offer" | "answer" | "pranswer" | "rollback";
+  sdp?: string;
+}
+interface RTCIceCandidateInit {
+  candidate?: string;
+  sdpMLineIndex?: number | null;
+  sdpMid?: string | null;
+  usernameFragment?: string | null;
+}
+
 interface RoomParticipant {
   userId: string;
   displayName: string;

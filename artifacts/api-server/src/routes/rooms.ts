@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { z } from "zod/v4";
 import { CreateRoomBody, GetRoomParams } from "@workspace/api-zod";
 import { getRoomParticipantCount } from "../signaling";
 import { logger } from "../lib/logger";
+import { db, meetingsTable } from "@workspace/db";
 
 const router = Router();
 
@@ -25,7 +25,7 @@ function generateRoomId(): string {
   return id;
 }
 
-router.post("/rooms", (req, res) => {
+router.post("/rooms", async (req, res) => {
   const parsed = CreateRoomBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid request body" });
@@ -33,12 +33,21 @@ router.post("/rooms", (req, res) => {
   }
   const { name } = parsed.data;
   const id = generateRoomId();
+  const now = new Date();
   const room: Room = {
     id,
     name,
-    createdAt: new Date().toISOString(),
+    createdAt: now.toISOString(),
   };
   roomStore.set(id, room);
+
+  // Persist meeting to DB for history tracking
+  try {
+    await db.insert(meetingsTable).values({ roomId: id, name, startedAt: now });
+  } catch (err) {
+    logger.warn({ err }, "Failed to persist meeting to DB");
+  }
+
   req.log.info({ roomId: id, name }, "Room created");
   res.status(201).json({
     ...room,

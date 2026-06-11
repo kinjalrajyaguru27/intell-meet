@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useRoute, useLocation } from "wouter";
-import { useGetRoom } from "@workspace/api-client-react";
+import { useGetRoom, useEndMeeting } from "@workspace/api-client-react";
 import { useWebRTC } from "@/hooks/useWebRTC";
 import { useRecording } from "@/hooks/useRecording";
 import { VideoTile } from "@/components/VideoTile";
@@ -46,6 +46,9 @@ export default function Room() {
     localStorage.setItem("intell_meet_name", newName);
     return newName;
   });
+
+  const joinedAt = useRef(Date.now());
+  const endMeetingMutation = useEndMeeting();
 
   const { data: roomInfo, isLoading: isRoomLoading, error: roomError } = useGetRoom(roomId);
 
@@ -140,9 +143,17 @@ export default function Room() {
     toast({ title: "Link copied", description: "Meeting link copied to clipboard." });
   };
 
-  const handleLeave = () => setLocation("/");
-
   const participantList = useMemo(() => Object.values(participants), [participants]);
+
+  const handleLeave = useCallback(() => {
+    if (isRecording) stopRecording();
+    const durationSeconds = Math.round((Date.now() - joinedAt.current) / 1000);
+    const allNames = [displayName, ...participantList.map((p) => p.displayName)];
+    endMeetingMutation.mutate(
+      { roomId, data: { participantNames: allNames, durationSeconds } },
+      { onSettled: () => setLocation("/dashboard") },
+    );
+  }, [isRecording, stopRecording, displayName, participantList, endMeetingMutation, roomId, setLocation]);
 
   const screenSharingParticipantId = useMemo(() => {
     const sharingPeer = participantList.find((p) => p.isScreenSharing);

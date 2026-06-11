@@ -9,7 +9,6 @@ import * as zod from 'zod';
 
 
 /**
- * Returns server health status
  * @summary Health check
  */
 export const HealthCheckResponse = zod.object({
@@ -37,6 +36,156 @@ export const GetRoomResponse = zod.object({
   "name": zod.string(),
   "createdAt": zod.string(),
   "participantCount": zod.number()
+})
+
+
+/**
+ * @summary End a meeting and save it to history
+ */
+export const EndMeetingParams = zod.object({
+  "roomId": zod.coerce.string()
+})
+
+export const EndMeetingBody = zod.object({
+  "participantNames": zod.array(zod.string()),
+  "durationSeconds": zod.number()
+})
+
+export const EndMeetingResponse = zod.object({
+  "id": zod.string(),
+  "roomId": zod.string(),
+  "name": zod.string(),
+  "startedAt": zod.string(),
+  "endedAt": zod.string().nullable(),
+  "durationSeconds": zod.number().nullable(),
+  "participantNames": zod.array(zod.string()),
+  "actionItemCount": zod.number(),
+  "openActionItemCount": zod.number(),
+  "hasNotes": zod.boolean()
+})
+
+
+/**
+ * @summary List all past meetings (dashboard)
+ */
+export const ListMeetingsResponseItem = zod.object({
+  "id": zod.string(),
+  "roomId": zod.string(),
+  "name": zod.string(),
+  "startedAt": zod.string(),
+  "endedAt": zod.string().nullable(),
+  "durationSeconds": zod.number().nullable(),
+  "participantNames": zod.array(zod.string()),
+  "actionItemCount": zod.number(),
+  "openActionItemCount": zod.number(),
+  "hasNotes": zod.boolean()
+})
+export const ListMeetingsResponse = zod.array(ListMeetingsResponseItem)
+
+
+/**
+ * @summary Get a meeting with notes and action items
+ */
+export const GetMeetingParams = zod.object({
+  "meetingId": zod.coerce.string()
+})
+
+export const GetMeetingResponse = zod.object({
+  "id": zod.string(),
+  "roomId": zod.string(),
+  "name": zod.string(),
+  "startedAt": zod.string(),
+  "endedAt": zod.string().nullable(),
+  "durationSeconds": zod.number().nullable(),
+  "participantNames": zod.array(zod.string()),
+  "notes": zod.string().nullable(),
+  "actionItems": zod.array(zod.object({
+  "id": zod.string(),
+  "meetingId": zod.string(),
+  "text": zod.string(),
+  "assigneeName": zod.string().nullable(),
+  "dueDate": zod.string().nullable(),
+  "isDone": zod.boolean(),
+  "createdAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary Create or update meeting notes/summary
+ */
+export const UpsertNotesParams = zod.object({
+  "meetingId": zod.coerce.string()
+})
+
+export const UpsertNotesBody = zod.object({
+  "content": zod.string()
+})
+
+export const UpsertNotesResponse = zod.object({
+  "id": zod.string(),
+  "meetingId": zod.string(),
+  "content": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Create a new action item for a meeting
+ */
+export const CreateActionItemParams = zod.object({
+  "meetingId": zod.coerce.string()
+})
+
+export const CreateActionItemBody = zod.object({
+  "text": zod.string(),
+  "assigneeName": zod.string().nullish(),
+  "dueDate": zod.string().nullish()
+})
+
+
+/**
+ * @summary Update an action item (toggle done, edit text/assignee)
+ */
+export const UpdateActionItemParams = zod.object({
+  "actionItemId": zod.coerce.string()
+})
+
+export const UpdateActionItemBody = zod.object({
+  "text": zod.string().optional(),
+  "assigneeName": zod.string().nullish(),
+  "dueDate": zod.string().nullish(),
+  "isDone": zod.boolean().optional()
+})
+
+export const UpdateActionItemResponse = zod.object({
+  "id": zod.string(),
+  "meetingId": zod.string(),
+  "text": zod.string(),
+  "assigneeName": zod.string().nullable(),
+  "dueDate": zod.string().nullable(),
+  "isDone": zod.boolean(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Delete an action item
+ */
+export const DeleteActionItemParams = zod.object({
+  "actionItemId": zod.coerce.string()
+})
+
+
+/**
+ * @summary Get dashboard summary stats
+ */
+export const GetDashboardStatsResponse = zod.object({
+  "totalMeetings": zod.number(),
+  "totalDurationSeconds": zod.number(),
+  "openActionItems": zod.number(),
+  "completedActionItems": zod.number(),
+  "meetingsThisWeek": zod.number()
 })
 
 

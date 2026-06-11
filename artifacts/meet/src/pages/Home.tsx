@@ -4,7 +4,7 @@ import { useCreateRoom, useHealthCheck } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Video, Keyboard, Plus, Activity } from "lucide-react";
+import { Video, Keyboard, Plus, Activity, BarChart2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 
 export default function Home() {
@@ -44,7 +44,16 @@ export default function Home() {
           </div>
           <span className="text-xl font-semibold tracking-tight">Intell Meet</span>
         </div>
-        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+        <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-2 text-muted-foreground hover:text-foreground"
+            onClick={() => setLocation("/dashboard")}
+          >
+            <BarChart2 className="w-4 h-4" />
+            Dashboard
+          </Button>
           {isHealthLoading ? (
             <span className="flex items-center space-x-2"><Activity className="w-4 h-4 animate-pulse" /> <span>Connecting...</span></span>
           ) : (

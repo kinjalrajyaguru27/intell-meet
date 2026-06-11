@@ -20,3 +20,86 @@ export interface RoomInput {
   name: string;
 }
 
+export interface Meeting {
+  id: string;
+  roomId: string;
+  name: string;
+  startedAt: string;
+  /** @nullable */
+  endedAt: string | null;
+  /** @nullable */
+  durationSeconds: number | null;
+  participantNames: string[];
+  actionItemCount: number;
+  openActionItemCount: number;
+  hasNotes: boolean;
+}
+
+export interface ActionItem {
+  id: string;
+  meetingId: string;
+  text: string;
+  /** @nullable */
+  assigneeName: string | null;
+  /** @nullable */
+  dueDate: string | null;
+  isDone: boolean;
+  createdAt: string;
+}
+
+export interface MeetingDetail {
+  id: string;
+  roomId: string;
+  name: string;
+  startedAt: string;
+  /** @nullable */
+  endedAt: string | null;
+  /** @nullable */
+  durationSeconds: number | null;
+  participantNames: string[];
+  /** @nullable */
+  notes: string | null;
+  actionItems: ActionItem[];
+}
+
+export interface EndMeetingInput {
+  participantNames: string[];
+  durationSeconds: number;
+}
+
+export interface Notes {
+  id: string;
+  meetingId: string;
+  content: string;
+  updatedAt: string;
+}
+
+export interface NotesInput {
+  content: string;
+}
+
+export interface ActionItemInput {
+  text: string;
+  /** @nullable */
+  assigneeName?: string | null;
+  /** @nullable */
+  dueDate?: string | null;
+}
+
+export interface ActionItemUpdate {
+  text?: string;
+  /** @nullable */
+  assigneeName?: string | null;
+  /** @nullable */
+  dueDate?: string | null;
+  isDone?: boolean;
+}
+
+export interface DashboardStats {
+  totalMeetings: number;
+  totalDurationSeconds: number;
+  openActionItems: number;
+  completedActionItems: number;
+  meetingsThisWeek: number;
+}
+

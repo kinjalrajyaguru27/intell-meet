@@ -6,6 +6,15 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './actionItem';
+export * from './actionItemInput';
+export * from './actionItemUpdate';
+export * from './dashboardStats';
+export * from './endMeetingInput';
 export * from './healthStatus';
+export * from './meeting';
+export * from './meetingDetail';
+export * from './notes';
+export * from './notesInput';
 export * from './room';
 export * from './roomInput';

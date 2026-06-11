@@ -1,6 +1,5 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
   description: Intell Meet API specification
@@ -12,13 +11,18 @@ tags:
     description: Health operations
   - name: rooms
     description: Meeting room operations
+  - name: meetings
+    description: Meeting history and dashboard
+  - name: notes
+    description: Meeting notes and summaries
+  - name: actionItems
+    description: Action item tracking
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -67,6 +71,170 @@ paths:
         "404":
           description: Room not found
 
+  /rooms/{roomId}/end:
+    post:
+      operationId: endMeeting
+      tags: [meetings]
+      summary: End a meeting and save it to history
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EndMeetingInput"
+      responses:
+        "200":
+          description: Meeting saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Meeting"
+
+  /meetings:
+    get:
+      operationId: listMeetings
+      tags: [meetings]
+      summary: List all past meetings (dashboard)
+      responses:
+        "200":
+          description: List of meetings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Meeting"
+
+  /meetings/{meetingId}:
+    get:
+      operationId: getMeeting
+      tags: [meetings]
+      summary: Get a meeting with notes and action items
+      parameters:
+        - name: meetingId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Meeting detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeetingDetail"
+        "404":
+          description: Not found
+
+  /meetings/{meetingId}/notes:
+    put:
+      operationId: upsertNotes
+      tags: [notes]
+      summary: Create or update meeting notes/summary
+      parameters:
+        - name: meetingId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NotesInput"
+      responses:
+        "200":
+          description: Notes saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notes"
+
+  /meetings/{meetingId}/action-items:
+    post:
+      operationId: createActionItem
+      tags: [actionItems]
+      summary: Create a new action item for a meeting
+      parameters:
+        - name: meetingId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActionItemInput"
+      responses:
+        "201":
+          description: Action item created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionItem"
+
+  /action-items/{actionItemId}:
+    patch:
+      operationId: updateActionItem
+      tags: [actionItems]
+      summary: Update an action item (toggle done, edit text/assignee)
+      parameters:
+        - name: actionItemId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActionItemUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionItem"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteActionItem
+      tags: [actionItems]
+      summary: Delete an action item
+      parameters:
+        - name: actionItemId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [meetings]
+      summary: Get dashboard summary stats
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
 components:
   schemas:
     HealthStatus:
@@ -74,8 +242,7 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
     Room:
       type: object
@@ -88,16 +255,177 @@ components:
           type: string
         participantCount:
           type: integer
-      required:
-        - id
-        - name
-        - createdAt
-        - participantCount
+      required: [id, name, createdAt, participantCount]
 
     RoomInput:
       type: object
       properties:
         name:
           type: string
+      required: [name]
+
+    Meeting:
+      type: object
+      properties:
+        id:
+          type: string
+        roomId:
+          type: string
+        name:
+          type: string
+        startedAt:
+          type: string
+        endedAt:
+          type: ["string", "null"]
+        durationSeconds:
+          type: ["integer", "null"]
+        participantNames:
+          type: array
+          items:
+            type: string
+        actionItemCount:
+          type: integer
+        openActionItemCount:
+          type: integer
+        hasNotes:
+          type: boolean
       required:
+        - id
+        - roomId
         - name
+        - startedAt
+        - endedAt
+        - durationSeconds
+        - participantNames
+        - actionItemCount
+        - openActionItemCount
+        - hasNotes
+
+    MeetingDetail:
+      type: object
+      properties:
+        id:
+          type: string
+        roomId:
+          type: string
+        name:
+          type: string
+        startedAt:
+          type: string
+        endedAt:
+          type: ["string", "null"]
+        durationSeconds:
+          type: ["integer", "null"]
+        participantNames:
+          type: array
+          items:
+            type: string
+        notes:
+          type: ["string", "null"]
+        actionItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActionItem"
+      required:
+        - id
+        - roomId
+        - name
+        - startedAt
+        - endedAt
+        - durationSeconds
+        - participantNames
+        - notes
+        - actionItems
+
+    EndMeetingInput:
+      type: object
+      properties:
+        participantNames:
+          type: array
+          items:
+            type: string
+        durationSeconds:
+          type: integer
+      required: [participantNames, durationSeconds]
+
+    Notes:
+      type: object
+      properties:
+        id:
+          type: string
+        meetingId:
+          type: string
+        content:
+          type: string
+        updatedAt:
+          type: string
+      required: [id, meetingId, content, updatedAt]
+
+    NotesInput:
+      type: object
+      properties:
+        content:
+          type: string
+      required: [content]
+
+    ActionItem:
+      type: object
+      properties:
+        id:
+          type: string
+        meetingId:
+          type: string
+        text:
+          type: string
+        assigneeName:
+          type: ["string", "null"]
+        dueDate:
+          type: ["string", "null"]
+        isDone:
+          type: boolean
+        createdAt:
+          type: string
+      required: [id, meetingId, text, assigneeName, dueDate, isDone, createdAt]
+
+    ActionItemInput:
+      type: object
+      properties:
+        text:
+          type: string
+        assigneeName:
+          type: ["string", "null"]
+        dueDate:
+          type: ["string", "null"]
+      required: [text]
+
+    ActionItemUpdate:
+      type: object
+      properties:
+        text:
+          type: string
+        assigneeName:
+          type: ["string", "null"]
+        dueDate:
+          type: ["string", "null"]
+        isDone:
+          type: boolean
+
+    DashboardStats:
+      type: object
+      properties:
+        totalMeetings:
+          type: integer
+        totalDurationSeconds:
+          type: integer
+        openActionItems:
+          type: integer
+        completedActionItems:
+          type: integer
+        meetingsThisWeek:
+          type: integer
+      required:
+        - totalMeetings
+        - totalDurationSeconds
+        - openActionItems
+        - completedActionItems
+        - meetingsThisWeek
