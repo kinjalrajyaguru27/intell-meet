@@ -1,0 +1,134 @@
+IMPORTANT: Do NOT modify, remove, redesign, refactor, or break any existing functionality, UI, routes, components, database models, APIs, authentication flows, AI features, dashboards, workspaces, or project structure already present in the codebase.
+
+Preserve the entire existing application exactly as it is.
+
+Only ADD the following features and integrate them seamlessly into the current architecture.
+
+### FEATURE 1: REAL-TIME VIDEO CALLING
+
+Implement a production-ready video conferencing system using WebRTC + Socket.io.
+
+Requirements:
+
+* Start Meeting
+* Join Meeting
+* Multiple Participants
+* Local Video Preview
+* Remote Participant Videos
+* Camera ON/OFF Toggle
+* Mute/Unmute Microphone
+* Device Permission Handling
+* Device Selection (Microphone/Camera)
+* Participant Join/Leave Detection
+* Connection Status Indicators
+* Reconnect Logic on Network Failure
+
+The video calling functionality must work reliably and smoothly like:
+
+* Zoom
+* Google Meet
+* Microsoft Teams
+
+No dummy implementation.
+No placeholder UI.
+No mock functionality.
+
+### FEATURE 2: SCREEN SHARING
+
+Implement fully functional screen sharing.
+
+Requirements:
+
+* Share Entire Screen
+* Share Browser Tab
+* Share Application Window
+* Start Screen Share
+* Stop Screen Share
+* Presenter Highlight
+* Automatic UI Updates for Participants
+* Real-Time Stream Switching
+
+When screen sharing starts:
+
+* Other participants must immediately see the shared screen
+* Video streams should continue working properly
+* No page refresh required
+
+### FEATURE 3: PROPER MICROPHONE FUNCTIONALITY
+
+Implement enterprise-grade audio handling.
+
+Requirements:
+
+* Mic ON/OFF Toggle
+* Audio Permission Management
+* Real-Time Audio Transmission
+* Echo Prevention
+* Noise Suppression
+* Auto Gain Control
+* Mute State Synchronization Across Participants
+* Device Change Detection
+* Audio Recovery After Connection Loss
+
+Ensure microphone works consistently across:
+
+* Chrome
+* Edge
+* Firefox
+
+### UI REQUIREMENTS
+
+Without changing the existing design system:
+
+Add:
+
+* Camera Button
+* Microphone Button
+* Screen Share Button
+* Leave Meeting Button
+* Participant Count
+* Connection Status Indicator
+
+Maintain:
+
+* Existing Theme
+* Existing Styling
+* Existing Layout
+* Existing Components
+
+Do not redesign anything.
+
+### PERFORMANCE REQUIREMENTS
+
+* Low latency communication
+* Proper WebRTC peer connection management
+* Clean socket handling
+* Memory leak prevention
+* Resource cleanup on disconnect
+* Efficient stream management
+
+### CODE QUALITY REQUIREMENTS
+
+* Follow existing project structure
+* Reuse existing components where possible
+* Keep code modular
+* Add only necessary files
+* Do not remove existing code
+* Do not break current features
+* Do not modify unrelated functionality
+
+### DELIVERABLE
+
+Provide complete implementation with:
+
+* Frontend changes
+* Backend changes
+* Socket.io events
+* WebRTC configuration
+* Screen sharing logic
+* Audio handling logic
+* State management updates
+* Error handling
+* Permission handling
+
+Final result should add working Video Call, Screen Sharing, and Microphone functionality while keeping the entire existing project unchanged and fully functional.

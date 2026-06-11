@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Intell Meet"
+version = "1.0.0"
+id = "artifacts/meet"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 20511
+
+[services.development]
+run = "pnpm --filter @workspace/meet run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/meet", "run", "build" ]
+publicDir = "artifacts/meet/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20511"
+BASE_PATH = "/"
