@@ -1,10 +1,13 @@
-import React, { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useRoute, useLocation } from "wouter";
 import { useGetRoom } from "@workspace/api-client-react";
 import { useWebRTC } from "@/hooks/useWebRTC";
 import { VideoTile } from "@/components/VideoTile";
 import { Button } from "@/components/ui/button";
-import { Mic, MicOff, Video, VideoOff, MonitorUp, PhoneOff, Copy, Users, Activity } from "lucide-react";
+import {
+  Mic, MicOff, Video, VideoOff, MonitorUp, PhoneOff,
+  Copy, Users, Activity, MessageSquare, Send, X,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 function generateUserId() {
@@ -15,6 +18,10 @@ function generateDisplayName() {
   const adjectives = ["Clever", "Swift", "Sharp", "Brave", "Quiet", "Bright"];
   const animals = ["Fox", "Hawk", "Owl", "Wolf", "Bear", "Lynx"];
   return `${adjectives[Math.floor(Math.random() * adjectives.length)]} ${animals[Math.floor(Math.random() * animals.length)]}`;
+}
+
+function formatTime(ts: number) {
+  return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
 export default function Room() {
@@ -49,37 +56,79 @@ export default function Room() {
     isCameraOff,
     isScreenSharing,
     error: rtcError,
+    messages,
     toggleMic,
     toggleCamera,
     toggleScreenShare,
+    sendMessage,
   } = useWebRTC(roomId, userId, displayName);
+
+  // Chat state
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [inputText, setInputText] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const prevMessagesLen = useRef(0);
+
+  // Track unread messages when chat is closed
+  useEffect(() => {
+    if (messages.length > prevMessagesLen.current) {
+      if (!isChatOpen) {
+        setUnreadCount((c) => c + (messages.length - prevMessagesLen.current));
+      }
+    }
+    prevMessagesLen.current = messages.length;
+  }, [messages, isChatOpen]);
+
+  // Auto-scroll to bottom when chat is open and new messages arrive
+  useEffect(() => {
+    if (isChatOpen) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, isChatOpen]);
+
+  // Clear unread count when chat is opened
+  const openChat = useCallback(() => {
+    setIsChatOpen(true);
+    setUnreadCount(0);
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
+      inputRef.current?.focus();
+    }, 50);
+  }, []);
+
+  const handleSend = useCallback(() => {
+    if (!inputText.trim()) return;
+    sendMessage(inputText);
+    setInputText("");
+    inputRef.current?.focus();
+  }, [inputText, sendMessage]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        handleSend();
+      }
+    },
+    [handleSend]
+  );
 
   useEffect(() => {
     if (rtcError) {
-      toast({
-        title: "Connection Error",
-        description: rtcError,
-        variant: "destructive",
-      });
+      toast({ title: "Connection Error", description: rtcError, variant: "destructive" });
     }
   }, [rtcError, toast]);
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href);
-    toast({
-      title: "Link copied",
-      description: "Meeting link copied to clipboard.",
-    });
+    toast({ title: "Link copied", description: "Meeting link copied to clipboard." });
   };
 
-  const handleLeave = () => {
-    setLocation("/");
-  };
+  const handleLeave = () => setLocation("/");
 
-  const participantList = useMemo(() => {
-    const list = Object.values(participants);
-    return list;
-  }, [participants]);
+  const participantList = useMemo(() => Object.values(participants), [participants]);
 
   const screenSharingParticipantId = useMemo(() => {
     const sharingPeer = participantList.find((p) => p.isScreenSharing);
@@ -111,14 +160,14 @@ export default function Room() {
     );
   }
 
-  const gridClass = screenSharingParticipantId 
-    ? "grid-cols-2 md:grid-cols-4 lg:grid-cols-6" 
-    : participantList.length === 0 
-      ? "grid-cols-1" 
-      : participantList.length === 1 
-        ? "grid-cols-2" 
-        : participantList.length <= 3 
-          ? "grid-cols-2" 
+  const gridClass = screenSharingParticipantId
+    ? "grid-cols-2 md:grid-cols-4 lg:grid-cols-6"
+    : participantList.length === 0
+      ? "grid-cols-1"
+      : participantList.length === 1
+        ? "grid-cols-2"
+        : participantList.length <= 3
+          ? "grid-cols-2"
           : "grid-cols-3 lg:grid-cols-4";
 
   return (
@@ -136,7 +185,7 @@ export default function Room() {
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2 text-sm font-medium">
             <Users className="w-4 h-4 text-muted-foreground" />
-            <span>{participantList.length + 1}</span>
+            <span data-testid="participant-count">{participantList.length + 1}</span>
           </div>
           <Button variant="outline" size="sm" className="hidden sm:flex" onClick={handleCopyLink}>
             <Copy className="w-4 h-4 mr-2" />
@@ -145,42 +194,131 @@ export default function Room() {
         </div>
       </header>
 
-      {/* Video Grid */}
-      <main className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col relative">
-        <div className={`grid gap-4 w-full h-full max-h-full content-center ${gridClass}`}>
-          
-          {/* Local User */}
-          <VideoTile
-            stream={localStream}
-            displayName={`${displayName}`}
-            isLocal={true}
-            isMuted={isMuted}
-            isCameraOff={isCameraOff}
-            isScreenSharing={isScreenSharing}
-            isDominant={screenSharingParticipantId === userId}
-          />
-
-          {/* Remote Users */}
-          {participantList.map((p) => (
+      {/* Body: video grid + optional chat panel */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Video Grid */}
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col relative min-w-0">
+          <div className={`grid gap-4 w-full h-full max-h-full content-center ${gridClass}`}>
             <VideoTile
-              key={p.id}
-              stream={remoteStreams[p.id] || null}
-              displayName={p.displayName}
-              isLocal={false}
-              isMuted={p.isMuted}
-              isCameraOff={p.isCameraOff}
-              isScreenSharing={p.isScreenSharing}
-              isDominant={screenSharingParticipantId === p.id}
+              stream={localStream}
+              displayName={`${displayName}`}
+              isLocal={true}
+              isMuted={isMuted}
+              isCameraOff={isCameraOff}
+              isScreenSharing={isScreenSharing}
+              isDominant={screenSharingParticipantId === userId}
             />
-          ))}
+            {participantList.map((p) => (
+              <VideoTile
+                key={p.id}
+                stream={remoteStreams[p.id] || null}
+                displayName={p.displayName}
+                isLocal={false}
+                isMuted={p.isMuted}
+                isCameraOff={p.isCameraOff}
+                isScreenSharing={p.isScreenSharing}
+                isDominant={screenSharingParticipantId === p.id}
+              />
+            ))}
+          </div>
+        </main>
 
-        </div>
-      </main>
+        {/* Chat Panel */}
+        {isChatOpen && (
+          <aside className="w-80 shrink-0 flex flex-col border-l border-border bg-card">
+            {/* Chat header */}
+            <div className="h-14 shrink-0 flex items-center justify-between px-4 border-b border-border">
+              <div className="flex items-center space-x-2">
+                <MessageSquare className="w-4 h-4 text-primary" />
+                <span className="font-semibold text-sm">In-meeting chat</span>
+              </div>
+              <button
+                data-testid="button-close-chat"
+                onClick={() => setIsChatOpen(false)}
+                className="text-muted-foreground hover:text-foreground transition-colors rounded p-1 hover:bg-muted"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+              {messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground space-y-2 py-8">
+                  <MessageSquare className="w-8 h-8 opacity-30" />
+                  <p className="text-sm">No messages yet.</p>
+                  <p className="text-xs opacity-60">Be the first to say something.</p>
+                </div>
+              ) : (
+                messages.map((msg) => {
+                  const isOwn = msg.userId === userId;
+                  return (
+                    <div
+                      key={msg.id}
+                      data-testid={`chat-message-${msg.id}`}
+                      className={`flex flex-col ${isOwn ? "items-end" : "items-start"}`}
+                    >
+                      {!isOwn && (
+                        <span className="text-xs font-medium text-muted-foreground mb-1 ml-1">
+                          {msg.displayName}
+                        </span>
+                      )}
+                      <div
+                        className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm break-words ${
+                          isOwn
+                            ? "bg-primary text-primary-foreground rounded-tr-sm"
+                            : "bg-muted text-foreground rounded-tl-sm"
+                        }`}
+                      >
+                        {msg.text}
+                      </div>
+                      <span className="text-[10px] text-muted-foreground mt-1 mx-1">
+                        {formatTime(msg.timestamp)}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Input */}
+            <div className="shrink-0 p-3 border-t border-border">
+              <div className="flex items-center space-x-2 bg-muted rounded-xl px-3 py-2">
+                <input
+                  ref={inputRef}
+                  data-testid="input-chat-message"
+                  type="text"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Send a message..."
+                  maxLength={2000}
+                  className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none min-w-0"
+                />
+                <button
+                  data-testid="button-send-chat"
+                  onClick={handleSend}
+                  disabled={!inputText.trim()}
+                  className="text-primary disabled:text-muted-foreground transition-colors hover:text-primary/80 shrink-0"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </aside>
+        )}
+      </div>
 
       {/* Control Bar */}
-      <footer className="h-24 shrink-0 bg-card border-t border-border flex items-center justify-center px-6 z-10 pb-safe">
+      <footer className="h-24 shrink-0 bg-card border-t border-border flex items-center justify-between px-6 z-10">
+        {/* Left side spacer */}
+        <div className="flex-1" />
+
+        {/* Center controls */}
         <div className="flex items-center space-x-4">
           <Button
+            data-testid="button-toggle-mic"
             variant={isMuted ? "destructive" : "secondary"}
             size="icon"
             className="w-14 h-14 rounded-full"
@@ -188,8 +326,9 @@ export default function Room() {
           >
             {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
           </Button>
-          
+
           <Button
+            data-testid="button-toggle-camera"
             variant={isCameraOff ? "destructive" : "secondary"}
             size="icon"
             className="w-14 h-14 rounded-full"
@@ -198,9 +337,10 @@ export default function Room() {
             {isCameraOff ? <VideoOff className="w-6 h-6" /> : <Video className="w-6 h-6" />}
           </Button>
 
-          <div className="w-px h-8 bg-border mx-2 hidden sm:block"></div>
+          <div className="w-px h-8 bg-border mx-2 hidden sm:block" />
 
           <Button
+            data-testid="button-toggle-screenshare"
             variant={isScreenSharing ? "default" : "secondary"}
             size="icon"
             className="w-14 h-14 rounded-full hidden sm:flex"
@@ -209,9 +349,10 @@ export default function Room() {
             <MonitorUp className="w-6 h-6" />
           </Button>
 
-          <div className="w-px h-8 bg-border mx-2"></div>
+          <div className="w-px h-8 bg-border mx-2" />
 
           <Button
+            data-testid="button-leave"
             variant="destructive"
             size="lg"
             className="h-14 px-8 rounded-full font-semibold"
@@ -220,6 +361,26 @@ export default function Room() {
             <PhoneOff className="w-5 h-5 mr-2" />
             Leave
           </Button>
+        </div>
+
+        {/* Right side: chat toggle */}
+        <div className="flex-1 flex justify-end">
+          <div className="relative">
+            <Button
+              data-testid="button-toggle-chat"
+              variant={isChatOpen ? "default" : "secondary"}
+              size="icon"
+              className="w-14 h-14 rounded-full"
+              onClick={isChatOpen ? () => setIsChatOpen(false) : openChat}
+            >
+              <MessageSquare className="w-6 h-6" />
+            </Button>
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 pointer-events-none">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
+          </div>
         </div>
       </footer>
     </div>

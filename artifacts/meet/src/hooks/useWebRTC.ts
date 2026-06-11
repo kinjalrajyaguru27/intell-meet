@@ -9,6 +9,14 @@ export type ParticipantState = {
   isScreenSharing: boolean;
 };
 
+export type ChatMessage = {
+  id: string;
+  userId: string;
+  displayName: string;
+  text: string;
+  timestamp: number;
+};
+
 const ICE_SERVERS = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
@@ -51,6 +59,7 @@ export function useWebRTC(roomId: string, userId: string, displayName: string) {
   const [isCameraOff, setIsCameraOff] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
 
   const socketRef = useRef<Socket | null>(null);
   const peersRef = useRef<Record<string, RTCPeerConnection>>({});
@@ -217,6 +226,14 @@ export function useWebRTC(roomId: string, userId: string, displayName: string) {
           updateParticipant(changedUserId, { isMuted: m, isCameraOff: c, isScreenSharing: s });
         });
 
+        socket.on("chat-history", (history: ChatMessage[]) => {
+          setMessages(history);
+        });
+
+        socket.on("chat-message", (msg: ChatMessage) => {
+          setMessages((prev) => [...prev, msg]);
+        });
+
       } catch (err) {
         console.error("Error accessing media devices.", err);
         setError("Could not access camera or microphone.");
@@ -318,6 +335,12 @@ export function useWebRTC(roomId: string, userId: string, displayName: string) {
     }
   }, [isScreenSharing, isCameraOff, isMuted, broadcastMediaState]);
 
+  const sendMessage = useCallback((text: string) => {
+    if (socketRef.current && text.trim()) {
+      socketRef.current.emit("chat-message", { text: text.trim() });
+    }
+  }, []);
+
   return {
     localStream,
     remoteStreams,
@@ -326,8 +349,10 @@ export function useWebRTC(roomId: string, userId: string, displayName: string) {
     isCameraOff,
     isScreenSharing,
     error,
+    messages,
     toggleMic,
     toggleCamera,
     toggleScreenShare,
+    sendMessage,
   };
 }

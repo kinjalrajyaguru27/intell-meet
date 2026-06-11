@@ -11,7 +11,17 @@ interface RoomParticipant {
   isScreenSharing: boolean;
 }
 
+interface ChatMessage {
+  id: string;
+  userId: string;
+  displayName: string;
+  text: string;
+  timestamp: number;
+}
+
 const rooms = new Map<string, Map<string, RoomParticipant>>();
+const chatHistory = new Map<string, ChatMessage[]>();
+const MAX_CHAT_HISTORY = 100;
 
 export function initSignaling(httpServer: HttpServer) {
   const io = new SocketIOServer(httpServer, {
@@ -61,6 +71,10 @@ export function initSignaling(httpServer: HttpServer) {
         }));
         socket.emit("existing-users", existingUsers);
 
+        // Send chat history to the new participant
+        const history = chatHistory.get(roomId) ?? [];
+        socket.emit("chat-history", history);
+
         // Add the new participant
         room.set(userId, {
           userId,
@@ -75,6 +89,38 @@ export function initSignaling(httpServer: HttpServer) {
         socket.to(roomId).emit("user-connected", { userId, displayName });
 
         logger.info({ roomId, userId, displayName }, "User joined room");
+      },
+    );
+
+    socket.on(
+      "chat-message",
+      ({ text }: { text: string }) => {
+        if (!currentRoomId || !currentUserId) return;
+        const room = rooms.get(currentRoomId);
+        if (!room) return;
+        const participant = room.get(currentUserId);
+        if (!participant) return;
+
+        const trimmed = text.trim().slice(0, 2000);
+        if (!trimmed) return;
+
+        const message: ChatMessage = {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          userId: currentUserId,
+          displayName: participant.displayName,
+          text: trimmed,
+          timestamp: Date.now(),
+        };
+
+        if (!chatHistory.has(currentRoomId)) {
+          chatHistory.set(currentRoomId, []);
+        }
+        const history = chatHistory.get(currentRoomId)!;
+        history.push(message);
+        if (history.length > MAX_CHAT_HISTORY) history.shift();
+
+        io.to(currentRoomId).emit("chat-message", message);
+        logger.info({ roomId: currentRoomId, userId: currentUserId }, "Chat message sent");
       },
     );
 
@@ -175,6 +221,7 @@ export function initSignaling(httpServer: HttpServer) {
       room.delete(userId);
       if (room.size === 0) {
         rooms.delete(roomId);
+        chatHistory.delete(roomId);
       }
       socket.to(roomId).emit("user-disconnected", { userId });
       socket.leave(roomId);
