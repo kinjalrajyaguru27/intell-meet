@@ -11,6 +11,7 @@ export interface User {
   bio?: string;
   timezone?: string;
   avatar?: string;
+  profileColor?: string;
   notificationSettings?: {
     email: boolean;
     push: boolean;

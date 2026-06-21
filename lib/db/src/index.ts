@@ -1,16 +1,32 @@
 import mongoose from "mongoose";
 
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/intell_meet";
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://rajyagurukinjal27_db_user:db_user@intell-meet-cluster.ebbde1m.mongodb.net/intell_meet?retryWrites=true&w=majority";
 
 export async function connectDB() {
   if (mongoose.connection.readyState >= 1) {
     return;
   }
   try {
-    await mongoose.connect(MONGODB_URI);
+    console.log(`Connecting to MongoDB: ${MONGODB_URI}`);
+    await mongoose.connect(MONGODB_URI, {
+      serverSelectionTimeoutMS: 5000
+    });
     console.log("Connected to MongoDB successfully");
-  } catch (error) {
-    console.error("MongoDB connection error:", error);
+  } catch (error: any) {
+    console.warn("MongoDB connection failed:", error.message || error);
+    if (MONGODB_URI !== "mongodb://localhost:27017/intell_meet") {
+      console.warn("Falling back to local MongoDB database: mongodb://localhost:27017/intell_meet");
+      try {
+        await mongoose.connect("mongodb://localhost:27017/intell_meet", {
+          serverSelectionTimeoutMS: 5000
+        });
+        console.log("Connected to local MongoDB successfully");
+        return;
+      } catch (localError: any) {
+        console.error("Local MongoDB connection also failed:", localError.message || localError);
+        throw localError;
+      }
+    }
     throw error;
   }
 }

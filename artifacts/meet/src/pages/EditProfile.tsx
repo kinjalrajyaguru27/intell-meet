@@ -31,14 +31,33 @@ import {
 } from "lucide-react";
 
 // Curated avatar background gradients
-const AVATAR_PRESETS = [
-  "linear-gradient(to right, #8b5cf6, #6366f1)", // violet-indigo
-  "linear-gradient(to right, #10b981, #14b8a6)", // emerald-teal
-  "linear-gradient(to right, #ec4899, #f43f5e)", // pink-rose
-  "linear-gradient(to right, #06b6d4, #3b82f6)", // cyan-blue
-  "linear-gradient(to right, #d946ef, #a21caf)", // fuchsia-purple
-  "linear-gradient(to right, #f59e0b, #ef4444)", // amber-red
+export const COLOR_MAP: Record<string, string> = {
+  purple: "linear-gradient(to right, #8b5cf6, #6366f1)",
+  green: "linear-gradient(to right, #10b981, #14b8a6)",
+  pink: "linear-gradient(to right, #ec4899, #f43f5e)",
+  blue: "linear-gradient(to right, #06b6d4, #3b82f6)",
+  orange: "linear-gradient(to right, #f59e0b, #ef4444)",
+  cyan: "linear-gradient(to right, #06b6d4, #0891b2)",
+};
+
+const COLOR_PRESETS = [
+  { name: "purple", gradient: "linear-gradient(to right, #8b5cf6, #6366f1)" },
+  { name: "green", gradient: "linear-gradient(to right, #10b981, #14b8a6)" },
+  { name: "pink", gradient: "linear-gradient(to right, #ec4899, #f43f5e)" },
+  { name: "blue", gradient: "linear-gradient(to right, #06b6d4, #3b82f6)" },
+  { name: "orange", gradient: "linear-gradient(to right, #f59e0b, #ef4444)" },
+  { name: "cyan", gradient: "linear-gradient(to right, #06b6d4, #0891b2)" },
 ];
+
+const getInitials = (name: string) => {
+  if (!name) return "U";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) {
+    return parts[0].substring(0, 2).toUpperCase();
+  }
+  return (parts[0][0] + (parts[1][0] || "")).toUpperCase();
+};
+
 
 export default function EditProfile() {
   const [, setLocation] = useLocation();
@@ -50,6 +69,7 @@ export default function EditProfile() {
   const changePasswordMutation = useChangePassword();
 
   const [selectedAvatar, setSelectedAvatar] = useState("");
+  const [selectedColor, setSelectedColor] = useState("purple");
   const [isPasswordOpen, setIsPasswordOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState<"edit" | "avatar" | "security" | "password" | "sessions">("edit");
@@ -83,6 +103,8 @@ export default function EditProfile() {
     },
   });
 
+  const watchName = watch("name");
+
   const {
     register: registerPassword,
     handleSubmit: handlePasswordSubmit,
@@ -110,7 +132,8 @@ export default function EditProfile() {
         notifyPush: profile.notificationSettings?.push ?? true,
         notifySMS: profile.notificationSettings?.sms ?? false,
       });
-      setSelectedAvatar(profile.avatar || AVATAR_PRESETS[0]);
+      setSelectedAvatar(profile.avatar || "");
+      setSelectedColor((profile as any).profileColor || "purple");
     }
   }, [profile, reset]);
 
@@ -125,6 +148,7 @@ export default function EditProfile() {
           bio: data.bio,
           timezone: data.timezone,
           avatar: selectedAvatar,
+          profileColor: selectedColor,
           notificationSettings: {
             email: data.notifyEmail,
             push: data.notifyPush,
@@ -222,11 +246,11 @@ export default function EditProfile() {
         {/* Edit Form */}
         {activeTab !== "sessions" && (
           <form onSubmit={handleSubmit(onProfileSubmit)} className="space-y-6">
-          <Card className="bg-card/50 backdrop-blur-xl border border-white/10 overflow-hidden relative shadow-2xl">
+          <Card className="bg-white dark:bg-card/50 border border-zinc-200 dark:border-white/10 overflow-hidden relative shadow-2xl">
             <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-primary to-indigo-500" />
             
             <CardHeader>
-              <CardTitle className="text-xl font-bold text-white">Edit Profile Details</CardTitle>
+              <CardTitle className="text-xl font-bold text-foreground dark:text-white">Edit Profile Details</CardTitle>
               <CardDescription className="text-xs text-muted-foreground">
                 Manage your public metadata and settings on the platform
               </CardDescription>
@@ -235,40 +259,55 @@ export default function EditProfile() {
             <CardContent className="space-y-6">
               {/* Avatar Preset Picker */}
               <div className="space-y-2">
-                <Label className="text-white text-xs font-semibold">Profile Color Identity</Label>
+                <Label className="text-foreground dark:text-white text-xs font-semibold">Profile Color Identity</Label>
                 <div className="flex items-center gap-4 py-2">
                   <div 
-                    className="w-16 h-16 rounded-full border-2 border-primary shrink-0 transition-all shadow-lg overflow-hidden flex items-center justify-center"
-                    style={{ background: selectedAvatar.startsWith("http") ? "transparent" : selectedAvatar }}
+                    className="w-16 h-16 rounded-full border-2 border-primary shrink-0 transition-all shadow-lg overflow-hidden flex items-center justify-center animate-fade-in"
+                    style={{ background: selectedAvatar && (selectedAvatar.startsWith("http") || selectedAvatar.startsWith("/")) ? "transparent" : (COLOR_MAP[selectedColor] || COLOR_MAP.purple) }}
                   >
-                    {selectedAvatar.startsWith("http") ? (
+                    {selectedAvatar && (selectedAvatar.startsWith("http") || selectedAvatar.startsWith("/")) ? (
                       <img src={selectedAvatar} alt="Avatar Preview" className="w-full h-full object-cover" />
                     ) : (
                       <span className="text-white font-bold text-xl">
-                        {profile?.name ? profile.name.split(" ").map((n) => n[0]).join("").toUpperCase().substring(0, 2) : "U"}
+                        {getInitials(watchName)}
                       </span>
                     )}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    {AVATAR_PRESETS.map((preset) => (
-                      <button
-                        key={preset}
-                        type="button"
-                        onClick={() => setSelectedAvatar(preset)}
-                        className="w-9 h-9 rounded-full border border-white/10 cursor-pointer hover:scale-105 active:scale-95 transition-transform flex items-center justify-center relative"
-                        style={{ background: preset }}
-                      >
-                        {selectedAvatar === preset && (
-                          <Check className="w-4 h-4 text-white drop-shadow" />
-                        )}
-                      </button>
-                    ))}
+                    {COLOR_PRESETS.map((preset) => {
+                      const isSelected = (!selectedAvatar || (!selectedAvatar.startsWith("http") && !selectedAvatar.startsWith("/"))) && selectedColor === preset.name;
+                      return (
+                        <button
+                          key={preset.name}
+                          type="button"
+                          onClick={() => {
+                            setSelectedColor(preset.name);
+                            setSelectedAvatar(""); // reset so it falls back to initials
+                          }}
+                          className={`w-9 h-9 rounded-full border cursor-pointer hover:scale-105 active:scale-95 transition-all flex items-center justify-center relative ${
+                            isSelected 
+                              ? "border-primary ring-2 ring-primary/45 ring-offset-2 ring-offset-background dark:ring-offset-zinc-950 scale-105" 
+                              : "border-zinc-200 dark:border-white/10"
+                          }`}
+                          style={{ background: preset.gradient }}
+                          title={preset.name}
+                        >
+                          {isSelected && (
+                            <Check className="w-4 h-4 text-white drop-shadow" />
+                          )}
+                        </button>
+                      );
+                    })}
                     
                     {profile?.profilePicture && (
                       <button
                         type="button"
                         onClick={() => setSelectedAvatar(profile.profilePicture!)}
-                        className="w-9 h-9 rounded-full border-2 border-dashed border-primary/40 overflow-hidden cursor-pointer hover:scale-105 active:scale-95 transition-transform flex items-center justify-center relative"
+                        className={`w-9 h-9 rounded-full border overflow-hidden cursor-pointer hover:scale-105 active:scale-95 transition-all flex items-center justify-center relative ${
+                          selectedAvatar === profile.profilePicture 
+                            ? "border-primary ring-2 ring-primary/45 ring-offset-2 ring-offset-background dark:ring-offset-zinc-950 scale-105" 
+                            : "border-zinc-200 dark:border-white/10"
+                        }`}
                       >
                         <img src={profile.profilePicture} alt="Google Profile" className="w-full h-full object-cover" />
                         {selectedAvatar === profile.profilePicture && (
@@ -285,75 +324,75 @@ export default function EditProfile() {
               {/* Grid fields */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="name" className="text-white text-xs font-semibold">Display Name</Label>
+                  <Label htmlFor="name" className="text-foreground dark:text-white text-xs font-semibold">Display Name</Label>
                   <div className="relative">
                     <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       id="name"
                       {...register("name", { required: "Name is required" })}
-                      className="bg-black/40 border-white/10 pl-10 text-sm focus-visible:ring-primary h-10 text-white"
+                      className="bg-zinc-50 dark:bg-black/40 border-zinc-200 dark:border-white/10 pl-10 text-sm focus-visible:ring-primary h-10 text-foreground dark:text-white"
                     />
                   </div>
                   {errors.name && <p className="text-xs text-destructive mt-0.5">{errors.name.message}</p>}
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="phoneNumber" className="text-white text-xs font-semibold">Phone Number</Label>
+                  <Label htmlFor="phoneNumber" className="text-foreground dark:text-white text-xs font-semibold">Phone Number</Label>
                   <div className="relative">
                     <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       id="phoneNumber"
                       placeholder="+1 (555) 000-0000"
                       {...register("phoneNumber")}
-                      className="bg-black/40 border-white/10 pl-10 text-sm focus-visible:ring-primary h-10 text-white"
+                      className="bg-zinc-50 dark:bg-black/40 border-zinc-200 dark:border-white/10 pl-10 text-sm focus-visible:ring-primary h-10 text-foreground dark:text-white"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="jobTitle" className="text-white text-xs font-semibold">Job Title</Label>
+                  <Label htmlFor="jobTitle" className="text-foreground dark:text-white text-xs font-semibold">Job Title</Label>
                   <div className="relative">
                     <Briefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       id="jobTitle"
                       placeholder="Senior Project Manager"
                       {...register("jobTitle")}
-                      className="bg-black/40 border-white/10 pl-10 text-sm focus-visible:ring-primary h-10 text-white"
+                      className="bg-zinc-50 dark:bg-black/40 border-zinc-200 dark:border-white/10 pl-10 text-sm focus-visible:ring-primary h-10 text-foreground dark:text-white"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="department" className="text-white text-xs font-semibold">Department</Label>
+                  <Label htmlFor="department" className="text-foreground dark:text-white text-xs font-semibold">Department</Label>
                   <div className="relative">
                     <Building className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       id="department"
                       placeholder="Engineering"
                       {...register("department")}
-                      className="bg-black/40 border-white/10 pl-10 text-sm focus-visible:ring-primary h-10 text-white"
+                      className="bg-zinc-50 dark:bg-black/40 border-zinc-200 dark:border-white/10 pl-10 text-sm focus-visible:ring-primary h-10 text-foreground dark:text-white"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1.5 md:col-span-2">
-                  <Label htmlFor="bio" className="text-white text-xs font-semibold">Biography</Label>
+                  <Label htmlFor="bio" className="text-foreground dark:text-white text-xs font-semibold">Biography</Label>
                   <Textarea
                     id="bio"
                     placeholder="Tell us about yourself..."
                     {...register("bio")}
-                    className="bg-black/40 border-white/10 text-sm focus-visible:ring-primary min-h-[80px] text-white"
+                    className="bg-zinc-50 dark:bg-black/40 border-zinc-200 dark:border-white/10 text-sm focus-visible:ring-primary min-h-[80px] text-foreground dark:text-white"
                   />
                 </div>
 
                 <div className="space-y-1.5 md:col-span-2">
-                  <Label htmlFor="timezone" className="text-white text-xs font-semibold">Timezone</Label>
+                  <Label htmlFor="timezone" className="text-foreground dark:text-white text-xs font-semibold">Timezone</Label>
                   <div className="relative">
                     <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <select
                       id="timezone"
                       {...register("timezone")}
-                      className="w-full bg-black/40 border border-white/10 rounded-lg h-10 pl-10 pr-4 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer"
+                      className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/10 rounded-lg h-10 pl-10 pr-4 text-sm text-foreground dark:text-white focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer font-medium"
                     >
                       <option value="UTC">UTC (GMT+0)</option>
                       <option value="America/New_York">Eastern Time (EST, GMT-5)</option>
@@ -370,33 +409,33 @@ export default function EditProfile() {
               </div>
 
               {/* Notification Preferences */}
-              <div className="border-t border-white/5 pt-4 space-y-3">
-                <Label className="text-white text-xs font-semibold flex items-center gap-2">
+              <div className="border-t border-zinc-200 dark:border-white/5 pt-4 space-y-3">
+                <Label className="text-foreground dark:text-white text-xs font-semibold flex items-center gap-2">
                   <Bell className="w-4 h-4 text-primary" />
                   Notifications Channels
                 </Label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-black/25 p-4 rounded-xl border border-white/5">
-                  <label className="flex items-center space-x-2.5 text-xs text-zinc-300 cursor-pointer">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-zinc-50 dark:bg-black/25 p-4 rounded-xl border border-zinc-200 dark:border-white/5">
+                  <label className="flex items-center space-x-2.5 text-xs text-zinc-700 dark:text-zinc-300 cursor-pointer">
                     <input
                       type="checkbox"
                       {...register("notifyEmail")}
-                      className="w-4 h-4 rounded border-white/10 bg-black/40 text-primary accent-primary"
+                      className="w-4 h-4 rounded border-zinc-350 dark:border-white/10 bg-zinc-50 dark:bg-black/40 text-primary accent-primary"
                     />
                     <span>Email Alerts</span>
                   </label>
-                  <label className="flex items-center space-x-2.5 text-xs text-zinc-300 cursor-pointer">
+                  <label className="flex items-center space-x-2.5 text-xs text-zinc-700 dark:text-zinc-300 cursor-pointer">
                     <input
                       type="checkbox"
                       {...register("notifyPush")}
-                      className="w-4 h-4 rounded border-white/10 bg-black/40 text-primary accent-primary"
+                      className="w-4 h-4 rounded border-zinc-350 dark:border-white/10 bg-zinc-50 dark:bg-black/40 text-primary accent-primary"
                     />
                     <span>Push Notifications</span>
                   </label>
-                  <label className="flex items-center space-x-2.5 text-xs text-zinc-300 cursor-pointer">
+                  <label className="flex items-center space-x-2.5 text-xs text-zinc-700 dark:text-zinc-300 cursor-pointer">
                     <input
                       type="checkbox"
                       {...register("notifySMS")}
-                      className="w-4 h-4 rounded border-white/10 bg-black/40 text-primary accent-primary"
+                      className="w-4 h-4 rounded border-zinc-350 dark:border-white/10 bg-zinc-50 dark:bg-black/40 text-primary accent-primary"
                     />
                     <span>SMS Alerts</span>
                   </label>
@@ -404,13 +443,13 @@ export default function EditProfile() {
               </div>
             </CardContent>
 
-            <CardFooter className="bg-white/5 px-6 py-4 flex justify-end gap-3 border-t border-white/5">
+            <CardFooter className="bg-zinc-50/50 dark:bg-white/5 px-6 py-4 flex justify-end gap-3 border-t border-zinc-200 dark:border-white/5">
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => setLocation("/profile")}
-                className="text-xs font-semibold text-zinc-400 hover:text-white"
+                className="text-xs font-semibold text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
               >
                 Cancel
               </Button>

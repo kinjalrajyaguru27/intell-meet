@@ -112,18 +112,18 @@ export default function TeamManagement() {
   return (
     <div className="flex-1 flex flex-col min-h-0 space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-200 dark:border-white/5 pb-4">
         <div className="flex items-center gap-3 flex-wrap">
           <Users className="w-5 h-5 text-primary" />
-          <h1 className="font-semibold text-lg text-white font-sans">Team & Workspace Management</h1>
+          <h1 className="font-semibold text-lg text-zinc-900 dark:text-white font-sans">Team & Workspace Management</h1>
           
-          <div className="h-5 w-px bg-white/10 hidden sm:block" />
+          <div className="h-5 w-px bg-zinc-200 dark:bg-white/10 hidden sm:block" />
           
-          <div className="flex items-center gap-2 text-xs bg-white/5 px-3 py-1.5 rounded-full border border-white/5">
+          <div className="flex items-center gap-2 text-xs bg-zinc-100 dark:bg-white/5 px-3 py-1.5 rounded-full border border-zinc-200 dark:border-white/5">
             <span className="text-muted-foreground flex items-center gap-1">
               <Building2 className="w-3.5 h-3.5" /> Org:
             </span>
-            <span className="text-white font-bold">
+            <span className="text-zinc-800 dark:text-white font-bold">
               {organizations.find(o => o._id === selectedOrgId)?.name || "Not Selected"}
             </span>
           </div>
@@ -131,7 +131,7 @@ export default function TeamManagement() {
       </div>
 
       {/* Main configuration container */}
-      <div className="flex-1 bg-card border border-white/5 rounded-2xl p-6 min-h-0 overflow-y-auto">
+      <div className="flex-1 bg-white dark:bg-card border border-zinc-200 dark:border-white/5 rounded-2xl p-6 min-h-0 overflow-y-auto shadow-sm">
         {isLoading ? (
           <div className="py-20 flex flex-col items-center justify-center gap-3">
             <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin text-primary" />

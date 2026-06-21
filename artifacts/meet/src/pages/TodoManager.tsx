@@ -610,10 +610,10 @@ export default function TodoManager() {
   return (
     <div className="flex-1 flex flex-col min-h-0 space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-200 dark:border-white/5 pb-4">
         <div className="flex items-center gap-3">
           <CheckSquare className="w-5 h-5 text-primary animate-pulse" />
-          <h1 className="font-semibold text-lg text-white font-sans">Todo Manager</h1>
+          <h1 className="font-semibold text-lg text-zinc-900 dark:text-white font-sans">Todo Manager</h1>
         </div>
 
         <div className="flex gap-2">
@@ -623,7 +623,7 @@ export default function TodoManager() {
               <Button
                 variant="outline"
                 size="sm"
-                className="rounded-full px-4 text-xs font-bold gap-1.5 border-white/10 text-violet-400 hover:text-violet-300 hover:bg-violet-500/10"
+                className="rounded-full px-4 text-xs font-bold gap-1.5 border-zinc-200 dark:border-white/10 text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-500/10"
               >
                 <Brain className="w-3.5 h-3.5" />
                 Import AI Action Items
@@ -665,8 +665,8 @@ export default function TodoManager() {
 
                 {selectedActionItemId && (
                   <>
-                    <div className="p-3 bg-white/5 border border-white/5 rounded-xl text-xs space-y-1 text-zinc-300">
-                      <span className="font-bold text-white block">Description:</span>
+                    <div className="p-3 bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/5 rounded-xl text-xs space-y-1 text-zinc-700 dark:text-zinc-300">
+                      <span className="font-bold text-zinc-900 dark:text-white block">Description:</span>
                       <p>{actionItems.find(ai => ai.id === selectedActionItemId)?.description || "No details provided"}</p>
                     </div>
 
@@ -886,14 +886,14 @@ export default function TodoManager() {
       {/* Stats Dashboard Widgets Grid */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         {[
-          { label: "Pending Tasks", value: stats.pending, sub: "Action required", color: "text-amber-400" },
-          { label: "Completed Tasks", value: stats.completed, sub: "Tasks finished", color: "text-emerald-400" },
-          { label: "Overdue Tasks", value: stats.overdue, sub: "Deadlines missed", color: "text-rose-500 font-bold animate-pulse" },
-          { label: "Progress %", value: `${stats.progressPercent}%`, sub: "Overall completion", color: "text-sky-400" },
-          { label: "Today's Tasks", value: stats.todayTasks, sub: "Due by midnight", color: "text-violet-400" },
-          { label: "Upcoming", value: stats.upcomingDeadlines, sub: "Next 7 days", color: "text-zinc-400" },
+          { label: "Pending Tasks", value: stats.pending, sub: "Action required", color: "text-amber-600 dark:text-amber-400" },
+          { label: "Completed Tasks", value: stats.completed, sub: "Tasks finished", color: "text-emerald-600 dark:text-emerald-400" },
+          { label: "Overdue Tasks", value: stats.overdue, sub: "Deadlines missed", color: "text-rose-600 dark:text-rose-500 font-bold animate-pulse" },
+          { label: "Progress %", value: `${stats.progressPercent}%`, sub: "Overall completion", color: "text-sky-600 dark:text-sky-400" },
+          { label: "Today's Tasks", value: stats.todayTasks, sub: "Due by midnight", color: "text-violet-600 dark:text-violet-400" },
+          { label: "Upcoming", value: stats.upcomingDeadlines, sub: "Next 7 days", color: "text-zinc-700 dark:text-zinc-400" },
         ].map((widget, i) => (
-          <div key={i} className="bg-card border border-white/5 p-4 rounded-2xl flex flex-col justify-between space-y-2">
+          <div key={i} className="bg-white dark:bg-card border border-zinc-200 dark:border-white/5 p-4 rounded-2xl flex flex-col justify-between space-y-2 shadow-sm">
             <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider leading-none">
               {widget.label}
             </span>
@@ -908,14 +908,14 @@ export default function TodoManager() {
       </div>
 
       {/* Control filters bar */}
-      <div className="bg-card border border-white/5 p-4 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white dark:bg-card border border-zinc-200 dark:border-white/5 p-4 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
           <Input
             placeholder="Search todo items..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 bg-black/40 border-white/10 text-xs h-9"
+            className="pl-9 bg-zinc-50 dark:bg-black/40 border-zinc-200 dark:border-white/10 text-xs h-9 text-foreground dark:text-white"
           />
         </div>
 
@@ -923,10 +923,10 @@ export default function TodoManager() {
           <div className="flex items-center gap-2">
             <span className="text-zinc-500 font-semibold whitespace-nowrap">Priority:</span>
             <Select value={filterPriority} onValueChange={setFilterPriority}>
-              <SelectTrigger className="w-32 bg-black/40 border-white/10 h-8">
+              <SelectTrigger className="w-32 bg-zinc-50 dark:bg-black/40 border-zinc-200 dark:border-white/10 h-8 text-foreground dark:text-white">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white dark:bg-[#09090b] border-zinc-200 dark:border-white/10 text-foreground dark:text-white">
                 <SelectItem value="all">All Priorities</SelectItem>
                 <SelectItem value="Low">Low</SelectItem>
                 <SelectItem value="Medium">Medium</SelectItem>
@@ -939,10 +939,10 @@ export default function TodoManager() {
           <div className="flex items-center gap-2">
             <span className="text-zinc-500 font-semibold whitespace-nowrap">Assignee:</span>
             <Select value={filterAssignee} onValueChange={setFilterAssignee}>
-              <SelectTrigger className="w-36 bg-black/40 border-white/10 h-8">
+              <SelectTrigger className="w-36 bg-zinc-50 dark:bg-black/40 border-zinc-200 dark:border-white/10 h-8 text-foreground dark:text-white">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white dark:bg-[#09090b] border-zinc-200 dark:border-white/10 text-foreground dark:text-white">
                 <SelectItem value="all">All Members</SelectItem>
                 <SelectItem value="unassigned">Unassigned</SelectItem>
                 {coworkers.map((c) => (
@@ -955,10 +955,10 @@ export default function TodoManager() {
           <div className="flex items-center gap-2">
             <span className="text-zinc-500 font-semibold whitespace-nowrap">Project:</span>
             <Select value={filterProject} onValueChange={setFilterProject}>
-              <SelectTrigger className="w-36 bg-black/40 border-white/10 h-8">
+              <SelectTrigger className="w-36 bg-zinc-50 dark:bg-black/40 border-zinc-200 dark:border-white/10 h-8 text-foreground dark:text-white">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white dark:bg-[#09090b] border-zinc-200 dark:border-white/10 text-foreground dark:text-white">
                 <SelectItem value="all">All Projects</SelectItem>
                 {projects.map((p) => (
                   <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
@@ -990,19 +990,19 @@ export default function TodoManager() {
                 key={col.status}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, col.status)}
-                className={`border border-white/5 rounded-2xl flex flex-col min-h-[500px] bg-[#09090b]/40 backdrop-blur-md`}
+                className={`border border-zinc-200 dark:border-white/5 rounded-2xl flex flex-col min-h-[500px] bg-zinc-50 dark:bg-[#09090b]/40 backdrop-blur-md shadow-sm`}
               >
                 {/* Column Header */}
-                <div className={`p-4 border-b border-white/5 flex items-center justify-between rounded-t-2xl bg-black/20`}>
+                <div className={`p-4 border-b border-zinc-200 dark:border-white/5 flex items-center justify-between rounded-t-2xl bg-zinc-100/50 dark:bg-black/20`}>
                   <div className="flex items-center gap-2">
                     <span className={`w-1.5 h-1.5 rounded-full ${
                       col.status === "Todo" ? "bg-amber-400" :
                       col.status === "In Progress" ? "bg-sky-400" :
                       col.status === "Review" ? "bg-violet-400" : "bg-emerald-400"
                     }`} />
-                    <span className="text-xs font-bold text-white tracking-wide uppercase">{col.title}</span>
+                    <span className="text-xs font-bold text-zinc-900 dark:text-white tracking-wide uppercase">{col.title}</span>
                   </div>
-                  <Badge variant="secondary" className="h-5 px-1.5 text-[9px] font-bold bg-white/5 text-zinc-400 rounded-full">
+                  <Badge variant="secondary" className="h-5 px-1.5 text-[9px] font-bold bg-zinc-200/50 dark:bg-white/5 text-zinc-700 dark:text-zinc-400 rounded-full">
                     {colTasks.length}
                   </Badge>
                 </div>
@@ -1010,17 +1010,17 @@ export default function TodoManager() {
                 {/* Column Cards zone */}
                 <div className="flex-1 p-3.5 space-y-3 overflow-y-auto max-h-[600px] scrollbar-thin">
                   {colTasks.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-16 text-center text-zinc-600/50">
+                    <div className="flex flex-col items-center justify-center py-16 text-center text-zinc-650/50">
                       <CheckSquare className="w-5 h-5 mb-1 opacity-20" />
                       <span className="text-[9px]">Drag tasks here</span>
                     </div>
                   ) : (
                     colTasks.map((task) => {
                       const priorityColor = {
-                        Low: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
-                        Medium: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-                        High: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-                        Critical: "bg-red-500/10 text-red-400 border-red-500/20",
+                        Low: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20",
+                        Medium: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
+                        High: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+                        Critical: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20",
                       }[task.priority || "Medium"];
 
                       const isOverdue = !task.status.includes("Done") && task.dueDate && task.dueDate < new Date().toISOString().split("T")[0];
@@ -1031,10 +1031,10 @@ export default function TodoManager() {
                           draggable
                           onDragStart={(e) => handleDragStart(e, task.id)}
                           onClick={() => fetchTaskDetail(task.id)}
-                          className="bg-black/50 border border-white/5 hover:border-white/15 rounded-xl p-3.5 space-y-2.5 transition-all shadow-md cursor-pointer group hover:scale-[1.01]"
+                          className="bg-white dark:bg-black/50 border border-zinc-200 dark:border-white/5 hover:border-zinc-300 dark:hover:border-white/15 rounded-xl p-3.5 space-y-2.5 transition-all shadow-sm cursor-pointer group hover:scale-[1.01]"
                         >
                           <div className="flex justify-between items-start gap-2">
-                            <span className="font-semibold text-xs text-white leading-snug line-clamp-2">
+                            <span className="font-semibold text-xs text-zinc-900 dark:text-white leading-snug line-clamp-2">
                               {task.title}
                             </span>
                             <button
@@ -1052,14 +1052,14 @@ export default function TodoManager() {
                           )}
 
                           {/* Task details footer indicators */}
-                          <div className="flex flex-wrap items-center justify-between gap-1.5 pt-2 border-t border-white/5 text-[9px]">
+                          <div className="flex flex-wrap items-center justify-between gap-1.5 pt-2 border-t border-zinc-100 dark:border-white/5 text-[9px]">
                             <div className="flex items-center gap-1.5">
                               <span className={`px-1.5 py-0.5 rounded border ${priorityColor} font-bold text-[8px]`}>
                                 {task.priority}
                               </span>
                               {task.dueDate && (
                                 <span className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded border text-[8px] ${
-                                  isOverdue ? "bg-red-500/10 text-red-400 border-red-500/20 animate-pulse font-bold" : "bg-white/5 text-zinc-400 border-white/5"
+                                  isOverdue ? "bg-red-500/10 text-red-400 border-red-500/20 animate-pulse font-bold" : "bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-white/5"
                                 }`}>
                                   <Clock className="w-2.5 h-2.5" />
                                   {task.dueDate}
@@ -1087,39 +1087,39 @@ export default function TodoManager() {
       {/* Task detail drawer/modal */}
       {activeTaskDetail && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex justify-end">
-          <div className="w-full max-w-xl bg-card border-l border-white/10 h-full p-6 overflow-y-auto space-y-6 flex flex-col justify-between">
+          <div className="w-full max-w-xl bg-white dark:bg-card border-l border-zinc-200 dark:border-white/10 h-full p-6 overflow-y-auto space-y-6 flex flex-col justify-between shadow-2xl">
             <div className="space-y-6">
               {/* Header */}
-              <div className="flex items-center justify-between border-b border-white/5 pb-4">
+              <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/5 pb-4">
                 <div className="space-y-1.5 flex-1 pr-4">
                   <div className="flex items-center gap-2">
                     <Badge variant="outline" className="text-[10px] uppercase font-bold text-primary bg-primary/10 border-primary/20">
                       {activeTaskDetail.status}
                     </Badge>
-                    <Badge variant="outline" className="text-[10px] uppercase font-bold text-zinc-400">
+                    <Badge variant="outline" className="text-[10px] uppercase font-bold text-zinc-550 dark:text-zinc-400">
                       Priority: {activeTaskDetail.priority}
                     </Badge>
                   </div>
                   <Input
-                    className="text-base font-bold text-white bg-transparent border-transparent hover:border-white/10 focus-visible:ring-0 focus-visible:border-primary px-1 h-8 mt-1"
+                    className="text-base font-bold text-zinc-900 dark:text-white bg-transparent border-transparent hover:border-zinc-200 dark:hover:border-white/10 focus-visible:ring-0 focus-visible:border-primary px-1 h-8 mt-1"
                     defaultValue={activeTaskDetail.title}
                     onBlur={(e) => handleUpdateTaskDetail({ title: e.target.value })}
                   />
                 </div>
-                <Button size="icon" variant="ghost" onClick={() => setActiveTaskDetail(null)} className="rounded-full w-8 h-8">
+                <Button size="icon" variant="ghost" onClick={() => setActiveTaskDetail(null)} className="rounded-full w-8 h-8 hover:bg-zinc-100 dark:hover:bg-white/5 text-zinc-500 hover:text-zinc-900 dark:hover:text-white">
                   <X className="w-4 h-4" />
                 </Button>
               </div>
 
               {/* Assignee / Due Date grid */}
-              <div className="grid grid-cols-2 gap-4 text-xs bg-white/5 p-4 rounded-xl border border-white/5">
+              <div className="grid grid-cols-2 gap-4 text-xs bg-zinc-50 dark:bg-white/5 p-4 rounded-xl border border-zinc-200 dark:border-white/5">
                 <div className="space-y-2">
-                  <span className="text-zinc-400 font-semibold block">Assignee</span>
+                  <span className="text-zinc-550 dark:text-zinc-400 font-semibold block">Assignee</span>
                   <Select
                     value={activeTaskDetail.assignee?.id || activeTaskDetail.assignee?._id || "unassigned"}
                     onValueChange={(val) => handleUpdateTaskDetail({ assigneeId: val === "unassigned" ? null : val })}
                   >
-                    <SelectTrigger className="bg-black/25 border-white/5 h-8">
+                    <SelectTrigger className="bg-white dark:bg-black/25 border-zinc-200 dark:border-white/5 h-8 text-zinc-900 dark:text-white">
                       <SelectValue placeholder="Unassigned" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1132,10 +1132,10 @@ export default function TodoManager() {
                 </div>
 
                 <div className="space-y-2">
-                  <span className="text-zinc-400 font-semibold block">Due Date</span>
+                  <span className="text-zinc-550 dark:text-zinc-400 font-semibold block">Due Date</span>
                   <Input
                     type="date"
-                    className="bg-black/25 border-white/5 h-8 text-xs"
+                    className="bg-white dark:bg-black/25 border-zinc-200 dark:border-white/5 h-8 text-xs text-zinc-900 dark:text-white"
                     value={activeTaskDetail.dueDate || ""}
                     onChange={(e) => handleUpdateTaskDetail({ dueDate: e.target.value || null })}
                   />
@@ -1144,9 +1144,9 @@ export default function TodoManager() {
 
               {/* Description */}
               <div className="space-y-1.5 text-xs">
-                <span className="text-zinc-400 font-semibold">Description</span>
+                <span className="text-zinc-550 dark:text-zinc-400 font-semibold">Description</span>
                 <Textarea
-                  className="text-white/90 leading-relaxed bg-black/25 border-white/5 text-xs p-3 focus-visible:ring-0"
+                  className="text-zinc-805 dark:text-white/90 leading-relaxed bg-zinc-50 dark:bg-black/25 border border-zinc-200 dark:border-white/5 text-xs p-3 focus-visible:ring-0"
                   defaultValue={activeTaskDetail.description || ""}
                   placeholder="Provide task description here..."
                   onBlur={(e) => handleUpdateTaskDetail({ description: e.target.value })}
@@ -1156,7 +1156,7 @@ export default function TodoManager() {
               {/* Subtasks Checklist */}
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-zinc-400 font-semibold flex items-center gap-1">
+                  <span className="text-xs text-zinc-550 dark:text-zinc-400 font-semibold flex items-center gap-1">
                     <CheckSquare className="w-4 h-4 text-primary" />
                     Subtasks Checklist ({activeTaskDetail.completedChildren || 0}/{activeTaskDetail.totalChildren || 0})
                   </span>
@@ -1172,12 +1172,12 @@ export default function TodoManager() {
                     placeholder="Add checklist item..."
                     value={subtaskTitle}
                     onChange={(e) => setSubtaskTitle(e.target.value)}
-                    className="bg-black/40 border-white/10 h-8 text-xs"
+                    className="bg-white dark:bg-black/40 border-zinc-200 dark:border-white/10 h-8 text-xs text-zinc-900 dark:text-white"
                   />
                   <Button type="submit" size="sm" className="h-8">Add</Button>
                 </form>
 
-                <div className="space-y-1 divide-y divide-white/5">
+                <div className="space-y-1 divide-y divide-zinc-200 dark:divide-white/5">
                   {activeTaskDetail.subtasks?.map((sub: any) => (
                     <div key={sub.id} className="flex items-center justify-between py-2 text-xs">
                       <div className="flex items-center gap-2.5 min-w-0">
@@ -1187,12 +1187,12 @@ export default function TodoManager() {
                           className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
                             sub.status === "Done"
                               ? "bg-primary border-primary text-primary-foreground"
-                              : "border-white/20 hover:border-primary/50"
+                              : "border-zinc-300 dark:border-white/20 hover:border-primary/50"
                           }`}
                         >
                           {sub.status === "Done" && <Check className="w-3 h-3" />}
                         </button>
-                        <span className={`truncate ${sub.status === "Done" ? "line-through text-zinc-500" : "text-white"}`}>
+                        <span className={`truncate ${sub.status === "Done" ? "line-through text-zinc-500" : "text-zinc-900 dark:text-white"}`}>
                           {sub.title}
                         </span>
                       </div>
@@ -1211,8 +1211,8 @@ export default function TodoManager() {
 
               {/* Attachments Section */}
               <div className="space-y-3">
-                <span className="text-xs text-zinc-400 font-semibold flex items-center gap-1">
-                  <Paperclip className="w-4 h-4 text-sky-400" />
+                <span className="text-xs text-zinc-550 dark:text-zinc-400 font-semibold flex items-center gap-1">
+                  <Paperclip className="w-4 h-4 text-sky-500 dark:text-sky-400" />
                   Files & Attachments ({activeTaskDetail.attachments?.length || 0})
                 </span>
 
@@ -1222,7 +1222,7 @@ export default function TodoManager() {
                     variant="outline"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isUploading}
-                    className="h-8 text-xs border-white/10"
+                    className="h-8 text-xs border-zinc-200 dark:border-white/10 text-zinc-800 dark:text-zinc-205"
                   >
                     {isUploading ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : <Plus className="w-4 h-4 mr-1.5" />}
                     Upload File
@@ -1237,9 +1237,9 @@ export default function TodoManager() {
 
                 <div className="grid grid-cols-2 gap-2">
                   {activeTaskDetail.attachments?.map((att: any) => (
-                    <div key={att._id} className="bg-black/30 border border-white/5 p-2 rounded-xl flex items-center justify-between text-xs gap-3">
+                    <div key={att._id} className="bg-zinc-55 dark:bg-black/30 border border-zinc-200 dark:border-white/5 p-2 rounded-xl flex items-center justify-between text-xs gap-3">
                       <div className="min-w-0">
-                        <span className="font-semibold truncate block text-white">{att.filename}</span>
+                        <span className="font-semibold truncate block text-zinc-900 dark:text-white">{att.filename}</span>
                         <span className="text-[9px] text-zinc-500 block">
                           {(att.sizeBytes / 1024).toFixed(1)} KB
                         </span>
@@ -1248,7 +1248,7 @@ export default function TodoManager() {
                         href={att.fileUrl}
                         download
                         target="_blank"
-                        className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white shrink-0"
+                        className="p-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-800 dark:text-white shrink-0"
                       >
                         <Download className="w-3.5 h-3.5" />
                       </a>
@@ -1259,8 +1259,8 @@ export default function TodoManager() {
 
               {/* Comments Section */}
               <div className="space-y-3">
-                <span className="text-xs text-zinc-400 font-semibold flex items-center gap-1">
-                  <MessageSquare className="w-4 h-4 text-violet-400" />
+                <span className="text-xs text-zinc-550 dark:text-zinc-400 font-semibold flex items-center gap-1">
+                  <MessageSquare className="w-4 h-4 text-violet-500 dark:text-violet-400" />
                   Discussions ({activeTaskDetail.comments?.length || 0})
                 </span>
 
@@ -1269,7 +1269,7 @@ export default function TodoManager() {
                     placeholder="Write a comment..."
                     value={commentText}
                     onChange={(e) => setCommentText(e.target.value)}
-                    className="bg-black/40 border-white/10 h-9 text-xs"
+                    className="bg-white dark:bg-black/40 border-zinc-200 dark:border-white/10 h-9 text-xs text-zinc-900 dark:text-white"
                   />
                   <Button type="submit" size="sm" className="h-9">
                     <Send className="w-3.5 h-3.5" />
@@ -1279,17 +1279,17 @@ export default function TodoManager() {
                 <div className="space-y-3 pt-2 max-h-48 overflow-y-auto">
                   {activeTaskDetail.comments?.map((c: any) => (
                     <div key={c._id} className="flex gap-2.5 items-start text-xs text-left">
-                      <div className="w-6 h-6 rounded-full bg-violet-600/25 flex items-center justify-center font-bold text-[10px] text-violet-400 shrink-0">
+                      <div className="w-6 h-6 rounded-full bg-violet-500/10 dark:bg-violet-600/25 flex items-center justify-center font-bold text-[10px] text-violet-600 dark:text-violet-400 shrink-0">
                         {c.userId?.name?.charAt(0) || "?"}
                       </div>
                       <div className="flex-1 space-y-0.5">
                         <div className="flex justify-between items-baseline">
-                          <span className="font-bold text-white">{c.userId?.name}</span>
+                          <span className="font-bold text-zinc-900 dark:text-white">{c.userId?.name}</span>
                           <span className="text-[9px] text-zinc-500">
                             {new Date(c.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                           </span>
                         </div>
-                        <p className="text-white/80 leading-relaxed bg-white/5 p-2 rounded-lg border border-white/5">
+                        <p className="text-zinc-800 dark:text-white/80 leading-relaxed bg-zinc-50 dark:bg-white/5 p-2 rounded-lg border border-zinc-200 dark:border-white/5">
                           {c.text}
                         </p>
                       </div>
@@ -1300,7 +1300,7 @@ export default function TodoManager() {
             </div>
 
             {/* Footer */}
-            <div className="border-t border-white/5 pt-4 flex gap-2 justify-end">
+            <div className="border-t border-zinc-200 dark:border-white/5 pt-4 flex gap-2 justify-end">
               <Button variant="ghost" size="sm" onClick={() => setActiveTaskDetail(null)}>Close</Button>
               <Button variant="destructive" size="sm" onClick={() => handleDeleteTask(activeTaskDetail.id)}>
                 Delete Task

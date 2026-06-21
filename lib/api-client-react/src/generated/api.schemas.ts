@@ -49,6 +49,8 @@ export interface User {
   timezone?: string | null;
   /** @nullable */
   avatar?: string | null;
+  /** @nullable */
+  profileColor?: string | null;
   authProvider: UserAuthProvider;
   /** @nullable */
   googleId?: string | null;
@@ -323,6 +325,8 @@ export interface UserProfileUpdate {
   timezone?: string | null;
   /** @nullable */
   avatar?: string | null;
+  /** @nullable */
+  profileColor?: string | null;
   notificationSettings?: UserProfileUpdateNotificationSettings;
 }
 

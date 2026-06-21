@@ -642,6 +642,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 25.6.2
+      mongoose:
+        specifier: ^8.12.1
+        version: 8.24.0
       tsx:
         specifier: 'catalog:'
         version: 4.21.0

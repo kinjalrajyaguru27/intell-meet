@@ -181,18 +181,18 @@ export default function Home() {
   return (
     <div className="flex-1 flex flex-col min-h-0 space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-200 dark:border-white/5 pb-4">
         <div className="flex items-center gap-3">
           <Video className="w-5 h-5 text-primary" />
-          <h1 className="font-semibold text-lg text-white font-sans">Meetings Center</h1>
+          <h1 className="font-semibold text-lg text-zinc-900 dark:text-white font-sans">Meetings Center</h1>
         </div>
       </div>
 
       {/* Hero Control Panel (Quick actions) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 bg-card border border-white/5 p-6 rounded-2xl">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 bg-white dark:bg-card border border-zinc-200 dark:border-white/5 p-6 rounded-2xl shadow-sm">
         <div className="space-y-4">
           <div>
-            <h2 className="text-base font-bold text-white leading-tight">Instant Video Conference</h2>
+            <h2 className="text-base font-bold text-zinc-900 dark:text-white leading-tight">Instant Video Conference</h2>
             <p className="text-xs text-muted-foreground">Start an immediate workspace sync or join an ongoing call.</p>
           </div>
 
@@ -221,10 +221,10 @@ export default function Home() {
                 <Input
                   {...joinForm.register("roomId")}
                   placeholder="Enter room code"
-                  className="pl-9 h-11 bg-black/40 border-white/10 rounded-full text-xs placeholder:text-zinc-500 w-full"
+                  className="pl-9 h-11 bg-zinc-50 dark:bg-black/40 border-zinc-200 dark:border-white/10 rounded-full text-xs placeholder:text-zinc-500 text-foreground dark:text-white w-full"
                 />
               </div>
-              <Button type="submit" variant="secondary" className="h-11 rounded-full px-5 text-xs font-semibold shrink-0">
+              <Button type="submit" variant="secondary" className="h-11 rounded-full px-5 text-xs font-semibold shrink-0 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700">
                 Join Call
               </Button>
             </form>
@@ -232,15 +232,15 @@ export default function Home() {
         </div>
 
         {/* Schedule Dialog Launcher */}
-        <div className="flex flex-col justify-between border-t lg:border-t-0 lg:border-l border-white/5 pt-6 lg:pt-0 lg:pl-6">
+        <div className="flex flex-col justify-between border-t lg:border-t-0 lg:border-l border-zinc-200 dark:border-white/5 pt-6 lg:pt-0 lg:pl-6">
           <div className="mb-4">
-            <h2 className="text-base font-bold text-white leading-tight">Schedule Upcoming Meeting</h2>
+            <h2 className="text-base font-bold text-zinc-900 dark:text-white leading-tight">Schedule Upcoming Meeting</h2>
             <p className="text-xs text-muted-foreground">Pre-arrange conferences, enable lobbies, and send calendars invitations.</p>
           </div>
 
           <Dialog open={isScheduleOpen} onOpenChange={setIsScheduleOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" className="rounded-full h-11 text-xs font-bold gap-2 border-white/10 w-fit">
+              <Button variant="outline" className="rounded-full h-11 text-xs font-bold gap-2 border-zinc-250 dark:border-white/10 text-foreground dark:text-zinc-250 hover:bg-zinc-100 dark:hover:bg-white/5 w-fit">
                 <Calendar className="w-4 h-4" />
                 Schedule Video Meeting
               </Button>
@@ -301,8 +301,8 @@ export default function Home() {
       </div>
 
       {/* sub-tabs and search row */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-2">
-        <div className="flex bg-muted/20 border border-white/5 rounded-lg p-1 text-xs w-fit">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-200 dark:border-white/5 pb-2">
+        <div className="flex bg-zinc-100/80 dark:bg-muted/20 border border-zinc-200 dark:border-white/5 rounded-lg p-1 text-xs w-fit">
           {([
             { value: "all", label: "All Logs" },
             { value: "active", label: "Ongoing" },
@@ -316,7 +316,7 @@ export default function Home() {
               className={`px-3 py-1.5 rounded-md transition-colors font-semibold ${
                 meetingFilter === tab.value
                   ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-zinc-400 hover:text-white"
+                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
               }`}
             >
               {tab.label}
@@ -330,7 +330,7 @@ export default function Home() {
             placeholder="Search meetings by agenda..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8 text-xs bg-black/40 border-white/10 rounded-lg placeholder-zinc-500 text-white focus-visible:ring-primary focus-visible:ring-offset-0 h-8.5"
+            className="pl-8 text-xs bg-zinc-50 dark:bg-black/40 border-zinc-200 dark:border-white/10 rounded-lg placeholder-zinc-500 text-foreground dark:text-white focus-visible:ring-primary focus-visible:ring-offset-0 h-8.5"
           />
         </div>
       </div>
@@ -344,9 +344,9 @@ export default function Home() {
             ))}
           </div>
         ) : filteredMeetings.length === 0 ? (
-          <div className="py-20 text-center bg-card/20 border border-white/5 rounded-2xl flex flex-col items-center">
+          <div className="py-20 text-center bg-white dark:bg-card border border-zinc-200 dark:border-white/5 rounded-2xl flex flex-col items-center shadow-sm">
             <Video className="w-12 h-12 text-muted-foreground/20 mb-4" />
-            <h3 className="font-semibold text-sm mb-1 text-white font-sans">No Meetings Found</h3>
+            <h3 className="font-semibold text-sm mb-1 text-zinc-900 dark:text-white font-sans">No Meetings Found</h3>
             <p className="text-xs text-muted-foreground max-w-xs">
               No matches found for category "{meetingFilter}".
             </p>
@@ -362,45 +362,45 @@ export default function Home() {
               return (
                 <div
                   key={meeting.id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between bg-card border border-white/5 rounded-2xl px-5 py-4 hover:border-primary/30 transition-all gap-4 group"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between bg-white dark:bg-card border border-zinc-200 dark:border-white/5 rounded-2xl px-5 py-4 hover:border-zinc-300 dark:hover:border-primary/30 transition-all gap-4 group shadow-sm"
                 >
                   <div
                     className="flex items-center gap-4 flex-1 min-w-0 cursor-pointer"
                     onClick={() => setLocation(`/dashboard/meeting/${meeting.id}`)}
                   >
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border border-white/5 ${
-                      isPast ? "bg-white/5 text-zinc-500" : "bg-primary/10 text-primary"
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border border-zinc-200 dark:border-white/5 ${
+                      isPast ? "bg-zinc-100 dark:bg-white/5 text-zinc-500" : "bg-primary/10 text-primary"
                     }`}>
                       <Video className="w-5 h-5" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-bold truncate text-sm text-white">{title}</span>
+                        <span className="font-bold truncate text-sm text-zinc-900 dark:text-white">{title}</span>
                         {meeting.openActionItemCount > 0 && (
-                          <Badge variant="outline" className="shrink-0 text-[10px] bg-amber-500/10 text-amber-400 border-amber-500/20 font-semibold px-2 py-0">
+                          <Badge variant="outline" className="shrink-0 text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 font-semibold px-2 py-0">
                             {meeting.openActionItemCount} Tasks
                           </Badge>
                         )}
                         {meeting.hasNotes && (
-                          <Badge variant="outline" className="shrink-0 text-[10px] bg-emerald-500/10 text-emerald-400 border-emerald-500/20 font-semibold px-2 py-0">
+                          <Badge variant="outline" className="shrink-0 text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 font-semibold px-2 py-0">
                             Notes
                           </Badge>
                         )}
                       </div>
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1 font-medium text-zinc-400">
-                          <Calendar className="w-3.5 h-3.5 shrink-0 text-zinc-500" />
+                        <span className="flex items-center gap-1 font-medium text-zinc-500 dark:text-zinc-400">
+                          <Calendar className="w-3.5 h-3.5 shrink-0 text-zinc-400 dark:text-zinc-500" />
                           {isUpcoming ? formatDate(meeting.startedAt) : timeAgo(meeting.startedAt)}
                         </span>
                         {meeting.durationSeconds && (
-                          <span className="flex items-center gap-1 text-zinc-400">
-                            <Clock className="w-3.5 h-3.5 shrink-0 text-zinc-500" />
+                          <span className="flex items-center gap-1 text-zinc-500 dark:text-zinc-400">
+                            <Clock className="w-3.5 h-3.5 shrink-0 text-zinc-400 dark:text-zinc-500" />
                             {formatDuration(meeting.durationSeconds)}
                           </span>
                         )}
                         {meeting.participantNames && meeting.participantNames.length > 0 && (
-                          <span className="flex items-center gap-1 truncate max-w-[200px] text-zinc-400">
-                            <Users className="w-3.5 h-3.5 shrink-0 text-zinc-500" />
+                          <span className="flex items-center gap-1 truncate max-w-[200px] text-zinc-500 dark:text-zinc-400">
+                            <Users className="w-3.5 h-3.5 shrink-0 text-zinc-400 dark:text-zinc-500" />
                             {meeting.participantNames.slice(0, 2).join(", ")}
                             {meeting.participantNames.length > 2 && ` +${meeting.participantNames.length - 2}`}
                           </span>
@@ -424,7 +424,7 @@ export default function Home() {
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="rounded-full h-8 text-xs text-zinc-400 hover:text-white hover:bg-white/5"
+                        className="rounded-full h-8 text-xs text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
                         onClick={() => setLocation(`/dashboard/meeting/${meeting.id}`)}
                       >
                         View Summary

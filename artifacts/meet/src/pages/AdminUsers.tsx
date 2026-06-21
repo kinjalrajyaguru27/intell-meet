@@ -136,26 +136,26 @@ export default function AdminUsers() {
   return (
     <div className="space-y-6">
       {/* Back link & Header */}
-      <div className="flex items-center justify-between border-b border-white/5 pb-4">
+      <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/5 pb-4">
         <button
           onClick={() => setLocation("/dashboard")}
-          className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors text-xs font-semibold"
+          className="flex items-center gap-2 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors text-xs font-semibold"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Dashboard
         </button>
         <div className="flex items-center gap-2">
-          <Shield className="w-4 h-4 text-amber-500" />
-          <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">Admin Console</span>
+          <Shield className="w-4 h-4 text-amber-600 dark:text-amber-500" />
+          <span className="text-xs font-bold text-amber-650 dark:text-amber-400 uppercase tracking-wider">Admin Console</span>
         </div>
       </div>
 
       {/* Tab switchers */}
-      <div className="flex border-b border-white/5 overflow-x-auto pb-px shrink-0">
+      <div className="flex border-b border-zinc-200 dark:border-white/5 overflow-x-auto pb-px shrink-0">
         <button
           onClick={() => handleTabChange("users")}
           className={`flex items-center gap-2 px-4 py-3 border-b-2 font-bold text-xs uppercase tracking-wider transition-all whitespace-nowrap ${
-            activeTab === "users" ? "border-amber-500 text-amber-400" : "border-transparent text-muted-foreground hover:text-white"
+            activeTab === "users" ? "border-amber-500 text-amber-600 dark:text-amber-400" : "border-transparent text-muted-foreground hover:text-zinc-900 dark:hover:text-white"
           }`}
         >
           <Users className="w-4 h-4" />
@@ -164,7 +164,7 @@ export default function AdminUsers() {
         <button
           onClick={() => handleTabChange("teams")}
           className={`flex items-center gap-2 px-4 py-3 border-b-2 font-bold text-xs uppercase tracking-wider transition-all whitespace-nowrap ${
-            activeTab === "teams" ? "border-amber-500 text-amber-400" : "border-transparent text-muted-foreground hover:text-white"
+            activeTab === "teams" ? "border-amber-500 text-amber-600 dark:text-amber-400" : "border-transparent text-muted-foreground hover:text-zinc-900 dark:hover:text-white"
           }`}
         >
           <Shield className="w-4 h-4" />
@@ -173,7 +173,7 @@ export default function AdminUsers() {
         <button
           onClick={() => handleTabChange("org")}
           className={`flex items-center gap-2 px-4 py-3 border-b-2 font-bold text-xs uppercase tracking-wider transition-all whitespace-nowrap ${
-            activeTab === "org" ? "border-amber-500 text-amber-400" : "border-transparent text-muted-foreground hover:text-white"
+            activeTab === "org" ? "border-amber-500 text-amber-600 dark:text-amber-400" : "border-transparent text-muted-foreground hover:text-zinc-900 dark:hover:text-white"
           }`}
         >
           <Lock className="w-4 h-4" />
@@ -182,7 +182,7 @@ export default function AdminUsers() {
         <button
           onClick={() => handleTabChange("analytics")}
           className={`flex items-center gap-2 px-4 py-3 border-b-2 font-bold text-xs uppercase tracking-wider transition-all whitespace-nowrap ${
-            activeTab === "analytics" ? "border-amber-500 text-amber-400" : "border-transparent text-muted-foreground hover:text-white"
+            activeTab === "analytics" ? "border-amber-500 text-amber-600 dark:text-amber-400" : "border-transparent text-muted-foreground hover:text-zinc-900 dark:hover:text-white"
           }`}
         >
           <ShieldAlert className="w-4 h-4" />
@@ -191,7 +191,7 @@ export default function AdminUsers() {
         <button
           onClick={() => handleTabChange("settings")}
           className={`flex items-center gap-2 px-4 py-3 border-b-2 font-bold text-xs uppercase tracking-wider transition-all whitespace-nowrap ${
-            activeTab === "settings" ? "border-amber-500 text-amber-400" : "border-transparent text-muted-foreground hover:text-white"
+            activeTab === "settings" ? "border-amber-500 text-amber-600 dark:text-amber-400" : "border-transparent text-muted-foreground hover:text-zinc-900 dark:hover:text-white"
           }`}
         >
           <Lock className="w-4 h-4" />
@@ -200,7 +200,7 @@ export default function AdminUsers() {
         <button
           onClick={() => handleTabChange("logs")}
           className={`flex items-center gap-2 px-4 py-3 border-b-2 font-bold text-xs uppercase tracking-wider transition-all whitespace-nowrap ${
-            activeTab === "logs" ? "border-amber-500 text-amber-400" : "border-transparent text-muted-foreground hover:text-white"
+            activeTab === "logs" ? "border-amber-500 text-amber-600 dark:text-amber-400" : "border-transparent text-muted-foreground hover:text-zinc-900 dark:hover:text-white"
           }`}
         >
           <Calendar className="w-4 h-4" />
@@ -209,7 +209,7 @@ export default function AdminUsers() {
         <button
           onClick={() => handleTabChange("audit")}
           className={`flex items-center gap-2 px-4 py-3 border-b-2 font-bold text-xs uppercase tracking-wider transition-all whitespace-nowrap ${
-            activeTab === "audit" ? "border-amber-500 text-amber-400" : "border-transparent text-muted-foreground hover:text-white"
+            activeTab === "audit" ? "border-amber-500 text-amber-600 dark:text-amber-400" : "border-transparent text-muted-foreground hover:text-zinc-900 dark:hover:text-white"
           }`}
         >
           <Shield className="w-4 h-4" />
@@ -219,15 +219,15 @@ export default function AdminUsers() {
 
       {/* User list tab content */}
       {activeTab === "users" && (
-        <Card className="bg-card/50 backdrop-blur-xl border border-white/10 relative overflow-hidden shadow-2xl">
+        <Card className="bg-white dark:bg-card/50 backdrop-blur-xl border border-zinc-200 dark:border-white/10 relative overflow-hidden shadow-xl">
           <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-amber-500 to-orange-500" />
           
           <CardHeader>
-            <CardTitle className="text-xl font-bold text-white flex items-center gap-2">
+            <CardTitle className="text-xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">
               <Users className="w-5 h-5 text-amber-500" />
               Manage Platform Users
             </CardTitle>
-            <CardDescription className="text-xs text-zinc-400">
+            <CardDescription className="text-xs text-zinc-500 dark:text-zinc-400">
               List registered users, reassign roles, and delete accounts
             </CardDescription>
           </CardHeader>
@@ -236,11 +236,11 @@ export default function AdminUsers() {
             {isLoading ? (
               <div className="space-y-3">
                 {[1, 2, 3].map((n) => (
-                  <div key={n} className="h-16 bg-zinc-800/50 animate-pulse rounded-lg border border-white/5" />
+                  <div key={n} className="h-16 bg-zinc-100 dark:bg-zinc-800/50 animate-pulse rounded-lg border border-zinc-200 dark:border-white/5" />
                 ))}
               </div>
             ) : error ? (
-              <div className="py-8 text-center text-red-400 text-xs">
+              <div className="py-8 text-center text-red-500 dark:text-red-400 text-xs">
                 Failed to list users from database.
               </div>
             ) : users && users.length === 0 ? (
@@ -252,26 +252,26 @@ export default function AdminUsers() {
                 {users?.map((usr) => (
                   <div 
                     key={usr.id} 
-                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl border border-white/5 bg-black/25 hover:border-white/10 transition-colors"
+                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl border border-zinc-200 dark:border-white/5 bg-zinc-50/50 dark:bg-black/25 hover:bg-zinc-50 dark:hover:bg-black/30 hover:border-zinc-350 dark:hover:border-white/10 transition-all shadow-sm"
                   >
                     {/* User Metadata */}
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-zinc-700 to-zinc-650 flex items-center justify-center font-bold text-sm text-white border border-white/10">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-zinc-200 to-zinc-100 dark:from-zinc-750 dark:to-zinc-700 flex items-center justify-center font-bold text-sm text-zinc-800 dark:text-white border border-zinc-300 dark:border-white/10">
                         {usr.name.substring(0, 2).toUpperCase()}
                       </div>
                       <div className="space-y-0.5">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-sm text-white">{usr.name}</span>
+                          <span className="font-bold text-sm text-zinc-900 dark:text-white">{usr.name}</span>
                           {usr.id === authUser.id && (
-                            <Badge className="bg-zinc-800 text-zinc-400 border-zinc-700 rounded text-[8px] font-bold px-1 py-0">You</Badge>
+                            <Badge className="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-250 dark:border-zinc-700 rounded text-[8px] font-bold px-1 py-0">You</Badge>
                           )}
                         </div>
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-[10px] text-zinc-400">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-[10px] text-zinc-650 dark:text-zinc-400">
                           <span className="flex items-center gap-1">
                             <Mail className="w-3.5 h-3.5" />
                             {usr.email}
                           </span>
-                          <span className="hidden sm:inline text-zinc-600">•</span>
+                          <span className="hidden sm:inline text-zinc-450 dark:text-zinc-600">•</span>
                           <span className="flex items-center gap-1">
                             <Calendar className="w-3.5 h-3.5" />
                             Joined {formatDate(usr.createdAt)}
@@ -287,11 +287,11 @@ export default function AdminUsers() {
                         value={usr.role}
                         onChange={(e) => handleRoleChange(usr.id, e.target.value as any)}
                         disabled={usr.id === authUser.id || updateRoleMutation.isPending}
-                        className="bg-black/40 border border-white/10 rounded-lg h-9 px-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer disabled:opacity-50"
+                        className="bg-white dark:bg-black/40 border border-zinc-250 dark:border-white/10 rounded-lg h-9 px-2 text-xs text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer disabled:opacity-50"
                       >
-                        <option value="Member">Team Member</option>
-                        <option value="Manager">Manager</option>
-                        <option value="Admin">Platform Admin</option>
+                        <option value="Member" className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">Team Member</option>
+                        <option value="Manager" className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">Manager</option>
+                        <option value="Admin" className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">Platform Admin</option>
                       </select>
 
                       {/* Delete user button */}
@@ -315,15 +315,15 @@ export default function AdminUsers() {
 
       {/* Mock console panels for other tabs */}
       {activeTab !== "users" && (
-        <Card className="bg-card/50 backdrop-blur-xl border border-white/10 relative overflow-hidden shadow-2xl p-8 text-center space-y-4">
+        <Card className="bg-white dark:bg-card/50 backdrop-blur-xl border border-zinc-200 dark:border-white/10 relative overflow-hidden shadow-xl p-8 text-center space-y-4">
           <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-amber-500 to-orange-500" />
           <Shield className="w-12 h-12 text-amber-500/30 mx-auto animate-pulse" />
-          <h3 className="text-lg font-bold text-white capitalize">{activeTab} Console Panel</h3>
-          <p className="text-xs text-zinc-400 max-w-md mx-auto">
+          <h3 className="text-lg font-bold text-zinc-900 dark:text-white capitalize">{activeTab} Console Panel</h3>
+          <p className="text-xs text-zinc-550 dark:text-zinc-400 max-w-md mx-auto leading-relaxed">
             This administrative area provides enterprise security policy configurations, activity audit queries, system logs integration, and automated backup management controls.
           </p>
           <div className="pt-4">
-            <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-xs px-3 py-1 font-bold">
+            <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 text-xs px-3 py-1 font-bold">
               Feature Active & Secure
             </Badge>
           </div>

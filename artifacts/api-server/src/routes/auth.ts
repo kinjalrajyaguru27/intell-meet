@@ -80,6 +80,7 @@ export function formatUserResponse(user: any) {
     bio: user.bio || null,
     timezone: user.timezone || "UTC",
     avatar: user.avatar || null,
+    profileColor: user.profileColor || "purple",
     authProvider: user.authProvider || "local",
     googleId: user.googleId || null,
     profilePicture: user.profilePicture || null,
@@ -448,29 +449,17 @@ router.post("/google", rateLimiter(15 * 60 * 1000, 30), async (req, res) => {
 
     const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "335439563229-placeholder.apps.googleusercontent.com";
 
-    if (idToken.startsWith("mock_google_token_")) {
-      const mockEmail = idToken.replace("mock_google_token_", "") || "google-user@example.com";
-      payload = {
-        aud: GOOGLE_CLIENT_ID,
-        email: mockEmail,
-        email_verified: "true",
-        name: mockEmail.split("@")[0],
-        picture: `https://api.dicebear.com/7.x/adventurer/svg?seed=${mockEmail}`,
-        sub: `mock_google_sub_${mockEmail}`,
-      };
-    } else {
-      const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
-      if (!response.ok) {
-        res.status(401).json({ error: "Invalid Google ID token" });
-        return;
-      }
+    const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
+    if (!response.ok) {
+      res.status(401).json({ error: "Invalid Google ID token" });
+      return;
+    }
 
-      payload = (await response.json()) as any;
+    payload = (await response.json()) as any;
 
-      if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID !== "335439563229-placeholder.apps.googleusercontent.com" && payload.aud !== GOOGLE_CLIENT_ID) {
-        res.status(401).json({ error: "Google token client ID mismatch" });
-        return;
-      }
+    if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID !== "335439563229-placeholder.apps.googleusercontent.com" && payload.aud !== GOOGLE_CLIENT_ID) {
+      res.status(401).json({ error: "Google token client ID mismatch" });
+      return;
     }
 
     const email = payload.email.toLowerCase();

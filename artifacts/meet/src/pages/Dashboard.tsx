@@ -123,9 +123,9 @@ export default function Dashboard() {
   return (
     <div className="flex-1 flex flex-col min-h-0 space-y-6">
       {/* Top Welcome Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-200 dark:border-white/5 pb-4">
         <div>
-          <h1 className="font-semibold text-lg text-white font-sans">
+          <h1 className="font-semibold text-lg text-zinc-900 dark:text-white font-sans">
             Welcome back, {user.name}!
           </h1>
           <p className="text-xs text-zinc-500">
@@ -143,19 +143,19 @@ export default function Dashboard() {
           sub={`${stats?.meetingsThisWeek ?? 0} this week`}
         />
         <StatCard
-          icon={<Clock className="w-5 h-5 text-cyan-400" />}
+          icon={<Clock className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />}
           label="Time in Meetings"
           value={formatDuration(stats?.totalDurationSeconds ?? 0)}
           sub="total recorded time"
         />
         <StatCard
-          icon={<AlertCircle className="w-5 h-5 text-amber-400" />}
+          icon={<AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400" />}
           label="Open Action Items"
           value={String(stats?.openActionItems ?? 0)}
           sub={`${stats?.completedActionItems ?? 0} completed`}
         />
         <StatCard
-          icon={<CheckSquare className="w-5 h-5 text-emerald-400" />}
+          icon={<CheckSquare className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />}
           label="Completion Rate"
           value={
             (stats?.openActionItems ?? 0) + (stats?.completedActionItems ?? 0) > 0
@@ -177,7 +177,7 @@ export default function Dashboard() {
           {/* Upcoming Meetings */}
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-400">
                 Upcoming Meetings
               </h3>
               <Button
@@ -198,14 +198,14 @@ export default function Dashboard() {
                   ))}
                 </div>
               ) : upcomingMeetings.length === 0 ? (
-                <div className="text-center py-8 bg-card border border-white/5 rounded-2xl text-xs text-zinc-500 italic">
+                <div className="text-center py-8 bg-zinc-100/40 dark:bg-card border border-zinc-200 dark:border-white/5 rounded-2xl text-xs text-zinc-500 italic shadow-sm">
                   No upcoming meetings scheduled.
                 </div>
               ) : (
                 upcomingMeetings.map((meeting: any) => (
                   <div
                     key={meeting.id}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between bg-card border border-white/5 hover:border-white/15 transition-all px-5 py-4 rounded-xl cursor-pointer gap-4"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between bg-white dark:bg-card border border-zinc-200 dark:border-white/5 hover:border-zinc-300 dark:hover:border-white/15 transition-all px-5 py-4 rounded-xl cursor-pointer gap-4 shadow-sm"
                     onClick={() => setLocation(`/`)}
                   >
                     <div className="flex items-center gap-3">
@@ -213,7 +213,7 @@ export default function Dashboard() {
                         <Calendar className="w-4 h-4" />
                       </div>
                       <div>
-                        <span className="font-bold text-xs text-white block">
+                        <span className="font-bold text-xs text-zinc-900 dark:text-white block">
                           {meeting.title || meeting.name}
                         </span>
                         <span className="text-[10px] text-zinc-500 block">
@@ -233,7 +233,7 @@ export default function Dashboard() {
           {/* Recent Tasks */}
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-400">
                 My Pending Tasks
               </h3>
               <Button
@@ -248,26 +248,26 @@ export default function Dashboard() {
 
             <div className="space-y-3">
               {recentTasks.length === 0 ? (
-                <div className="text-center py-8 bg-card border border-white/5 rounded-2xl text-xs text-zinc-500 italic">
+                <div className="text-center py-8 bg-zinc-100/40 dark:bg-card border border-zinc-200 dark:border-white/5 rounded-2xl text-xs text-zinc-500 italic shadow-sm">
                   No pending tasks assigned to you.
                 </div>
               ) : (
                 recentTasks.map((task) => {
                   const priorityColor = ( {
-                    Low: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
-                    Medium: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-                    High: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-                    Critical: "bg-red-500/10 text-red-400 border-red-500/20",
+                    Low: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20",
+                    Medium: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
+                    High: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+                    Critical: "bg-red-500/10 text-red-650 dark:text-red-400 border-red-500/20",
                   } as any )[task.priority || "Medium"];
 
                   return (
                     <div
                       key={task.id}
-                      className="flex items-center justify-between bg-card border border-white/5 hover:border-white/15 px-4 py-3 rounded-xl cursor-pointer gap-4 transition-all"
+                      className="flex items-center justify-between bg-white dark:bg-card border border-zinc-200 dark:border-white/5 hover:border-zinc-300 dark:hover:border-white/15 px-4 py-3 rounded-xl cursor-pointer gap-4 transition-all shadow-sm"
                       onClick={() => setLocation("/todo-manager")}
                     >
                       <div className="min-w-0 flex-1">
-                        <span className="font-bold text-xs text-white block truncate">
+                        <span className="font-bold text-xs text-zinc-900 dark:text-white block truncate">
                           {task.title}
                         </span>
                         <span className="text-[10px] text-zinc-500 truncate block mt-0.5">
@@ -279,7 +279,7 @@ export default function Dashboard() {
                         <Badge variant="outline" className={`text-[8px] font-bold ${priorityColor}`}>
                           {task.priority}
                         </Badge>
-                        <Badge variant="secondary" className="text-[8px] font-bold bg-white/5 text-zinc-400">
+                        <Badge variant="secondary" className="text-[8px] font-bold bg-zinc-100 dark:bg-white/5 text-zinc-650 dark:text-zinc-400">
                           {task.status}
                         </Badge>
                       </div>
@@ -293,15 +293,15 @@ export default function Dashboard() {
 
         {/* Right Column (Recent Activity) */}
         <div className="space-y-3">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-400">
             Recent Activity Log
           </h3>
-          <Card className="bg-card border-white/5 rounded-2xl p-4 min-h-[350px]">
+          <Card className="bg-white dark:bg-card border border-zinc-200 dark:border-white/5 rounded-2xl p-4 min-h-[350px] shadow-sm">
             <CardContent className="p-0 space-y-4 max-h-[500px] overflow-y-auto scrollbar-thin">
               {isLoadingActivities ? (
                 <div className="space-y-4">
                   {[...Array(3)].map((_, i) => (
-                    <div key={i} className="h-10 bg-white/5 rounded-lg animate-pulse" />
+                    <div key={i} className="h-10 bg-zinc-100 dark:bg-white/5 rounded-lg animate-pulse" />
                   ))}
                 </div>
               ) : activityLogs.length === 0 ? (
@@ -311,12 +311,12 @@ export default function Dashboard() {
               ) : (
                 activityLogs.slice(0, 8).map((log) => (
                   <div key={log._id} className="text-xs space-y-1">
-                    <div className="flex justify-between items-start font-bold text-white/95 leading-none">
+                    <div className="flex justify-between items-start font-bold text-zinc-800 dark:text-white/95 leading-none">
                       <span className="truncate max-w-[130px]">{log.actionType?.replace(/_/g, " ").toUpperCase()}</span>
                       <span className="text-[8px] text-zinc-500 font-normal">{timeAgo(log.createdAt)}</span>
                     </div>
-                    <p className="text-[11px] text-zinc-400 leading-normal">{log.details}</p>
-                    <div className="h-px bg-white/5 pt-1" />
+                    <p className="text-[11px] text-zinc-650 dark:text-zinc-400 leading-normal">{log.details}</p>
+                    <div className="h-px bg-zinc-100 dark:bg-white/5 pt-1" />
                   </div>
                 ))
               )}
@@ -340,14 +340,14 @@ function StatCard({
   sub: string;
 }) {
   return (
-    <div className="bg-card border border-white/5 rounded-2xl px-5 py-4 flex flex-col justify-between space-y-2">
+    <div className="bg-white dark:bg-card border border-zinc-200 dark:border-white/5 rounded-2xl px-5 py-4 flex flex-col justify-between space-y-2 shadow-sm">
       <div className="flex items-center gap-2">
         {icon}
         <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
           {label}
         </span>
       </div>
-      <p className="text-2xl font-bold tabular-nums text-white leading-none">{value}</p>
+      <p className="text-2xl font-bold tabular-nums text-zinc-900 dark:text-white leading-none">{value}</p>
       <p className="text-[9px] text-zinc-500 leading-none">{sub}</p>
     </div>
   );

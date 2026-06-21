@@ -400,38 +400,38 @@ export default function Collaboration() {
   return (
     <div className="flex-1 flex flex-col min-h-0 space-y-4">
       {/* Header with presence selection */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-200 dark:border-white/5 pb-4">
         <div className="flex items-center gap-3">
           <MessageSquare className="w-5 h-5 text-primary animate-pulse" />
-          <h1 className="font-semibold text-lg text-white font-sans">Workspace Collaboration</h1>
+          <h1 className="font-semibold text-lg text-zinc-900 dark:text-white font-sans">Workspace Collaboration</h1>
         </div>
 
         <div className="flex items-center gap-2">
           <span className="text-xs text-zinc-500 font-semibold">My Status:</span>
           <Select value={userStatus} onValueChange={handleUpdatePresence}>
-            <SelectTrigger className="w-32 bg-black/40 border-white/10 h-8 text-xs">
+            <SelectTrigger className="w-32 bg-white dark:bg-black/40 border-zinc-200 dark:border-white/10 h-8 text-xs text-zinc-800 dark:text-white font-medium">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="online">Online</SelectItem>
-              <SelectItem value="away">Away</SelectItem>
-              <SelectItem value="in-meeting">In Meeting</SelectItem>
+            <SelectContent className="bg-white dark:bg-[#09090b] border-zinc-200 dark:border-white/10 text-zinc-800 dark:text-white">
+              <SelectItem value="online" className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">Online</SelectItem>
+              <SelectItem value="away" className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">Away</SelectItem>
+              <SelectItem value="in-meeting" className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">In Meeting</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
 
       {/* Main chat window */}
-      <div className="bg-card border border-white/5 rounded-2xl overflow-hidden flex h-[580px] shadow-2xl relative">
+      <div className="bg-white dark:bg-card border border-zinc-200 dark:border-white/5 rounded-2xl overflow-hidden flex h-[580px] shadow-xl relative">
         {/* Left Column */}
-        <div className="w-64 border-r border-white/5 bg-black/10 flex flex-col shrink-0">
-          <div className="p-4 border-b border-white/5 flex items-center justify-between">
-            <h3 className="font-bold text-xs text-white truncate max-w-[130px]">{user?.name}</h3>
+        <div className="w-64 border-r border-zinc-200 dark:border-white/5 bg-zinc-50/50 dark:bg-black/10 flex flex-col shrink-0">
+          <div className="p-4 border-b border-zinc-200 dark:border-white/5 flex items-center justify-between">
+            <h3 className="font-bold text-xs text-zinc-900 dark:text-white truncate max-w-[130px]">{user?.name}</h3>
 
             <Dialog open={isCreateChannelOpen} onOpenChange={setIsCreateChannelOpen}>
               <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="w-7 h-7 rounded-full hover:bg-white/5">
-                  <Plus className="w-4 h-4 text-zinc-400 hover:text-white" />
+                <Button variant="ghost" size="icon" className="w-7 h-7 rounded-full hover:bg-zinc-200/50 dark:hover:bg-white/5">
+                  <Plus className="w-4 h-4 text-zinc-500 hover:text-zinc-900 dark:hover:text-white" />
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[425px]">
@@ -463,7 +463,7 @@ export default function Collaboration() {
                       </SelectTrigger>
                       <SelectContent>
                         {teams?.map((t) => (
-                          <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                           <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -492,7 +492,7 @@ export default function Collaboration() {
                 Channels
               </span>
               {channels.length === 0 ? (
-                <span className="text-[10px] text-zinc-600 italic pl-2">No channels created</span>
+                <span className="text-[10px] text-zinc-500 italic pl-2">No channels created</span>
               ) : (
                 channels.map((c) => (
                   <button
@@ -504,7 +504,7 @@ export default function Collaboration() {
                     className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
                       activeChannelId === c._id
                         ? "bg-primary/10 text-primary font-bold border-l-2 border-primary rounded-l-none"
-                        : "text-zinc-400 hover:bg-white/5 hover:text-white"
+                        : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200/50 dark:hover:bg-white/5 hover:text-zinc-950 dark:hover:text-white"
                     }`}
                   >
                     <span className="opacity-70 font-mono">#</span>
@@ -520,15 +520,15 @@ export default function Collaboration() {
                 Direct Messages
               </span>
               {coWorkers.length === 0 ? (
-                <span className="text-[10px] text-zinc-600 italic pl-2">No workspace coworkers</span>
+                <span className="text-[10px] text-zinc-500 italic pl-2">No workspace coworkers</span>
               ) : (
                 coWorkers.map((u) => {
                   const presence = onlinePresence[u.id] || "offline";
                   const presenceColors = {
-                    online: "text-emerald-400 fill-emerald-400",
-                    away: "text-amber-400 fill-amber-400",
-                    "in-meeting": "text-cyan-400 fill-cyan-400",
-                    offline: "text-zinc-600 fill-transparent",
+                    online: "text-emerald-500 fill-emerald-500 dark:text-emerald-400 dark:fill-emerald-400",
+                    away: "text-amber-500 fill-amber-500 dark:text-amber-400 dark:fill-amber-400",
+                    "in-meeting": "text-cyan-500 fill-cyan-500 dark:text-cyan-400 dark:fill-cyan-400",
+                    offline: "text-zinc-400 dark:text-zinc-600 fill-transparent",
                   };
 
                   return (
@@ -541,14 +541,14 @@ export default function Collaboration() {
                       className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors ${
                         activeDmUserId === u.id
                           ? "bg-primary/10 text-primary font-bold border-l-2 border-primary rounded-l-none"
-                          : "text-zinc-400 hover:bg-white/5 hover:text-white"
+                          : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200/50 dark:hover:bg-white/5 hover:text-zinc-950 dark:hover:text-white"
                       }`}
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <Circle className={`w-2 h-2 shrink-0 ${presenceColors[presence]}`} />
                         <span className="truncate">{u.name}</span>
                       </div>
-                      <span className="text-[9px] opacity-50 capitalize">{presence === "in-meeting" ? "meeting" : presence}</span>
+                      <span className="text-[9px] opacity-60 dark:opacity-50 capitalize">{presence === "in-meeting" ? "meeting" : presence}</span>
                     </button>
                   );
                 })
@@ -558,13 +558,13 @@ export default function Collaboration() {
         </div>
 
         {/* Right Column */}
-        <div className="flex-1 flex flex-col bg-[#09090b]">
+        <div className="flex-1 flex flex-col bg-white dark:bg-[#09090b]">
           {activeChannelId || activeDmUserId ? (
             <>
               {/* Chat Window Header */}
-              <div className="p-4 border-b border-white/5 flex items-center justify-between shrink-0 bg-black/20">
+              <div className="p-4 border-b border-zinc-200 dark:border-white/5 flex items-center justify-between shrink-0 bg-zinc-50/50 dark:bg-black/20">
                 <div>
-                  <h4 className="font-semibold text-xs text-white">{activeChatName}</h4>
+                  <h4 className="font-semibold text-xs text-zinc-900 dark:text-white">{activeChatName}</h4>
                   {activeDmUserId && (
                     <p className="text-[9px] text-zinc-500 capitalize">
                       Status: {onlinePresence[activeDmUserId] || "offline"}
@@ -583,7 +583,7 @@ export default function Collaboration() {
                     placeholder="Search messages..."
                     value={chatSearchQuery}
                     onChange={(e) => setChatSearchQuery(e.target.value)}
-                    className="pl-8 pr-3 h-7 text-[10px] bg-black/40 border-white/10 rounded-lg"
+                    className="pl-8 pr-3 h-7 text-[10px] bg-zinc-50 dark:bg-black/40 border-zinc-200 dark:border-white/10 rounded-lg text-zinc-900 dark:text-white"
                   />
                 </div>
               </div>
@@ -607,27 +607,27 @@ export default function Collaboration() {
                         </div>
                         <div className="max-w-[70%] space-y-1">
                           <div className={`flex items-baseline gap-2 text-[9px] text-zinc-500 ${isMe ? "flex-row-reverse" : ""}`}>
-                            <span className="font-bold text-zinc-300">{msg.sender?.name || "Member"}</span>
+                            <span className="font-bold text-zinc-700 dark:text-zinc-300">{msg.sender?.name || "Member"}</span>
                             <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
                           </div>
                           <div className={`px-3 py-2 rounded-xl text-xs leading-relaxed inline-block ${
                             isMe
                               ? "bg-primary text-primary-foreground rounded-tr-none text-left"
-                              : "bg-white/5 text-white rounded-tl-none border border-white/5"
+                              : "bg-zinc-100 dark:bg-white/5 text-zinc-900 dark:text-white rounded-tl-none border border-zinc-200 dark:border-white/5"
                           }`}>
                             {msg.text}
 
                             {msg.file && (
-                              <div className="mt-2 p-2 bg-black/30 rounded-lg flex items-center justify-between gap-4 border border-white/5 text-[10px]">
+                              <div className="mt-2 p-2 bg-zinc-200/50 dark:bg-black/30 rounded-lg flex items-center justify-between gap-4 border border-zinc-350 dark:border-white/5 text-[10px]">
                                 <div className="flex items-center gap-1.5 min-w-0">
-                                  <Paperclip className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                                  <span className="font-semibold truncate text-white">{msg.file.filename}</span>
+                                  <Paperclip className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400 shrink-0" />
+                                  <span className="font-semibold truncate text-zinc-900 dark:text-white">{msg.file.filename}</span>
                                 </div>
                                 <a
                                   href={msg.file.fileUrl}
                                   download
                                   target="_blank"
-                                  className="p-1 rounded bg-white/5 hover:bg-white/10 text-white shrink-0"
+                                  className="p-1 rounded bg-zinc-250 hover:bg-zinc-300 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-800 dark:text-white shrink-0"
                                 >
                                   <Download className="w-3 h-3" />
                                 </a>
@@ -639,7 +639,7 @@ export default function Collaboration() {
                             <div className="text-[8px] text-zinc-500 flex justify-end items-center gap-0.5 mt-0.5">
                               {msg.readBy && msg.readBy.length > 0 ? (
                                 <>
-                                  <CheckCheck className="w-3 h-3 text-emerald-400" />
+                                  <CheckCheck className="w-3 h-3 text-emerald-500 dark:text-emerald-400" />
                                   <span>Read</span>
                                 </>
                               ) : (
@@ -674,13 +674,13 @@ export default function Collaboration() {
               </div>
 
               {/* Chat Input panel */}
-              <div className="p-3.5 border-t border-white/5 flex items-center gap-2 shrink-0 bg-black/20">
+              <div className="p-3.5 border-t border-zinc-200 dark:border-white/5 flex items-center gap-2 shrink-0 bg-zinc-50/50 dark:bg-black/20">
                 <Button
                   size="icon"
                   variant="ghost"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isUploading}
-                  className="w-9 h-9 rounded-full text-zinc-500 hover:text-white hover:bg-white/5"
+                  className="w-9 h-9 rounded-full text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-250 dark:hover:bg-white/5"
                 >
                   {isUploading ? (
                     <Loader2 className="w-4 h-4 animate-spin text-primary" />
@@ -702,7 +702,7 @@ export default function Collaboration() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") handleSendChatMessage();
                   }}
-                  className="flex-1 bg-black/40 border-white/10 text-xs rounded-xl h-9 focus-visible:ring-offset-0 focus-visible:ring-primary"
+                  className="flex-1 bg-white dark:bg-black/40 border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white text-xs rounded-xl h-9 focus-visible:ring-offset-0 focus-visible:ring-primary"
                 />
 
                 <Button
@@ -716,10 +716,10 @@ export default function Collaboration() {
               </div>
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-[#09090b]">
-              <MessageSquare className="w-12 h-12 text-zinc-700/50 mb-4" />
-              <h3 className="font-semibold text-sm mb-1 text-white">Select Chat Conversation</h3>
-              <p className="text-xs text-zinc-500 max-w-xs">
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-zinc-50/30 dark:bg-[#09090b]">
+              <MessageSquare className="w-12 h-12 text-zinc-400 dark:text-zinc-700/50 mb-4" />
+              <h3 className="font-semibold text-sm mb-1 text-zinc-900 dark:text-white">Select Chat Conversation</h3>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-xs">
                 Choose a workspace channel or click on a colleague under Direct Messages to start collaborating in real-time.
               </p>
             </div>

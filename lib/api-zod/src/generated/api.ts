@@ -295,6 +295,7 @@ export const GetUserProfileResponse = zod.object({
   "bio": zod.string().nullish(),
   "timezone": zod.string().nullish(),
   "avatar": zod.string().nullish(),
+  "profileColor": zod.string().nullish(),
   "authProvider": zod.enum(['local', 'google']),
   "googleId": zod.string().nullish(),
   "profilePicture": zod.string().nullish(),
@@ -320,6 +321,7 @@ export const UpdateUserProfileBody = zod.object({
   "bio": zod.string().nullish(),
   "timezone": zod.string().nullish(),
   "avatar": zod.string().nullish(),
+  "profileColor": zod.string().optional(),
   "notificationSettings": zod.object({
   "email": zod.boolean().optional(),
   "push": zod.boolean().optional(),
@@ -338,6 +340,7 @@ export const UpdateUserProfileResponse = zod.object({
   "bio": zod.string().nullish(),
   "timezone": zod.string().nullish(),
   "avatar": zod.string().nullish(),
+  "profileColor": zod.string().nullish(),
   "authProvider": zod.enum(['local', 'google']),
   "googleId": zod.string().nullish(),
   "profilePicture": zod.string().nullish(),

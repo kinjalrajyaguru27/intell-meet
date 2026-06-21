@@ -675,7 +675,7 @@ export default function MeetingDetail() {
               <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                 <Video className="w-4 h-4 text-primary" />
               </div>
-              <h1 className="font-semibold text-lg text-white truncate max-w-xs md:max-w-md">{meeting.name}</h1>
+              <h1 className="font-semibold text-lg text-zinc-900 dark:text-white truncate max-w-xs md:max-w-md">{meeting.name}</h1>
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -757,7 +757,7 @@ export default function MeetingDetail() {
               </div>
               <div className="flex justify-between items-center bg-muted/40 p-3 rounded-xl max-w-2xl mx-auto text-xs">
                 <div>
-                  <p className="font-semibold text-white">{recordings[0].title}</p>
+                  <p className="font-semibold text-zinc-900 dark:text-white">{recordings[0].title}</p>
                   <p className="text-muted-foreground text-[10px]">
                     Size: {recordings[0].sizeBytes ? `${(recordings[0].sizeBytes / (1024 * 1024)).toFixed(1)} MB` : "—"} | Duration: {formatDuration(recordings[0].durationSeconds)}
                   </p>
@@ -884,11 +884,11 @@ export default function MeetingDetail() {
                           className={`p-2.5 rounded-lg border text-left cursor-pointer transition-all ${
                             selectedVersion?._id === v._id
                               ? "bg-primary/10 border-primary"
-                              : "bg-muted/30 border-border/60 hover:border-white/10"
+                              : "bg-muted/30 border-border/60 hover:border-zinc-350 dark:hover:border-white/10"
                           }`}
                         >
                           <div className="flex justify-between items-start text-[10px] mb-1">
-                            <span className="font-semibold text-white">{v.author?.name || "Editor"}</span>
+                            <span className="font-semibold text-zinc-900 dark:text-white">{v.author?.name || "Editor"}</span>
                             <span className="text-muted-foreground font-mono">{new Date(v.createdAt).toLocaleTimeString()}</span>
                           </div>
                           <p className="text-[9px] text-muted-foreground font-mono truncate">{v.content}</p>
@@ -900,13 +900,13 @@ export default function MeetingDetail() {
                   {/* Selected version rollback action preview */}
                   {selectedVersion && (
                     <div className="border-t border-border pt-3 space-y-3">
-                      <div className="flex justify-between items-center text-[10px] font-bold text-white">
+                      <div className="flex justify-between items-center text-[10px] font-bold text-zinc-900 dark:text-white">
                         <span>Preview Selection</span>
                         <Button
                           size="sm"
                           variant="ghost"
                           onClick={() => setSelectedVersion(null)}
-                          className="h-5 px-2 text-muted-foreground hover:text-white"
+                          className="h-5 px-2 text-muted-foreground hover:text-zinc-900 dark:hover:text-white"
                         >
                           Cancel
                         </Button>
@@ -932,7 +932,7 @@ export default function MeetingDetail() {
               <section className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6">
                 <div className="flex items-center justify-between flex-wrap gap-4 border-b border-border/40 pb-4">
                   <div>
-                    <h2 className="font-semibold flex items-center gap-2 text-base text-white">
+                    <h2 className="font-semibold flex items-center gap-2 text-base text-zinc-900 dark:text-white">
                       <Sparkles className="w-5 h-5 text-violet-400" />
                       AI Summary Profiles
                     </h2>
@@ -1005,7 +1005,7 @@ export default function MeetingDetail() {
 
                   return (
                     <div className="space-y-6">
-                      <div className="prose prose-invert max-w-none text-sm text-foreground/80 leading-relaxed bg-muted/10 p-5 rounded-xl border border-white/5 whitespace-pre-wrap">
+                      <div className="prose dark:prose-invert max-w-none text-sm text-zinc-800 dark:text-foreground/80 leading-relaxed bg-zinc-50 dark:bg-muted/10 p-5 rounded-xl border border-zinc-200 dark:border-white/5 whitespace-pre-wrap">
                         {displayMainSummary}
                       </div>
 
@@ -1018,7 +1018,7 @@ export default function MeetingDetail() {
                             {activeSummary.keyPoints.map((pt, i) => (
                               <div
                                 key={i}
-                                className="flex items-start gap-2.5 bg-muted/15 p-3 rounded-xl border border-white/5 text-xs text-white"
+                                className="flex items-start gap-2.5 bg-zinc-50/50 dark:bg-muted/15 p-3 rounded-xl border border-zinc-200 dark:border-white/5 text-xs text-zinc-900 dark:text-white"
                               >
                                 <span className="w-1.5 h-1.5 rounded-full bg-violet-400 mt-1.5 shrink-0" />
                                 <span>{pt}</span>
@@ -1078,7 +1078,7 @@ export default function MeetingDetail() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-8 rounded-full text-xs font-semibold text-muted-foreground hover:text-white"
+                          className="h-8 rounded-full text-xs font-semibold text-muted-foreground hover:text-zinc-900 dark:hover:text-white"
                           onClick={() =>
                             summarizeMutation.mutate({
                               data: { meetingId, summaryType: selectedSummaryType },
@@ -1208,7 +1208,7 @@ export default function MeetingDetail() {
               <section className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6">
                 <div className="flex items-center justify-between mb-4 border-b border-border/40 pb-4">
                   <div>
-                    <h2 className="font-semibold flex items-center gap-2 text-base text-white">
+                    <h2 className="font-semibold flex items-center gap-2 text-base text-zinc-900 dark:text-white">
                       <Sparkles className="w-5 h-5 text-violet-400 animate-pulse" />
                       AI Action Items (Kanban Board Synced)
                     </h2>
@@ -1249,10 +1249,10 @@ export default function MeetingDetail() {
                     {aiActionItemsQuery.data.map((item) => (
                       <div
                         key={item.id}
-                        className="bg-muted/10 border border-border/60 hover:border-white/10 transition-colors p-4 rounded-xl space-y-3 relative overflow-hidden"
+                        className="bg-zinc-50/50 dark:bg-muted/10 border border-zinc-200 dark:border-border/60 hover:border-zinc-300 dark:hover:border-white/10 transition-colors p-4 rounded-xl space-y-3 relative overflow-hidden"
                       >
                         <div className="flex items-start justify-between gap-3">
-                          <h3 className="text-sm font-semibold text-white leading-snug">{item.title}</h3>
+                          <h3 className="text-sm font-semibold text-zinc-900 dark:text-white leading-snug">{item.title}</h3>
                           <span
                             className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase shrink-0 ${
                               item.priority === "High"
@@ -1268,7 +1268,7 @@ export default function MeetingDetail() {
                         {item.description && (
                           <p className="text-xs text-muted-foreground/80 leading-relaxed">{item.description}</p>
                         )}
-                        <div className="flex items-center justify-between border-t border-white/5 pt-3 text-xs flex-wrap gap-2">
+                        <div className="flex items-center justify-between border-t border-zinc-200 dark:border-white/5 pt-3 text-xs flex-wrap gap-2">
                           <div className="flex items-center gap-4 text-muted-foreground">
                             {item.assigneeName && (
                               <span className="flex items-center gap-1">
@@ -1310,7 +1310,7 @@ export default function MeetingDetail() {
               <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6">
                 <div className="border-b border-border/40 pb-4 flex items-center justify-between flex-wrap gap-3">
                   <div>
-                    <h2 className="font-semibold flex items-center gap-2 text-base text-white">
+                    <h2 className="font-semibold flex items-center gap-2 text-base text-zinc-900 dark:text-white">
                       <TrendingUp className="w-5 h-5 text-violet-400" />
                       Critical Decisions Tracker
                     </h2>
@@ -1327,7 +1327,7 @@ export default function MeetingDetail() {
               <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6">
                 <div className="border-b border-border/40 pb-4 flex items-center justify-between items-center flex-wrap gap-3">
                   <div>
-                    <h2 className="font-semibold flex items-center gap-2 text-base text-white">
+                    <h2 className="font-semibold flex items-center gap-2 text-base text-zinc-900 dark:text-white">
                       <Save className="w-5 h-5 text-violet-400" />
                       Follow-up recaps & exports
                     </h2>

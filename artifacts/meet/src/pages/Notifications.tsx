@@ -121,10 +121,10 @@ export default function Notifications() {
   return (
     <div className="flex-1 flex flex-col min-h-0 space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-200 dark:border-white/5 pb-4">
         <div className="flex items-center gap-3">
           <Bell className="w-5 h-5 text-primary" />
-          <h1 className="font-semibold text-lg text-white font-sans">Notifications Center</h1>
+          <h1 className="font-semibold text-lg text-zinc-900 dark:text-white font-sans">Notifications Center</h1>
           {unreadCount > 0 && (
             <Badge variant="destructive" className="rounded-full text-[10px] font-bold">
               {unreadCount} Unread
@@ -132,7 +132,7 @@ export default function Notifications() {
           )}
         </div>
         {unreadCount > 0 && (
-          <Button size="sm" variant="outline" onClick={markAllRead} className="rounded-full text-xs font-semibold border-white/10">
+          <Button size="sm" variant="outline" onClick={markAllRead} className="rounded-full text-xs font-semibold border-zinc-250 dark:border-white/10 hover:bg-zinc-150 dark:hover:bg-white/5 text-zinc-800 dark:text-white">
             <Check className="w-3.5 h-3.5 mr-1" />
             Mark all read
           </Button>
@@ -140,7 +140,7 @@ export default function Notifications() {
       </div>
 
       {/* Tabs Selection row */}
-      <div className="flex border-b border-white/5 overflow-x-auto pb-px">
+      <div className="flex border-b border-zinc-200 dark:border-white/5 overflow-x-auto pb-px">
         {([
           { value: "all", label: "All Alerts" },
           { value: "mentions", label: "Mentions" },
@@ -154,7 +154,7 @@ export default function Notifications() {
             className={`flex items-center gap-2 px-5 py-3 border-b-2 font-semibold text-xs uppercase tracking-wider transition-all whitespace-nowrap ${
               activeFilter === tab.value
                 ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-white"
+                : "border-transparent text-muted-foreground hover:text-zinc-900 dark:hover:text-white"
             }`}
           >
             {tab.label}
@@ -165,34 +165,34 @@ export default function Notifications() {
       {/* Main notifications list */}
       <div className="flex-1 min-h-0">
         {filteredNotifs.length === 0 ? (
-          <div className="py-20 text-center bg-card/20 border border-white/5 rounded-2xl flex flex-col items-center">
-            <Bell className="w-12 h-12 text-muted-foreground/20 mb-4 animate-pulse" />
-            <h3 className="font-semibold text-sm mb-1 text-white">All caught up!</h3>
+          <div className="py-20 text-center bg-white dark:bg-card/20 border border-zinc-200 dark:border-white/5 rounded-2xl flex flex-col items-center shadow-sm">
+            <Bell className="w-12 h-12 text-zinc-400 dark:text-muted-foreground/20 mb-4 animate-pulse" />
+            <h3 className="font-semibold text-sm mb-1 text-zinc-900 dark:text-white">All caught up!</h3>
             <p className="text-xs text-muted-foreground max-w-xs">
               No notifications logs found for category "{activeFilter}".
             </p>
           </div>
         ) : (
-          <div className="bg-card border border-white/5 rounded-2xl divide-y divide-white/5 overflow-hidden">
+          <div className="bg-white dark:bg-card border border-zinc-200 dark:border-white/5 rounded-2xl divide-y divide-zinc-200 dark:divide-white/5 overflow-hidden shadow-sm">
             {filteredNotifs.map(n => (
               <div
                 key={n._id}
                 className={`p-4 flex gap-4 transition-colors ${
-                  !n.isRead ? "bg-primary/5 hover:bg-primary/10" : "hover:bg-white/5"
+                  !n.isRead ? "bg-primary/5 hover:bg-primary/10" : "hover:bg-zinc-50 dark:hover:bg-white/5"
                 }`}
               >
                 {/* Left icon wrapper */}
-                <div className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center shrink-0 border border-white/5">
+                <div className="w-9 h-9 rounded-xl bg-zinc-50 dark:bg-white/5 flex items-center justify-center shrink-0 border border-zinc-200 dark:border-white/5">
                   {getIconForType(n.type)}
                 </div>
 
                 {/* Main details */}
                 <div className="flex-1 min-w-0 space-y-1">
                   <div className="flex justify-between items-start flex-wrap gap-2">
-                    <h4 className={`text-xs font-bold truncate ${!n.isRead ? "text-white" : "text-zinc-300"}`}>
+                    <h4 className={`text-xs font-bold truncate ${!n.isRead ? "text-zinc-900 dark:text-white" : "text-zinc-600 dark:text-zinc-400"}`}>
                       {n.title}
                     </h4>
-                    <span className="text-[10px] text-zinc-500">{timeAgo(n.createdAt)}</span>
+                    <span className="text-[10px] text-zinc-500 dark:text-zinc-400">{timeAgo(n.createdAt)}</span>
                   </div>
                   <p className="text-xs text-muted-foreground leading-relaxed">{n.content}</p>
                 </div>
@@ -204,7 +204,7 @@ export default function Notifications() {
                       size="icon"
                       variant="ghost"
                       onClick={() => markRead(n._id)}
-                      className="w-8 h-8 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white"
+                      className="w-8 h-8 rounded-lg hover:bg-zinc-150 dark:hover:bg-white/5 text-zinc-550 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
                       title="Mark as read"
                     >
                       <Check className="w-4 h-4" />
@@ -214,7 +214,7 @@ export default function Notifications() {
                     size="icon"
                     variant="ghost"
                     onClick={() => deleteNotif(n._id)}
-                    className="w-8 h-8 rounded-lg hover:bg-rose-500/10 text-rose-400 hover:text-rose-300"
+                    className="w-8 h-8 rounded-lg hover:bg-rose-500/10 text-rose-500 dark:text-rose-400 hover:text-rose-600 dark:hover:text-rose-300"
                     title="Delete alert"
                   >
                     <Trash2 className="w-4 h-4" />

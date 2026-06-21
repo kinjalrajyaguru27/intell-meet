@@ -166,22 +166,22 @@ export default function AIInsights() {
   return (
     <div className="flex-1 flex flex-col min-h-0 space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-200 dark:border-white/5 pb-4">
         <div className="flex items-center gap-3">
-          <Brain className="w-5 h-5 text-violet-400 animate-pulse" />
-          <h1 className="font-semibold text-lg text-white font-sans">AI Meeting Intelligence</h1>
+          <Brain className="w-5 h-5 text-violet-500 dark:text-violet-400 animate-pulse" />
+          <h1 className="font-semibold text-lg text-zinc-900 dark:text-white font-sans">AI Meeting Intelligence</h1>
         </div>
 
         {/* Dropdown Selector */}
         <div className="flex items-center gap-2">
-          <ListFilter className="w-4 h-4 text-zinc-500" />
+          <ListFilter className="w-4 h-4 text-zinc-550 dark:text-zinc-450" />
           <Select value={selectedMeetingId} onValueChange={setSelectedMeetingId}>
-            <SelectTrigger className="w-64 bg-black/40 border-white/10 h-9 text-xs">
+            <SelectTrigger className="w-64 bg-white dark:bg-black/40 border-zinc-200 dark:border-white/10 h-9 text-xs text-zinc-800 dark:text-white font-medium">
               <SelectValue placeholder="Select a past meeting" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white dark:bg-[#09090b] border-zinc-200 dark:border-white/10 text-zinc-800 dark:text-white">
               {meetings.map((m) => (
-                <SelectItem key={m.id || m._id} value={m.id || m._id}>
+                <SelectItem key={m.id || m._id} value={m.id || m._id} className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">
                   {m.title || m.name} ({formatDate(m.startedAt)})
                 </SelectItem>
               ))}
@@ -201,9 +201,9 @@ export default function AIInsights() {
           <span className="text-xs text-muted-foreground">Parsing AI models...</span>
         </div>
       ) : !meetingDetail ? (
-        <div className="py-20 text-center bg-card/20 border border-white/5 rounded-2xl flex flex-col items-center">
-          <Brain className="w-12 h-12 text-zinc-700/50 mb-4 animate-pulse" />
-          <h3 className="font-semibold text-sm mb-1 text-white">No Meeting Selected</h3>
+        <div className="py-20 text-center bg-white dark:bg-card/20 border border-zinc-200 dark:border-white/5 rounded-2xl flex flex-col items-center shadow-sm">
+          <Brain className="w-12 h-12 text-zinc-400 dark:text-zinc-700/50 mb-4 animate-pulse" />
+          <h3 className="font-semibold text-sm mb-1 text-zinc-900 dark:text-white">No Meeting Selected</h3>
           <p className="text-xs text-zinc-500 max-w-xs">
             Please choose a completed session from the dropdown to run AI analytics.
           </p>
@@ -211,22 +211,22 @@ export default function AIInsights() {
       ) : (
         <div className="space-y-6">
           {/* Quick meeting stats overview */}
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 bg-card border border-white/5 p-4 rounded-2xl">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 bg-white dark:bg-card border border-zinc-200 dark:border-white/5 p-4 rounded-2xl shadow-sm">
             <div className="space-y-1">
               <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Meeting Name</span>
-              <span className="text-xs font-bold text-white block truncate">{meetingDetail.title || meetingDetail.name}</span>
+              <span className="text-xs font-bold text-zinc-900 dark:text-white block truncate">{meetingDetail.title || meetingDetail.name}</span>
             </div>
             <div className="space-y-1">
               <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Date & Time</span>
-              <span className="text-xs font-bold text-zinc-300 block">{formatDate(meetingDetail.startedAt)}</span>
+              <span className="text-xs font-bold text-zinc-800 dark:text-zinc-300 block">{formatDate(meetingDetail.startedAt)}</span>
             </div>
             <div className="space-y-1">
               <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Duration</span>
-              <span className="text-xs font-bold text-zinc-300 block">{formatDuration(meetingDetail.durationSeconds)}</span>
+              <span className="text-xs font-bold text-zinc-800 dark:text-zinc-300 block">{formatDuration(meetingDetail.durationSeconds)}</span>
             </div>
             <div className="space-y-1">
               <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Participants</span>
-              <span className="text-xs font-bold text-zinc-300 block truncate">
+              <span className="text-xs font-bold text-zinc-800 dark:text-zinc-300 block truncate">
                 {meetingDetail.participantNames?.join(", ") || "None"}
               </span>
             </div>
@@ -234,7 +234,7 @@ export default function AIInsights() {
 
           {/* Tabs switch panel */}
           <Tabs defaultValue="insights" className="w-full">
-            <TabsList className="grid w-full grid-cols-5 bg-muted/20 border border-white/5 rounded-xl h-10 p-1">
+            <TabsList className="grid w-full grid-cols-5 bg-zinc-100 dark:bg-muted/20 border border-zinc-200 dark:border-white/5 rounded-xl h-10 p-1">
               <TabsTrigger value="insights" className="text-xs font-semibold">Insights Dashboard</TabsTrigger>
               <TabsTrigger value="summary" className="text-xs font-semibold">AI Summaries</TabsTrigger>
               <TabsTrigger value="decisions" className="text-xs font-semibold">Decisions</TabsTrigger>
@@ -258,27 +258,27 @@ export default function AIInsights() {
                   <div key={s.id} className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {/* Main short/detailed summaries */}
                     <div className="md:col-span-2 space-y-4">
-                      <Card className="bg-card border-white/5 rounded-2xl">
+                      <Card className="bg-white dark:bg-card border border-zinc-200 dark:border-white/5 rounded-2xl shadow-sm">
                         <CardHeader className="pb-2">
-                          <CardTitle className="text-sm font-bold text-white flex items-center gap-1.5">
-                            <Sparkles className="w-4 h-4 text-violet-400" />
+                          <CardTitle className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
+                            <Sparkles className="w-4 h-4 text-violet-550 dark:text-violet-400" />
                             Executive Summary
                           </CardTitle>
                         </CardHeader>
-                        <CardContent className="text-xs leading-relaxed text-zinc-300 space-y-3 font-sans">
+                        <CardContent className="text-xs leading-relaxed text-zinc-800 dark:text-zinc-300 space-y-3 font-sans">
                           <p className="italic">"{s.shortSummary}"</p>
-                          <div className="h-px bg-white/5" />
+                          <div className="h-px bg-zinc-200 dark:bg-white/5" />
                           <p className="whitespace-pre-wrap">{s.executiveSummary || s.detailedSummary}</p>
                         </CardContent>
                       </Card>
 
                       {s.keyPoints && s.keyPoints.length > 0 && (
-                        <Card className="bg-card border-white/5 rounded-2xl">
+                        <Card className="bg-white dark:bg-card border border-zinc-200 dark:border-white/5 rounded-2xl shadow-sm">
                           <CardHeader className="pb-2">
-                            <CardTitle className="text-xs font-bold text-white">Key Discussion Points</CardTitle>
+                            <CardTitle className="text-xs font-bold text-zinc-900 dark:text-white">Key Discussion Points</CardTitle>
                           </CardHeader>
                           <CardContent>
-                            <ul className="list-disc pl-4 text-xs space-y-1.5 text-zinc-300">
+                            <ul className="list-disc pl-4 text-xs space-y-1.5 text-zinc-800 dark:text-zinc-300">
                               {s.keyPoints.map((pt: string, idx: number) => (
                                 <li key={idx}>{pt}</li>
                               ))}
@@ -290,14 +290,14 @@ export default function AIInsights() {
 
                     {/* Side card containing outcomes, risks, opportunities */}
                     <div className="space-y-4">
-                      <Card className="bg-card border-white/5 rounded-2xl">
+                      <Card className="bg-white dark:bg-card border border-zinc-200 dark:border-white/5 rounded-2xl shadow-sm">
                         <CardHeader className="pb-2">
-                          <CardTitle className="text-xs font-bold text-white flex items-center gap-1.5">
-                            <CheckCircle className="w-4 h-4 text-emerald-400" />
+                          <CardTitle className="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
+                            <CheckCircle className="w-4 h-4 text-emerald-555 dark:text-emerald-400" />
                             Meeting Outcomes
                           </CardTitle>
                         </CardHeader>
-                        <CardContent className="text-xs text-zinc-300">
+                        <CardContent className="text-xs text-zinc-800 dark:text-zinc-300">
                           {s.outcomes && s.outcomes.length > 0 ? (
                             <ul className="list-disc pl-4 space-y-1.5">
                               {s.outcomes.map((ot: string, i: number) => <li key={i}>{ot}</li>)}
@@ -308,14 +308,14 @@ export default function AIInsights() {
                         </CardContent>
                       </Card>
 
-                      <Card className="bg-card border-white/5 rounded-2xl">
+                      <Card className="bg-white dark:bg-card border border-zinc-200 dark:border-white/5 rounded-2xl shadow-sm">
                         <CardHeader className="pb-2">
-                          <CardTitle className="text-xs font-bold text-white flex items-center gap-1.5">
-                            <AlertTriangle className="w-4 h-4 text-rose-400" />
+                          <CardTitle className="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
+                            <AlertTriangle className="w-4 h-4 text-rose-550 dark:text-rose-400" />
                             Identified Risks & Roadblocks
                           </CardTitle>
                         </CardHeader>
-                        <CardContent className="text-xs text-zinc-300">
+                        <CardContent className="text-xs text-zinc-800 dark:text-zinc-300">
                           {s.risks && s.risks.length > 0 ? (
                             <ul className="list-disc pl-4 space-y-1.5">
                               {s.risks.map((rk: string, i: number) => <li key={i}>{rk}</li>)}
@@ -338,29 +338,29 @@ export default function AIInsights() {
 
             {/* Tab 4: Transcripts */}
             <TabsContent value="transcripts" className="pt-4">
-              <Card className="bg-card border-white/5 rounded-2xl">
-                <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                  <CardTitle className="text-sm font-bold text-white flex items-center gap-1.5">
-                    <MessageSquare className="w-4 h-4 text-sky-400" />
+              <Card className="bg-white dark:bg-card border border-zinc-200 dark:border-white/5 rounded-2xl shadow-sm">
+                <CardHeader className="pb-2 flex flex-row items-center justify-between border-b border-zinc-100 dark:border-white/5">
+                  <CardTitle className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
+                    <MessageSquare className="w-4 h-4 text-sky-500 dark:text-sky-400" />
                     Full Meeting Transcript Logs
                   </CardTitle>
-                  <Badge variant="secondary" className="bg-white/5 text-zinc-400">
+                  <Badge variant="secondary" className="bg-zinc-100 dark:bg-white/5 text-zinc-700 dark:text-zinc-400 border border-zinc-200 dark:border-transparent">
                     {transcripts.length} dialogue lines
                   </Badge>
                 </CardHeader>
-                <CardContent className="max-h-[450px] overflow-y-auto space-y-4 pt-2 font-sans">
+                <CardContent className="max-h-[450px] overflow-y-auto space-y-4 pt-4 font-sans">
                   {transcripts.map((t) => (
                     <div key={t.id} className="flex gap-3 text-xs items-start">
-                      <div className="w-7 h-7 rounded-full bg-sky-500/10 text-sky-400 font-bold flex items-center justify-center shrink-0">
+                      <div className="w-7 h-7 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400 font-bold flex items-center justify-center shrink-0">
                         {t.speaker?.charAt(0).toUpperCase()}
                       </div>
                       <div className="flex-1 space-y-0.5">
                         <div className="flex items-center gap-2 text-[10px] text-zinc-500">
-                          <span className="font-bold text-zinc-300">{t.speaker}</span>
+                          <span className="font-bold text-zinc-800 dark:text-zinc-300">{t.speaker}</span>
                           <span>•</span>
                           <span>{t.timestamp ? new Date(t.timestamp).toLocaleTimeString() : ""}</span>
                         </div>
-                        <p className="text-white/85 bg-white/5 p-2 rounded-lg border border-white/5 leading-relaxed">{t.text}</p>
+                        <p className="text-zinc-850 dark:text-white/85 bg-zinc-50 dark:bg-white/5 p-2 rounded-lg border border-zinc-200 dark:border-white/5 leading-relaxed">{t.text}</p>
                       </div>
                     </div>
                   ))}

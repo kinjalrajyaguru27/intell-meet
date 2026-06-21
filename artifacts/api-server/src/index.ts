@@ -20,6 +20,7 @@ connectDB()
   .then(() => {
     httpServer.listen(port, () => {
       logger.info({ port }, "Server listening and connected to MongoDB");
+      console.log(`\n🚀 Intell Meet is ready! Open http://localhost:${port} in your browser to view the application.\n`);
     });
   })
   .catch((err) => {

@@ -173,42 +173,42 @@ export default function TeamInvitation() {
 
   if (token) {
     return (
-      <div className="min-h-screen bg-[#09090b] text-zinc-100 flex flex-col">
+      <div className="min-h-screen bg-background text-foreground flex flex-col">
         <Header />
         <main className="flex-1 flex items-center justify-center p-6">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-[128px] pointer-events-none" />
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-[128px] pointer-events-none" />
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 dark:bg-primary/20 rounded-full blur-[128px] pointer-events-none" />
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-550/5 dark:bg-indigo-500/10 rounded-full blur-[128px] pointer-events-none" />
 
           {isDetailsLoading ? (
             <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
           ) : inviteDetails ? (
-            <Card className="w-full max-w-md bg-card/65 backdrop-blur-xl border border-white/10 shadow-2xl overflow-hidden relative">
+            <Card className="w-full max-w-md bg-white dark:bg-card/65 backdrop-blur-xl border border-zinc-200 dark:border-white/10 shadow-2xl overflow-hidden relative">
               <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-primary to-indigo-500" />
               
               <CardHeader className="text-center pt-8 space-y-2">
                 <div className="mx-auto w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-2">
                   <Users className="w-6 h-6 text-primary" />
                 </div>
-                <CardTitle className="text-xl font-bold text-white">Join Team Workspace</CardTitle>
+                <CardTitle className="text-xl font-bold text-zinc-900 dark:text-white">Join Team Workspace</CardTitle>
                 <CardDescription className="text-xs text-muted-foreground">
                   You have been invited to participate in a team
                 </CardDescription>
               </CardHeader>
 
               <CardContent className="space-y-4 pt-2">
-                <div className="bg-white/5 rounded-xl border border-white/5 p-4 space-y-3">
+                <div className="bg-zinc-50 dark:bg-white/5 rounded-xl border border-zinc-200 dark:border-white/5 p-4 space-y-3">
                   <div className="flex justify-between text-xs">
-                    <span className="text-zinc-400 font-medium">Invited To Join</span>
-                    <span className="text-white font-bold text-right">{inviteDetails.team?.name}</span>
+                    <span className="text-zinc-550 dark:text-zinc-400 font-medium">Invited To Join</span>
+                    <span className="text-zinc-800 dark:text-white font-bold text-right">{inviteDetails.team?.name}</span>
                   </div>
                   <div className="flex justify-between text-xs">
-                    <span className="text-zinc-400 font-medium">Invited By</span>
-                    <span className="text-white font-bold text-right">
+                    <span className="text-zinc-550 dark:text-zinc-400 font-medium">Invited By</span>
+                    <span className="text-zinc-800 dark:text-white font-bold text-right">
                       {inviteDetails.invitedBy?.name} ({inviteDetails.invitedBy?.email})
                     </span>
                   </div>
                   <div className="flex justify-between text-xs">
-                    <span className="text-zinc-400 font-medium">Your Role</span>
+                    <span className="text-zinc-550 dark:text-zinc-400 font-medium">Your Role</span>
                     <span className="text-primary font-bold text-right capitalize">{inviteDetails.role}</span>
                   </div>
                 </div>
@@ -222,7 +222,7 @@ export default function TeamInvitation() {
                 <Button
                   onClick={handleReject}
                   variant="outline"
-                  className="flex-1 h-11 border-white/10 hover:bg-white/5 hover:text-white rounded-xl gap-2 font-semibold text-xs"
+                  className="flex-1 h-11 border-zinc-250 dark:border-white/10 hover:bg-zinc-100 dark:hover:bg-white/5 text-zinc-800 dark:text-white rounded-xl gap-2 font-semibold text-xs"
                   disabled={acceptMutation.isPending || rejectMutation.isPending}
                 >
                   <X className="w-4 h-4" />
@@ -239,7 +239,7 @@ export default function TeamInvitation() {
               </CardFooter>
             </Card>
           ) : (
-            <div className="text-center text-zinc-400 text-sm">Invitation Details Unavailable</div>
+            <div className="text-center text-zinc-500 dark:text-zinc-400 text-sm font-medium">Invitation Details Unavailable</div>
           )}
         </main>
       </div>
@@ -248,21 +248,21 @@ export default function TeamInvitation() {
 
   // General Portal: Send Invitations
   return (
-    <div className="min-h-screen bg-[#09090b] text-zinc-100 flex flex-col">
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
       <Header />
 
       <main className="flex-1 p-6 md:p-8 max-w-4xl mx-auto w-full space-y-6">
-        <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+        <div className="flex items-center gap-3 border-b border-zinc-200 dark:border-white/5 pb-4">
           <Users className="w-5 h-5 text-primary" />
-          <h1 className="font-semibold text-lg text-white">Workspace Invitations</h1>
+          <h1 className="font-semibold text-lg text-zinc-900 dark:text-white font-sans">Workspace Invitations</h1>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Invite form: Only visible/usable if user is Admin or Manager */}
-          <Card className="bg-card/50 backdrop-blur-xl border border-white/10 md:col-span-2 relative">
+          <Card className="bg-white dark:bg-card/50 border border-zinc-200 dark:border-white/10 md:col-span-2 relative shadow-sm">
             <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-primary to-indigo-500" />
             <CardHeader>
-              <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
+              <CardTitle className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                 <UserPlus className="w-4 h-4 text-primary" />
                 Invite Team Members
               </CardTitle>
@@ -272,19 +272,19 @@ export default function TeamInvitation() {
             </CardHeader>
             <CardContent>
               {user?.role === "Member" ? (
-                <div className="flex flex-col items-center justify-center p-6 text-center border border-dashed border-white/10 rounded-xl space-y-3 bg-black/20">
-                  <ShieldAlert className="w-10 h-10 text-amber-500/80" />
-                  <h3 className="font-bold text-white text-sm">Access Restricted</h3>
-                  <p className="text-xs text-zinc-400 max-w-xs">
+                <div className="flex flex-col items-center justify-center p-6 text-center border border-dashed border-zinc-250 dark:border-white/10 rounded-xl space-y-3 bg-zinc-50 dark:bg-black/20">
+                  <ShieldAlert className="w-10 h-10 text-amber-550 dark:text-amber-500" />
+                  <h3 className="font-bold text-zinc-800 dark:text-white text-sm">Access Restricted</h3>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-xs leading-relaxed">
                     Your current role is **Team Member**. You must be a **Manager** or **Platform Admin** to generate invitation links.
                   </p>
                 </div>
               ) : (
                 <form onSubmit={handleSubmit(onInviteSubmit)} className="space-y-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="email" className="text-white text-xs font-semibold">Invitee Email Address</Label>
+                    <Label htmlFor="email" className="text-zinc-700 dark:text-white text-xs font-semibold">Invitee Email Address</Label>
                     <div className="relative">
-                      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                       <Input
                         id="email"
                         type="email"
@@ -296,7 +296,7 @@ export default function TeamInvitation() {
                             message: "Invalid email address"
                           }
                         })}
-                        className="bg-black/40 border-white/10 pl-10 text-xs h-10 text-white focus-visible:ring-primary"
+                        className="bg-zinc-50 dark:bg-black/40 border-zinc-250 dark:border-white/10 pl-10 text-xs h-10 text-foreground dark:text-white focus-visible:ring-primary"
                       />
                     </div>
                     {errors.email && <p className="text-xs text-destructive mt-0.5">{errors.email.message}</p>}
@@ -304,18 +304,18 @@ export default function TeamInvitation() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label htmlFor="teamId" className="text-white text-xs font-semibold">Select Team Workspace</Label>
+                      <Label htmlFor="teamId" className="text-zinc-700 dark:text-white text-xs font-semibold">Select Team Workspace</Label>
                       {isTeamsLoading ? (
-                        <div className="h-10 bg-zinc-800 animate-pulse rounded-lg" />
+                        <div className="h-10 bg-zinc-100 dark:bg-zinc-800 animate-pulse rounded-lg" />
                       ) : (
                         <select
                           id="teamId"
                           {...register("teamId", { required: "Please select a team" })}
-                          className="w-full bg-black/40 border border-white/10 rounded-lg h-10 px-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer"
+                          className="w-full bg-white dark:bg-black/40 border border-zinc-250 dark:border-white/10 rounded-lg h-10 px-3 text-xs text-zinc-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer font-medium"
                         >
-                          <option value="">Choose a team...</option>
+                          <option value="" className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">Choose a team...</option>
                           {teams?.map((team) => (
-                            <option key={team.id} value={team.id}>{team.name}</option>
+                            <option key={team.id} value={team.id} className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">{team.name}</option>
                           ))}
                         </select>
                       )}
@@ -323,15 +323,15 @@ export default function TeamInvitation() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label htmlFor="role" className="text-white text-xs font-semibold">Assign Role</Label>
+                      <Label htmlFor="role" className="text-zinc-700 dark:text-white text-xs font-semibold">Assign Role</Label>
                       <select
                         id="role"
                         {...register("role")}
-                        className="w-full bg-black/40 border border-white/10 rounded-lg h-10 px-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer"
+                        className="w-full bg-white dark:bg-black/40 border border-zinc-250 dark:border-white/10 rounded-lg h-10 px-3 text-xs text-zinc-850 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer font-medium"
                       >
-                        <option value="Member">Team Member</option>
-                        <option value="Manager">Manager</option>
-                        <option value="Admin">Admin</option>
+                        <option value="Member" className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">Team Member</option>
+                        <option value="Manager" className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">Manager</option>
+                        <option value="Admin" className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">Admin</option>
                       </select>
                     </div>
                   </div>
@@ -350,14 +350,14 @@ export default function TeamInvitation() {
           </Card>
 
           {/* Side card info */}
-          <Card className="bg-card/30 border-white/5 backdrop-blur-md">
+          <Card className="bg-white dark:bg-card/30 border border-zinc-200 dark:border-white/5 shadow-sm">
             <CardHeader>
-              <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
+              <CardTitle className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                 <Shield className="w-4 h-4 text-primary" />
                 Invitation Rules
               </CardTitle>
             </CardHeader>
-            <CardContent className="text-xs text-zinc-400 space-y-4 leading-relaxed">
+            <CardContent className="text-xs text-zinc-550 dark:text-zinc-400 space-y-4 leading-relaxed font-medium">
               <p>
                 - Invitations generate a secure link that can be visited by the invited user.
               </p>
@@ -378,10 +378,10 @@ export default function TeamInvitation() {
               <Clock className="w-4 h-4" />
               Developer Mail Catch Helper
             </div>
-            <p className="text-xs text-zinc-300">
+            <p className="text-xs text-zinc-650 dark:text-zinc-350">
               An invitation token was printed in the backend console. You can copy the simulated invite link below to test the acceptance flow locally:
             </p>
-            <div className="bg-black/60 p-3 rounded-lg border border-white/5 font-mono text-xs text-zinc-300 select-all break-all flex items-center justify-between gap-3">
+            <div className="bg-zinc-50 dark:bg-black/60 p-3 rounded-lg border border-zinc-200 dark:border-white/5 font-mono text-xs text-zinc-800 dark:text-zinc-300 select-all break-all flex items-center justify-between gap-3">
               <span>{simulatedMailLink}</span>
               <a
                 href={simulatedMailLink}

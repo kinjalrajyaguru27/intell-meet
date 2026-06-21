@@ -4,10 +4,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { COLOR_MAP } from "@/pages/EditProfile";
 import {
   Video, LayoutGrid, FolderKanban, Brain, Users, Bell,
   User, Settings, LogOut, X, MessageSquare, FileText,
-  CheckSquare, BarChart3
+  CheckSquare, BarChart3, Clock, Check
 } from "lucide-react";
 
 interface SidebarProps {
@@ -21,6 +22,14 @@ export default function Sidebar({ isOpen, setIsOpen, isCollapsed }: SidebarProps
   const [location, setLocation] = useLocation();
   const { logout, user, token } = useAuth();
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [, setTick] = useState(0);
+
+  // Monitor popstate / history pushes to ensure we re-evaluate active tabs when search parameters change
+  useEffect(() => {
+    const handleLocationChange = () => setTick((t) => t + 1);
+    window.addEventListener("popstate", handleLocationChange);
+    return () => window.removeEventListener("popstate", handleLocationChange);
+  }, []);
 
   useEffect(() => {
     if (!token) return;
@@ -45,22 +54,50 @@ export default function Sidebar({ isOpen, setIsOpen, isCollapsed }: SidebarProps
 
   const getInitials = (name: string) => {
     if (!name) return "U";
-    return name.split(" ").map((n) => n[0]).join("").toUpperCase().substring(0, 2);
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) {
+      return parts[0].substring(0, 2).toUpperCase();
+    }
+    return (parts[0][0] + (parts[1][0] || "")).toUpperCase();
   };
 
   const handleNavigate = (path: string) => {
     setLocation(path);
     setIsOpen(false); // Close mobile drawer on navigation
+    // Force location update event
+    setTick((t) => t + 1);
   };
 
   const isLinkActive = (path: string) => {
     if (path === "/") {
       return location === "/";
     }
+    // Handle exact query parameter matching for Project Management nested routes
+    if (path.includes("?")) {
+      const [basePath, searchStr] = path.split("?");
+      if (location !== basePath) return false;
+      const itemParams = new URLSearchParams(searchStr);
+      const currentParams = new URLSearchParams(window.location.search);
+      for (const [key, val] of itemParams.entries()) {
+        if (currentParams.get(key) !== val) return false;
+      }
+      return true;
+    }
+    if (path === "/kanban") {
+      // If path is exactly /kanban, only highlight if location is /kanban and status search param is empty
+      return location === "/kanban" && !new URLSearchParams(window.location.search).get("status");
+    }
     return location.startsWith(path);
   };
 
-  const menuItems = [
+  const menuItems: Array<{
+    key: string;
+    title: string;
+    icon?: any;
+    path?: string;
+    badge?: number;
+    isHeader?: boolean;
+  }> = [
     {
       key: "dashboard",
       title: "Dashboard",
@@ -142,7 +179,7 @@ export default function Sidebar({ isOpen, setIsOpen, isCollapsed }: SidebarProps
   if (!user) return null;
 
   const sidebarClasses = `
-    fixed inset-y-0 left-0 z-50 flex flex-col bg-[#09090b]/95 border-r border-white/10 backdrop-blur-xl transition-all duration-300
+    fixed inset-y-0 left-0 z-50 flex flex-col bg-zinc-50 dark:bg-[#09090b]/95 border-r border-zinc-200 dark:border-white/10 backdrop-blur-xl transition-all duration-300
     ${isCollapsed ? "w-16" : "w-64"}
     ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
   `;
@@ -159,13 +196,13 @@ export default function Sidebar({ isOpen, setIsOpen, isCollapsed }: SidebarProps
 
       <aside className={sidebarClasses}>
         {/* Brand Logo Header */}
-        <div className="flex items-center justify-between px-4 py-4 border-b border-white/5 shrink-0">
+        <div className="flex items-center justify-between px-4 py-4 border-b border-zinc-200 dark:border-white/5 shrink-0">
           <div className="flex items-center space-x-2.5 overflow-hidden">
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
               <Video className="w-4 h-4 text-primary-foreground" />
             </div>
             {!isCollapsed && (
-              <span className="text-sm font-bold tracking-wider text-white uppercase whitespace-nowrap bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">
+              <span className="text-sm font-bold tracking-wider text-zinc-900 dark:text-white uppercase whitespace-nowrap bg-gradient-to-r from-zinc-900 to-zinc-600 dark:from-white dark:to-zinc-400 bg-clip-text text-transparent">
                 Intell Meet
               </span>
             )}
@@ -175,27 +212,39 @@ export default function Sidebar({ isOpen, setIsOpen, isCollapsed }: SidebarProps
             size="icon"
             variant="ghost"
             onClick={() => setIsOpen(false)}
-            className="md:hidden w-7 h-7 hover:bg-white/5 text-zinc-400 hover:text-white rounded-lg"
+            className="md:hidden w-7 h-7 hover:bg-zinc-200/50 dark:hover:bg-white/5 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white rounded-lg"
           >
             <X className="w-4 h-4" />
           </Button>
         </div>
 
         {/* Middle Navigation Menu List */}
-        <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-1.5 scrollbar-thin scrollbar-thumb-white/5 scrollbar-track-transparent">
+        <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-1.5 scrollbar-thin scrollbar-thumb-zinc-200 dark:scrollbar-thumb-white/5 scrollbar-track-transparent">
           {menuItems.map((item) => {
-            const Icon = item.icon;
-            const active = isLinkActive(item.path);
+            if (item.isHeader) {
+              if (isCollapsed) return null;
+              return (
+                <div 
+                  key={item.key} 
+                  className="px-3 pt-3.5 pb-1 text-[10px] font-bold text-zinc-500 uppercase tracking-wider select-none text-left"
+                >
+                  {item.title}
+                </div>
+              );
+            }
+
+            const Icon = item.icon!;
+            const active = isLinkActive(item.path!);
 
             return (
               <button
                 key={item.key}
-                onClick={() => handleNavigate(item.path)}
+                onClick={() => handleNavigate(item.path!)}
                 className={`
                   w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-all duration-200 relative
                   ${active 
                     ? "bg-primary/10 text-primary font-bold" 
-                    : "text-zinc-400 hover:text-white hover:bg-white/5"}
+                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-200/50 dark:hover:bg-white/5"}
                 `}
               >
                 {/* Active Indicator on the Left */}
@@ -204,7 +253,7 @@ export default function Sidebar({ isOpen, setIsOpen, isCollapsed }: SidebarProps
                 )}
 
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <Icon className={`w-4 h-4 shrink-0 transition-colors ${active ? "text-primary" : "text-zinc-400"}`} />
+                  <Icon className={`w-4 h-4 shrink-0 transition-colors ${active ? "text-primary" : "text-zinc-500 dark:text-zinc-400"}`} />
                   {!isCollapsed && <span className="truncate">{item.title}</span>}
                 </div>
 
@@ -219,7 +268,7 @@ export default function Sidebar({ isOpen, setIsOpen, isCollapsed }: SidebarProps
         </nav>
 
         {/* Bottom Menu Items & User Card */}
-        <div className="px-2 py-3 border-t border-white/5 bg-black/10 space-y-1.5 shrink-0">
+        <div className="px-2 py-3 border-t border-zinc-200 dark:border-white/5 bg-zinc-100/50 dark:bg-black/10 space-y-1.5 shrink-0">
           {bottomItems.map((item) => {
             const Icon = item.icon;
             const active = isLinkActive(item.path);
@@ -232,7 +281,7 @@ export default function Sidebar({ isOpen, setIsOpen, isCollapsed }: SidebarProps
                   w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-all duration-200 relative
                   ${active 
                     ? "bg-primary/10 text-primary font-bold" 
-                    : "text-zinc-400 hover:text-white hover:bg-white/5"}
+                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-200/50 dark:hover:bg-white/5"}
                 `}
               >
                 {/* Active Indicator on the Left */}
@@ -241,7 +290,7 @@ export default function Sidebar({ isOpen, setIsOpen, isCollapsed }: SidebarProps
                 )}
 
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <Icon className={`w-4 h-4 shrink-0 transition-colors ${active ? "text-primary" : "text-zinc-400"}`} />
+                  <Icon className={`w-4 h-4 shrink-0 transition-colors ${active ? "text-primary" : "text-zinc-500 dark:text-zinc-400"}`} />
                   {!isCollapsed && <span className="truncate">{item.title}</span>}
                 </div>
               </button>
@@ -250,21 +299,24 @@ export default function Sidebar({ isOpen, setIsOpen, isCollapsed }: SidebarProps
         </div>
 
         {/* Bottom User Card Profile Footer */}
-        <div className="p-3 border-t border-white/5 bg-[#09090b]/80 shrink-0">
-          <div className="flex items-center justify-between gap-2 bg-white/5 border border-white/5 p-2 rounded-xl">
+        <div className="p-3 border-t border-zinc-200 dark:border-white/5 bg-zinc-100 dark:bg-[#09090b]/80 shrink-0">
+          <div className="flex items-center justify-between gap-2 bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/5 p-2 rounded-xl">
             <div className="flex items-center gap-2 min-w-0">
-              <Avatar className="w-8 h-8 rounded-lg border border-white/10 shrink-0">
-                {user.avatar ? (
+              <Avatar className="w-8 h-8 rounded-lg border border-zinc-200 dark:border-white/10 shrink-0 overflow-hidden flex items-center justify-center">
+                {user.avatar && (user.avatar.startsWith("http") || user.avatar.startsWith("/")) ? (
                   <img src={user.avatar} alt={user.name} className="w-full h-full object-cover rounded-lg" />
                 ) : (
-                  <AvatarFallback className="bg-gradient-to-tr from-violet-600 to-indigo-600 text-white font-bold text-xs rounded-lg">
+                  <div 
+                    className="w-full h-full text-white font-bold text-xs flex items-center justify-center rounded-lg"
+                    style={{ background: COLOR_MAP[user.profileColor || "purple"] || COLOR_MAP.purple }}
+                  >
                     {getInitials(user.name)}
-                  </AvatarFallback>
+                  </div>
                 )}
               </Avatar>
               {!isCollapsed && (
                 <div className="min-w-0 flex flex-col text-left">
-                  <span className="text-[11px] font-bold text-white truncate leading-tight">{user.name}</span>
+                  <span className="text-[11px] font-bold text-zinc-900 dark:text-white truncate leading-tight">{user.name}</span>
                   <span className="text-[9px] text-zinc-500 truncate leading-none capitalize mt-0.5">{user.role}</span>
                 </div>
               )}
@@ -278,7 +330,7 @@ export default function Sidebar({ isOpen, setIsOpen, isCollapsed }: SidebarProps
                   logout();
                   setLocation("/login");
                 }}
-                className="w-7 h-7 hover:bg-rose-500/10 text-rose-400 hover:text-rose-300 rounded-lg shrink-0"
+                className="w-7 h-7 hover:bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 rounded-lg shrink-0"
                 title="Logout"
               >
                 <LogOut className="w-3.5 h-3.5" />

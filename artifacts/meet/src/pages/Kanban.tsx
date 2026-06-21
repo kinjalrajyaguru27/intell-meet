@@ -160,31 +160,31 @@ export default function Kanban() {
     <div className="flex-1 flex flex-col min-h-0 space-y-6">
 
       {/* Workspace selector dropdown header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-200 dark:border-white/5 pb-4">
         <div className="flex items-center gap-3 flex-wrap">
           <LayoutGrid className="w-5 h-5 text-primary" />
-          <h1 className="font-semibold text-lg text-white">Team Workspace Hub</h1>
+          <h1 className="font-semibold text-lg text-zinc-900 dark:text-white">Team Workspace Hub</h1>
 
-          <div className="h-5 w-px bg-white/10 hidden sm:block" />
+          <div className="h-5 w-px bg-zinc-200 dark:bg-white/10 hidden sm:block" />
 
           {/* Quick Scope Selectors Info labels */}
-          <div className="flex items-center gap-2 text-xs bg-white/5 px-3 py-1.5 rounded-full border border-white/5">
+          <div className="flex items-center gap-2 text-xs bg-zinc-100 dark:bg-white/5 px-3 py-1.5 rounded-full border border-zinc-200 dark:border-white/5">
             <span className="text-muted-foreground flex items-center gap-1">
               <Building2 className="w-3.5 h-3.5" /> Org:
             </span>
-            <span className="text-white font-bold">
+            <span className="text-zinc-900 dark:text-white font-bold">
               {organizations.find(o => o._id === selectedOrgId)?.name || "Not Selected"}
             </span>
             <span className="text-muted-foreground ml-2 flex items-center gap-1">
               <Users className="w-3.5 h-3.5" /> Team:
             </span>
-            <span className="text-white font-bold">
+            <span className="text-zinc-900 dark:text-white font-bold">
               {teams.find(t => t.id === selectedTeamId)?.name || "Not Selected"}
             </span>
             <span className="text-muted-foreground ml-2 flex items-center gap-1">
               <FolderKanban className="w-3.5 h-3.5" /> Project:
             </span>
-            <span className="text-white font-bold">
+            <span className="text-zinc-900 dark:text-white font-bold">
               {projects.find(p => p.id === selectedProjectId)?.name || "Not Selected"}
             </span>
           </div>
@@ -195,7 +195,7 @@ export default function Kanban() {
             size="sm"
             variant="outline"
             onClick={() => setLocation("/team-management")}
-            className="rounded-full px-4 text-xs font-semibold border-white/10"
+            className="rounded-full px-4 text-xs font-semibold border-zinc-250 dark:border-white/10 text-foreground dark:text-zinc-250 hover:bg-zinc-100 dark:hover:bg-white/5"
           >
             <Settings className="w-3.5 h-3.5 mr-1" />
             Configure Workspace
@@ -204,12 +204,12 @@ export default function Kanban() {
       </div>
 
       {/* Tab Selection Row */}
-      <div className="flex border-b border-white/5 overflow-x-auto pb-px">
+      <div className="flex border-b border-zinc-200 dark:border-white/5 overflow-x-auto pb-px">
         <button
           onClick={() => handleTabChange("board")}
           className={`flex items-center gap-2 px-5 py-3 border-b-2 font-semibold text-xs uppercase tracking-wider transition-all whitespace-nowrap ${activeTab === "board"
               ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-white"
+              : "border-transparent text-muted-foreground hover:text-zinc-900 dark:hover:text-white"
             }`}
         >
           <LayoutGrid className="w-4 h-4" />
@@ -219,7 +219,7 @@ export default function Kanban() {
           onClick={() => handleTabChange("gantt")}
           className={`flex items-center gap-2 px-5 py-3 border-b-2 font-semibold text-xs uppercase tracking-wider transition-all whitespace-nowrap ${activeTab === "gantt"
               ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-white"
+              : "border-transparent text-muted-foreground hover:text-zinc-900 dark:hover:text-white"
             }`}
         >
           <Clock className="w-4 h-4" />
@@ -229,7 +229,7 @@ export default function Kanban() {
           onClick={() => handleTabChange("calendar")}
           className={`flex items-center gap-2 px-5 py-3 border-b-2 font-semibold text-xs uppercase tracking-wider transition-all whitespace-nowrap ${activeTab === "calendar"
               ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-white"
+              : "border-transparent text-muted-foreground hover:text-zinc-900 dark:hover:text-white"
             }`}
         >
           <CalendarIcon className="w-4 h-4" />
@@ -239,7 +239,7 @@ export default function Kanban() {
           onClick={() => handleTabChange("audit")}
           className={`flex items-center gap-2 px-5 py-3 border-b-2 font-semibold text-xs uppercase tracking-wider transition-all whitespace-nowrap ${activeTab === "audit"
               ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-white"
+              : "border-transparent text-muted-foreground hover:text-zinc-900 dark:hover:text-white"
             }`}
         >
           <ShieldAlert className="w-4 h-4" />
@@ -268,9 +268,9 @@ export default function Kanban() {
                 selectedTeamId={selectedTeamId}
               />
             ) : (
-              <div className="flex flex-col items-center justify-center py-20 text-center bg-card/20 border border-white/5 rounded-2xl">
+              <div className="flex flex-col items-center justify-center py-20 text-center bg-zinc-50/50 dark:bg-card/20 border border-zinc-200 dark:border-white/5 rounded-2xl shadow-sm">
                 <LayoutGrid className="w-12 h-12 text-muted-foreground/30 mb-4" />
-                <h3 className="font-semibold text-sm mb-1 text-white">No Project Selected</h3>
+                <h3 className="font-semibold text-sm mb-1 text-zinc-900 dark:text-white">No Project Selected</h3>
                 <p className="text-xs text-muted-foreground max-w-xs mb-4">
                   Please select or configure an organization, team, and project inside settings.
                 </p>
@@ -288,9 +288,9 @@ export default function Kanban() {
                 selectedProjectId={selectedProjectId}
               />
             ) : (
-              <div className="flex flex-col items-center justify-center py-20 text-center bg-card/20 border border-white/5 rounded-2xl">
+              <div className="flex flex-col items-center justify-center py-20 text-center bg-zinc-50/50 dark:bg-card/20 border border-zinc-200 dark:border-white/5 rounded-2xl shadow-sm">
                 <Clock className="w-12 h-12 text-muted-foreground/30 mb-4" />
-                <h3 className="font-semibold text-sm mb-1 text-white">No Project Selected</h3>
+                <h3 className="font-semibold text-sm mb-1 text-zinc-900 dark:text-white">No Project Selected</h3>
                 <p className="text-xs text-muted-foreground max-w-xs mb-4">
                   Configure your timelines inside settings to inspect project Gantt views.
                 </p>

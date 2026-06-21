@@ -24,6 +24,7 @@ export interface IUser extends Document {
   authProvider: "local" | "google";
   googleId?: string;
   profilePicture?: string;
+  profileColor?: string;
   emailVerified: boolean;
   createdAt: Date;
 }
@@ -39,6 +40,7 @@ const UserSchema: Schema = new Schema({
   bio: { type: String, default: "" },
   timezone: { type: String, default: "UTC" },
   avatar: { type: String, default: "" },
+  profileColor: { type: String, default: "purple" },
   notificationSettings: {
     email: { type: Boolean, default: true },
     push: { type: Boolean, default: true },

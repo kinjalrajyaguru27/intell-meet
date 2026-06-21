@@ -176,26 +176,26 @@ export default function PostMeeting() {
   return (
     <div className="flex-1 flex flex-col min-h-0 space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-200 dark:border-white/5 pb-4">
         <div className="flex items-center gap-3">
           <FileText className="w-5 h-5 text-primary" />
-          <h1 className="font-semibold text-lg text-white font-sans">Post-Meeting Dashboard</h1>
+          <h1 className="font-semibold text-lg text-zinc-900 dark:text-white font-sans">Post-Meeting Dashboard</h1>
         </div>
       </div>
 
       {/* Control bar */}
-      <div className="bg-card border border-white/5 p-4 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white dark:bg-card border border-zinc-200 dark:border-white/5 p-4 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
           <Input
             placeholder="Search past meetings..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 bg-black/40 border-white/10 text-xs h-9"
+            className="pl-9 bg-zinc-50 dark:bg-black/40 border-zinc-250 dark:border-white/10 text-xs h-9 text-foreground dark:text-white"
           />
         </div>
 
-        <div className="flex bg-muted/20 border border-white/5 rounded-lg p-1 text-xs w-fit">
+        <div className="flex bg-zinc-100 dark:bg-muted/20 border border-zinc-200 dark:border-white/5 rounded-lg p-1 text-xs w-fit">
           {([
             { value: "all", label: "All Sessions" },
             { value: "recordings", label: "Recordings Available" },
@@ -204,10 +204,10 @@ export default function PostMeeting() {
             <button
               key={tab.value}
               onClick={() => setFilterType(tab.value)}
-              className={`px-3 py-1.5 rounded-md transition-colors font-semibold ${
+              className={`px-3 py-1.5 rounded-md transition-all font-semibold ${
                 filterType === tab.value
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-zinc-400 hover:text-white"
+                  ? "bg-primary text-primary-foreground shadow-sm font-bold"
+                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-200/50 dark:hover:bg-white/5"
               }`}
             >
               {tab.label}
@@ -223,9 +223,9 @@ export default function PostMeeting() {
           <span className="text-xs text-muted-foreground">Loading session records...</span>
         </div>
       ) : filteredMeetings.length === 0 ? (
-        <div className="py-20 text-center bg-card/20 border border-white/5 rounded-2xl flex flex-col items-center">
-          <Video className="w-12 h-12 text-zinc-700/50 mb-4" />
-          <h3 className="font-semibold text-sm mb-1 text-white">No Post-Meetings Found</h3>
+        <div className="py-20 text-center bg-white dark:bg-card/20 border border-zinc-200 dark:border-white/5 rounded-2xl flex flex-col items-center shadow-sm">
+          <Video className="w-12 h-12 text-zinc-400 dark:text-zinc-700/50 mb-4 animate-pulse" />
+          <h3 className="font-semibold text-sm mb-1 text-zinc-900 dark:text-white">No Post-Meetings Found</h3>
           <p className="text-xs text-zinc-500 max-w-xs">
             No past sessions matched the category filter.
           </p>
@@ -239,23 +239,23 @@ export default function PostMeeting() {
               <Card
                 key={meeting.id || meeting._id}
                 onClick={() => setLocation(`/dashboard/meeting/${meeting.id || meeting._id}`)}
-                className="bg-card border-white/5 hover:border-white/15 transition-all p-5 flex flex-col justify-between cursor-pointer space-y-4 hover:scale-[1.01] shadow-lg group relative overflow-hidden"
+                className="bg-white dark:bg-card border border-zinc-200 dark:border-white/5 hover:border-zinc-350 dark:hover:border-white/15 transition-all p-5 flex flex-col justify-between cursor-pointer space-y-4 hover:scale-[1.01] shadow-sm hover:shadow-md group relative overflow-hidden"
               >
                 {/* Header title */}
                 <div className="space-y-1">
                   <div className="flex justify-between items-start gap-2">
-                    <h3 className="font-bold text-sm text-white group-hover:text-primary transition-colors truncate max-w-[80%]">
+                    <h3 className="font-bold text-sm text-zinc-900 dark:text-white group-hover:text-primary transition-colors truncate max-w-[80%]">
                       {title}
                     </h3>
                     <button
                       onClick={(e) => handleDeleteMeeting(meeting.id || meeting._id, e)}
-                      className="opacity-0 group-hover:opacity-100 p-1 text-zinc-500 hover:text-rose-400 rounded shrink-0 transition-opacity"
+                      className="opacity-0 group-hover:opacity-100 p-1 text-zinc-500 hover:text-rose-500 rounded shrink-0 transition-opacity"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
 
-                  <div className="flex items-center gap-1.5 text-[10px] text-zinc-500">
+                  <div className="flex items-center gap-1.5 text-[10px] text-zinc-500 dark:text-zinc-400">
                     <Calendar className="w-3 h-3 text-zinc-500" />
                     <span>{formatDate(meeting.startedAt)}</span>
                   </div>
@@ -264,24 +264,24 @@ export default function PostMeeting() {
                 {/* Details / Badges */}
                 <div className="flex flex-wrap gap-1.5">
                   {meeting.openActionItemCount > 0 && (
-                    <Badge variant="outline" className="text-[9px] bg-amber-500/10 text-amber-400 border-amber-500/20 px-2 py-0">
+                    <Badge variant="outline" className="text-[9px] bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 px-2 py-0 font-semibold">
                       {meeting.openActionItemCount} Open Tasks
                     </Badge>
                   )}
                   {meeting.hasNotes && (
-                    <Badge variant="outline" className="text-[9px] bg-emerald-500/10 text-emerald-400 border-emerald-500/20 px-2 py-0">
+                    <Badge variant="outline" className="text-[9px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 px-2 py-0 font-semibold">
                       AI Summary Generated
                     </Badge>
                   )}
                   {meeting.recordingId && (
-                    <Badge variant="outline" className="text-[9px] bg-cyan-500/10 text-cyan-400 border-cyan-500/20 px-2 py-0">
+                    <Badge variant="outline" className="text-[9px] bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20 px-2 py-0 font-semibold">
                       Recording Shared
                     </Badge>
                   )}
                 </div>
 
                 {/* Actions row */}
-                <div className="flex items-center justify-between pt-3 border-t border-white/5 text-xs text-zinc-400">
+                <div className="flex items-center justify-between pt-3 border-t border-zinc-200 dark:border-white/5 text-xs text-zinc-600 dark:text-zinc-400 font-medium">
                   <span className="flex items-center gap-1">
                     <Clock className="w-3.5 h-3.5 text-zinc-500" />
                     {formatDuration(meeting.durationSeconds)}
@@ -291,7 +291,7 @@ export default function PostMeeting() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-7 text-[10px] px-2 text-zinc-400 hover:text-white"
+                      className="h-7 text-[10px] px-2 text-zinc-500 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white"
                       onClick={() => handleExportMeetingReport(meeting, "CSV")}
                     >
                       Export CSV
@@ -299,7 +299,7 @@ export default function PostMeeting() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-7 text-[10px] px-2 text-zinc-400 hover:text-white"
+                      className="h-7 text-[10px] px-2 text-zinc-500 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white"
                       onClick={() => handleExportMeetingReport(meeting, "JSON")}
                     >
                       Export JSON

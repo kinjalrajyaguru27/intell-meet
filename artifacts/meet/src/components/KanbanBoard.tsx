@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useLocation } from "wouter";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,14 +60,80 @@ export default function KanbanBoard({ token, socket, selectedProjectId, selected
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const columns: { title: string; status: TaskStatus; color: string; bg: string }[] = [
-    { title: "Backlog", status: "Backlog", color: "text-zinc-400", bg: "bg-zinc-500/5" },
-    { title: "Todo", status: "Todo", color: "text-amber-400", bg: "bg-amber-500/5" },
-    { title: "In Progress", status: "In Progress", color: "text-sky-400", bg: "bg-sky-500/5" },
-    { title: "Review", status: "Review", color: "text-violet-400", bg: "bg-violet-500/5" },
-    { title: "Testing", status: "Testing", color: "text-rose-400", bg: "bg-rose-500/5" },
-    { title: "Done", status: "Done", color: "text-emerald-400", bg: "bg-emerald-500/5" },
+  const [location] = useLocation();
+  const queryParams = new URLSearchParams(window.location.search);
+  const statusFilter = queryParams.get("status");
+
+  // Edit mode states
+  const [isEditingTask, setIsEditingTask] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [editStatus, setEditStatus] = useState<TaskStatus>("Todo");
+  const [editPriority, setEditPriority] = useState<TaskPriority>("Medium");
+  const [editAssigneeId, setEditAssigneeId] = useState("");
+  const [editDueDate, setEditDueDate] = useState("");
+
+  useEffect(() => {
+    if (activeTaskDetail) {
+      setEditTitle(activeTaskDetail.title || "");
+      setEditDesc(activeTaskDetail.description || "");
+      setEditStatus(activeTaskDetail.status || "Todo");
+      setEditPriority(activeTaskDetail.priority || "Medium");
+      setEditAssigneeId(activeTaskDetail.assignee?.id || activeTaskDetail.assignee?._id || "");
+      if (activeTaskDetail.dueDate) {
+        setEditDueDate(new Date(activeTaskDetail.dueDate).toISOString().split("T")[0]);
+      } else {
+        setEditDueDate("");
+      }
+    } else {
+      setIsEditingTask(false);
+    }
+  }, [activeTaskDetail]);
+
+  const handleUpdateTask = async () => {
+    if (!editTitle.trim() || !token || !activeTaskDetail) return;
+    try {
+      const res = await fetch(`/api/tasks/${activeTaskDetail.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title: editTitle,
+          description: editDesc,
+          status: editStatus,
+          assigneeId: editAssigneeId || null,
+          priority: editPriority,
+          dueDate: editDueDate || null,
+        }),
+      });
+
+      if (res.ok) {
+        toast({ title: "Task updated", description: "Task successfully updated." });
+        setIsEditingTask(false);
+        fetchTasks();
+        fetchTaskDetail(activeTaskDetail.id);
+        socket?.emit("kanban-task-updated", { projectId: selectedProjectId, taskId: activeTaskDetail.id });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const columns: { title: string; statuses: TaskStatus[]; primaryStatus: TaskStatus; color: string; bg: string }[] = [
+    { title: "To Do", statuses: ["Todo", "Backlog"], primaryStatus: "Todo", color: "text-amber-400", bg: "bg-amber-500/5" },
+    { title: "In Progress", statuses: ["In Progress", "Review", "Testing"], primaryStatus: "In Progress", color: "text-sky-400", bg: "bg-sky-500/5" },
+    { title: "Done", statuses: ["Done"], primaryStatus: "Done", color: "text-emerald-400", bg: "bg-emerald-500/5" },
   ];
+
+  const displayColumns = statusFilter
+    ? columns.filter(col => {
+        const normFilter = statusFilter.toLowerCase().replace(/\s+/g, "");
+        const normColTitle = col.title.toLowerCase().replace(/\s+/g, "");
+        return normColTitle === normFilter;
+      })
+    : columns;
 
   useEffect(() => {
     if (selectedProjectId) {
@@ -415,7 +482,7 @@ export default function KanbanBoard({ token, socket, selectedProjectId, selected
       {/* Top action header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-base font-bold text-white uppercase tracking-wider">Project Kanban Board</h2>
+          <h2 className="text-base font-bold text-zinc-900 dark:text-white uppercase tracking-wider">Project Kanban Board</h2>
           <p className="text-xs text-muted-foreground">Manage issues, backlog streams, and progress parameters</p>
         </div>
         <Button size="sm" onClick={() => setShowAddForm(!showAddForm)} className="rounded-full px-4 text-xs font-semibold gap-1">
@@ -426,71 +493,68 @@ export default function KanbanBoard({ token, socket, selectedProjectId, selected
 
       {/* Add Task Form overlay */}
       {showAddForm && (
-        <Card className="bg-card/60 border border-white/10 backdrop-blur-md p-6 max-w-xl mx-auto">
+        <Card className="bg-white dark:bg-card/60 border border-zinc-200 dark:border-white/10 backdrop-blur-md p-6 max-w-xl mx-auto shadow-lg">
           <CardHeader className="p-0 pb-4">
-            <CardTitle className="text-base font-bold text-white">Create Issue</CardTitle>
+            <CardTitle className="text-base font-bold text-zinc-900 dark:text-white">Create Issue</CardTitle>
           </CardHeader>
           <form onSubmit={handleCreateTask} className="space-y-4">
             <div className="space-y-1.5">
-              <Label className="text-xs text-white">Title</Label>
+              <Label className="text-xs text-zinc-700 dark:text-white">Title</Label>
               <Input
                 placeholder="Issue title"
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
-                className="bg-black/40 border-white/10"
+                className="bg-zinc-50 dark:bg-black/40 border-zinc-200 dark:border-white/10 text-foreground dark:text-white"
                 required
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs text-white">Description</Label>
+              <Label className="text-xs text-zinc-700 dark:text-white">Description</Label>
               <Textarea
                 placeholder="Issue description detail..."
                 value={newDesc}
                 onChange={(e) => setNewDesc(e.target.value)}
-                className="bg-black/40 border-white/10"
+                className="bg-zinc-50 dark:bg-black/40 border-zinc-200 dark:border-white/10 text-foreground dark:text-white"
               />
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs text-white">Status</Label>
+                <Label className="text-xs text-zinc-700 dark:text-white">Status</Label>
                 <select
                   value={newStatus}
                   onChange={(e) => setNewStatus(e.target.value as any)}
-                  className="w-full bg-black/40 border border-white/10 h-10 rounded-md px-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary font-medium"
+                  className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/10 h-10 rounded-md px-2.5 text-xs text-foreground dark:text-white focus:outline-none focus:ring-1 focus:ring-primary font-medium"
                 >
-                  <option value="Backlog">Backlog</option>
-                  <option value="Todo">Todo</option>
-                  <option value="In Progress">In Progress</option>
-                  <option value="Review">Review</option>
-                  <option value="Testing">Testing</option>
-                  <option value="Done">Done</option>
+                  <option value="Todo" className="bg-white dark:bg-[#09090b] text-foreground dark:text-white">To Do</option>
+                  <option value="In Progress" className="bg-white dark:bg-[#09090b] text-foreground dark:text-white">In Progress</option>
+                  <option value="Done" className="bg-white dark:bg-[#09090b] text-foreground dark:text-white">Done</option>
                 </select>
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs text-white">Priority</Label>
+                <Label className="text-xs text-zinc-700 dark:text-white">Priority</Label>
                 <select
                   value={newPriority}
                   onChange={(e) => setNewPriority(e.target.value as any)}
-                  className="w-full bg-black/40 border border-white/10 h-10 rounded-md px-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary font-medium"
+                  className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/10 h-10 rounded-md px-2.5 text-xs text-foreground dark:text-white focus:outline-none focus:ring-1 focus:ring-primary font-medium"
                 >
-                  <option value="Low">Low</option>
-                  <option value="Medium">Medium</option>
-                  <option value="High">High</option>
-                  <option value="Critical">Critical</option>
+                  <option value="Low" className="bg-white dark:bg-[#09090b] text-foreground dark:text-white">Low</option>
+                  <option value="Medium" className="bg-white dark:bg-[#09090b] text-foreground dark:text-white">Medium</option>
+                  <option value="High" className="bg-white dark:bg-[#09090b] text-foreground dark:text-white">High</option>
+                  <option value="Critical" className="bg-white dark:bg-[#09090b] text-foreground dark:text-white">Critical</option>
                 </select>
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs text-white">Assignee</Label>
+                <Label className="text-xs text-zinc-700 dark:text-white">Assignee</Label>
                 <select
                   value={newAssigneeId}
                   onChange={(e) => setNewAssigneeId(e.target.value)}
-                  className="w-full bg-black/40 border border-white/10 h-10 rounded-md px-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary font-medium"
+                  className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/10 h-10 rounded-md px-2.5 text-xs text-foreground dark:text-white focus:outline-none focus:ring-1 focus:ring-primary font-medium"
                 >
-                  <option value="">Unassigned</option>
+                  <option value="" className="bg-white dark:bg-[#09090b] text-foreground dark:text-white">Unassigned</option>
                   {teamMembers.map((m) => (
-                    <option key={m.user.id || m.user._id} value={m.user.id || m.user._id}>
+                    <option key={m.user.id || m.user._id} value={m.user.id || m.user._id} className="bg-white dark:bg-[#09090b] text-foreground dark:text-white">
                       {m.user.name || m.user.email}
                     </option>
                   ))}
@@ -498,17 +562,17 @@ export default function KanbanBoard({ token, socket, selectedProjectId, selected
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs text-white">Due Date</Label>
+                <Label className="text-xs text-zinc-700 dark:text-white">Due Date</Label>
                 <Input
                   type="date"
                   value={newDueDate}
                   onChange={(e) => setNewDueDate(e.target.value)}
-                  className="bg-black/40 border-white/10 h-10 text-xs"
+                  className="bg-zinc-50 dark:bg-black/40 border-zinc-200 dark:border-white/10 h-10 text-xs text-foreground dark:text-white"
                 />
               </div>
             </div>
             <div className="flex gap-2 justify-end pt-2">
-              <Button type="button" variant="ghost" size="sm" onClick={() => setShowAddForm(false)}>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setShowAddForm(false)} className="text-zinc-600 dark:text-zinc-300">
                 Cancel
               </Button>
               <Button type="submit" size="sm">Create Task</Button>
@@ -519,28 +583,28 @@ export default function KanbanBoard({ token, socket, selectedProjectId, selected
 
       {/* Kanban Grid */}
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="h-96 bg-card/20 border border-white/5 rounded-2xl animate-pulse" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-96 bg-zinc-100/50 dark:bg-card/20 border border-zinc-200 dark:border-white/5 rounded-2xl animate-pulse" />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-start overflow-x-auto pb-4">
-          {columns.map((col) => {
-            const colTasks = tasks.filter((t) => t.status === col.status);
+        <div className={`grid grid-cols-1 ${displayColumns.length === 1 ? "md:grid-cols-1 max-w-md mx-auto" : "md:grid-cols-3"} gap-4 items-start overflow-x-auto pb-4`}>
+          {displayColumns.map((col) => {
+            const colTasks = tasks.filter((t) => col.statuses.includes(t.status));
             return (
               <div
-                key={col.status}
+                key={col.title}
                 onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => handleDrop(e, col.status)}
-                className={`bg-card/15 border border-white/5 ${col.bg} rounded-2xl p-4 flex flex-col space-y-4 min-w-[200px] select-none`}
+                onDrop={(e) => handleDrop(e, col.primaryStatus)}
+                className={`bg-zinc-50 dark:bg-[#09090b]/40 border border-zinc-200 dark:border-white/5 rounded-2xl p-4 flex flex-col space-y-4 min-w-[200px] select-none shadow-sm`}
               >
-                <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
+                <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/5 pb-2.5">
                   <div className="flex items-center gap-1.5 min-w-0">
                     <span className={`w-2 h-2 rounded-full bg-current ${col.color} shrink-0`} />
-                    <h3 className="font-bold text-[11px] text-white uppercase tracking-wider truncate">{col.title}</h3>
+                    <h3 className="font-bold text-[11px] text-zinc-900 dark:text-white uppercase tracking-wider truncate">{col.title}</h3>
                   </div>
-                  <span className="text-[10px] bg-white/5 text-muted-foreground px-2 py-0.5 rounded-full font-bold">
+                  <span className="text-[10px] bg-zinc-200/50 dark:bg-white/5 text-zinc-700 dark:text-muted-foreground px-2 py-0.5 rounded-full font-bold">
                     {colTasks.length}
                   </span>
                 </div>
@@ -566,10 +630,10 @@ export default function KanbanBoard({ token, socket, selectedProjectId, selected
                           draggable
                           onDragStart={(e) => handleDragStart(e, task.id)}
                           onClick={() => fetchTaskDetail(task.id)}
-                          className="bg-black/40 border border-white/5 rounded-xl p-3.5 space-y-3 hover:border-white/20 transition-all shadow-lg cursor-pointer group"
+                          className="bg-white dark:bg-black/50 border border-zinc-200 dark:border-white/5 rounded-xl p-3.5 space-y-3 hover:border-zinc-300 dark:hover:border-white/20 transition-all shadow-sm cursor-pointer group"
                         >
                           <div className="flex justify-between items-start gap-2">
-                            <span className="font-semibold text-xs text-white leading-snug line-clamp-2">
+                            <span className="font-semibold text-xs text-zinc-900 dark:text-white leading-snug line-clamp-2">
                               {task.title}
                             </span>
                             <button
@@ -623,47 +687,129 @@ export default function KanbanBoard({ token, socket, selectedProjectId, selected
             <div className="space-y-6">
               {/* Header */}
               <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                <div className="space-y-1">
-                  <Badge variant="outline" className="text-[10px] uppercase font-bold text-primary bg-primary/10 border-primary/20">
-                    {activeTaskDetail.status}
-                  </Badge>
-                  <h3 className="text-base font-bold text-white">{activeTaskDetail.title}</h3>
+                <div className="space-y-1 w-full mr-4">
+                  {isEditingTask ? (
+                    <div className="space-y-3 pt-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs text-white">Title</Label>
+                        <Input
+                          value={editTitle}
+                          onChange={(e) => setEditTitle(e.target.value)}
+                          className="bg-black/40 border-white/10 text-white text-sm w-full"
+                          required
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <Badge variant="outline" className="text-[10px] uppercase font-bold text-primary bg-primary/10 border-primary/20">
+                        {activeTaskDetail.status}
+                      </Badge>
+                      <h3 className="text-base font-bold text-white mt-1">{activeTaskDetail.title}</h3>
+                    </>
+                  )}
                 </div>
-                <Button size="icon" variant="ghost" onClick={() => setActiveTaskDetail(null)} className="rounded-full w-8 h-8">
+                <Button size="icon" variant="ghost" onClick={() => { setActiveTaskDetail(null); setIsEditingTask(false); }} className="rounded-full w-8 h-8 shrink-0">
                   <X className="w-4 h-4" />
                 </Button>
               </div>
 
               {/* Assignee / Due Date grid */}
-              <div className="grid grid-cols-2 gap-4 text-xs bg-white/5 p-4 rounded-xl border border-white/5">
-                <div className="space-y-1">
-                  <span className="text-muted-foreground font-semibold">Assignee</span>
-                  <div className="flex items-center gap-2 text-white font-medium">
-                    <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center font-bold text-[10px] text-primary">
-                      {activeTaskDetail.assignee?.name?.charAt(0) || "?"}
+              {isEditingTask ? (
+                <div className="grid grid-cols-2 gap-4 text-xs bg-white/5 p-4 rounded-xl border border-white/5">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-white">Status</Label>
+                    <select
+                      value={editStatus}
+                      onChange={(e) => setEditStatus(e.target.value as any)}
+                      className="w-full bg-black/40 border border-white/10 h-9 rounded-md px-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary font-medium"
+                    >
+                      <option value="Todo">To Do</option>
+                      <option value="In Progress">In Progress</option>
+                      <option value="Done">Done</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-white">Priority</Label>
+                    <select
+                      value={editPriority}
+                      onChange={(e) => setEditPriority(e.target.value as any)}
+                      className="w-full bg-black/40 border border-white/10 h-9 rounded-md px-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary font-medium"
+                    >
+                      <option value="Low">Low</option>
+                      <option value="Medium">Medium</option>
+                      <option value="High">High</option>
+                      <option value="Critical">Critical</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-white">Assignee</Label>
+                    <select
+                      value={editAssigneeId}
+                      onChange={(e) => setEditAssigneeId(e.target.value)}
+                      className="w-full bg-black/40 border border-white/10 h-9 rounded-md px-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary font-medium"
+                    >
+                      <option value="">Unassigned</option>
+                      {teamMembers.map((m) => (
+                        <option key={m.user.id || m.user._id} value={m.user.id || m.user._id}>
+                          {m.user.name || m.user.email}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-white">Due Date</Label>
+                    <Input
+                      type="date"
+                      value={editDueDate}
+                      onChange={(e) => setEditDueDate(e.target.value)}
+                      className="bg-black/40 border-white/10 h-9 text-xs"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4 text-xs bg-white/5 p-4 rounded-xl border border-white/5">
+                  <div className="space-y-1">
+                    <span className="text-muted-foreground font-semibold">Assignee</span>
+                    <div className="flex items-center gap-2 text-white font-medium">
+                      <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center font-bold text-[10px] text-primary">
+                        {activeTaskDetail.assignee?.name?.charAt(0) || "?"}
+                      </div>
+                      <span>{activeTaskDetail.assignee?.name || "Unassigned"}</span>
                     </div>
-                    <span>{activeTaskDetail.assignee?.name || "Unassigned"}</span>
                   </div>
-                </div>
 
-                <div className="space-y-1">
-                  <span className="text-muted-foreground font-semibold">Due Date</span>
-                  <div className="flex items-center gap-1.5 text-white font-medium">
-                    <Calendar className="w-4 h-4 text-muted-foreground" />
-                    <span>{activeTaskDetail.dueDate || "No deadline"}</span>
+                  <div className="space-y-1">
+                    <span className="text-muted-foreground font-semibold">Due Date</span>
+                    <div className="flex items-center gap-1.5 text-white font-medium">
+                      <Calendar className="w-4 h-4 text-muted-foreground" />
+                      <span>{activeTaskDetail.dueDate || "No deadline"}</span>
+                    </div>
                   </div>
-                </div>
-              </div>
-
-              {/* Description */}
-              {activeTaskDetail.description && (
-                <div className="space-y-1.5 text-xs">
-                  <span className="text-muted-foreground font-semibold">Description</span>
-                  <p className="text-white/90 leading-relaxed bg-black/25 p-3 rounded-lg border border-white/5">
-                    {activeTaskDetail.description}
-                  </p>
                 </div>
               )}
+
+              {/* Description */}
+              <div className="space-y-1.5 text-xs">
+                <span className="text-muted-foreground font-semibold">Description</span>
+                {isEditingTask ? (
+                  <Textarea
+                    value={editDesc}
+                    onChange={(e) => setEditDesc(e.target.value)}
+                    className="bg-black/40 border-white/10 text-xs min-h-[80px] text-white w-full"
+                    placeholder="Task description detail..."
+                  />
+                ) : (
+                  activeTaskDetail.description && (
+                    <p className="text-white/90 leading-relaxed bg-black/25 p-3 rounded-lg border border-white/5">
+                      {activeTaskDetail.description}
+                    </p>
+                  )
+                )}
+              </div>
 
               {/* Subtasks Checklist */}
               <div className="space-y-3">
@@ -813,10 +959,20 @@ export default function KanbanBoard({ token, socket, selectedProjectId, selected
 
             {/* Footer */}
             <div className="border-t border-white/5 pt-4 flex gap-2 justify-end">
-              <Button variant="ghost" size="sm" onClick={() => setActiveTaskDetail(null)}>Close</Button>
-              <Button variant="destructive" size="sm" onClick={() => handleDeleteTask(activeTaskDetail.id)}>
-                Delete Issue
-              </Button>
+              {isEditingTask ? (
+                <>
+                  <Button variant="ghost" size="sm" onClick={() => setIsEditingTask(false)}>Cancel</Button>
+                  <Button size="sm" onClick={handleUpdateTask}>Save Changes</Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="outline" size="sm" onClick={() => setIsEditingTask(true)} className="border-white/10 hover:bg-white/5 text-white">Edit Task</Button>
+                  <Button variant="ghost" size="sm" onClick={() => setActiveTaskDetail(null)}>Close</Button>
+                  <Button variant="destructive" size="sm" onClick={() => handleDeleteTask(activeTaskDetail.id)}>
+                    Delete Issue
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>

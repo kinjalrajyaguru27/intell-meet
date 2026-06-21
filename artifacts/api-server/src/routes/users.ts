@@ -54,6 +54,7 @@ router.put("/profile", async (req: AuthenticatedRequest, res) => {
     if (data.bio !== undefined) updateData.bio = data.bio || "";
     if (data.timezone !== undefined) updateData.timezone = data.timezone || "UTC";
     if (data.avatar !== undefined) updateData.avatar = data.avatar || "";
+    if ((data as any).profileColor !== undefined) updateData.profileColor = (data as any).profileColor || "purple";
     if (data.notificationSettings !== undefined) {
       updateData.notificationSettings = {
         email: data.notificationSettings.email ?? true,

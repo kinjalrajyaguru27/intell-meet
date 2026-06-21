@@ -61,54 +61,54 @@ export function AIInsightsDashboard({ insight }: AIInsightsDashboardProps) {
     <div className="space-y-6">
       {/* Metrics Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="bg-card/45 border-white/5 relative overflow-hidden">
+        <Card className="bg-white dark:bg-card/45 border border-zinc-200 dark:border-white/5 relative overflow-hidden shadow-sm">
           <div className="absolute top-0 right-0 w-16 h-16 bg-primary/5 rounded-full blur-xl pointer-events-none" />
           <CardContent className="p-4 flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-violet-600/10 flex items-center justify-center border border-violet-500/20 shrink-0">
-              <TrendingUp className="w-5 h-5 text-violet-400" />
+              <TrendingUp className="w-5 h-5 text-violet-550 dark:text-violet-400" />
             </div>
             <div>
               <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Productivity</p>
-              <h3 className="text-xl font-bold text-white mt-0.5">{insight.productivityScore}%</h3>
+              <h3 className="text-xl font-bold text-zinc-900 dark:text-white mt-0.5">{insight.productivityScore}%</h3>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-card/45 border-white/5 relative overflow-hidden">
+        <Card className="bg-white dark:bg-card/45 border border-zinc-200 dark:border-white/5 relative overflow-hidden shadow-sm">
           <div className="absolute top-0 right-0 w-16 h-16 bg-blue-500/5 rounded-full blur-xl pointer-events-none" />
           <CardContent className="p-4 flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/20 shrink-0">
-              <Activity className="w-5 h-5 text-blue-400" />
+              <Activity className="w-5 h-5 text-blue-550 dark:text-blue-400" />
             </div>
             <div>
               <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Engagement</p>
-              <h3 className="text-xl font-bold text-white mt-0.5">{insight.engagementScore}%</h3>
+              <h3 className="text-xl font-bold text-zinc-900 dark:text-white mt-0.5">{insight.engagementScore}%</h3>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-card/45 border-white/5 relative overflow-hidden">
+        <Card className="bg-white dark:bg-card/45 border border-zinc-200 dark:border-white/5 relative overflow-hidden shadow-sm">
           <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/5 rounded-full blur-xl pointer-events-none" />
           <CardContent className="p-4 flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 shrink-0">
-              <Award className="w-5 h-5 text-emerald-400" />
+              <Award className="w-5 h-5 text-emerald-555 dark:text-emerald-400" />
             </div>
             <div>
               <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Participation</p>
-              <h3 className="text-xl font-bold text-white mt-0.5">{insight.participationScore}%</h3>
+              <h3 className="text-xl font-bold text-zinc-900 dark:text-white mt-0.5">{insight.participationScore}%</h3>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-card/45 border-white/5 relative overflow-hidden">
+        <Card className="bg-white dark:bg-card/45 border border-zinc-200 dark:border-white/5 relative overflow-hidden shadow-sm">
           <div className="absolute top-0 right-0 w-16 h-16 bg-amber-500/5 rounded-full blur-xl pointer-events-none" />
           <CardContent className="p-4 flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shrink-0">
-              <ThumbsUp className="w-5 h-5 text-amber-400" />
+              <ThumbsUp className="w-5 h-5 text-amber-500 dark:text-amber-400" />
             </div>
             <div>
               <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Sentiment</p>
-              <h3 className="text-xl font-bold text-white mt-0.5">{insight.sentimentScore}%</h3>
+              <h3 className="text-xl font-bold text-zinc-900 dark:text-white mt-0.5">{insight.sentimentScore}%</h3>
             </div>
           </CardContent>
         </Card>
@@ -117,9 +117,9 @@ export function AIInsightsDashboard({ insight }: AIInsightsDashboardProps) {
       {/* Main Insights Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Speaking time analytics */}
-        <Card className="bg-card/30 border-white/5 backdrop-blur-md">
+        <Card className="bg-white dark:bg-card/30 border border-zinc-200 dark:border-white/5 backdrop-blur-md shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
+            <CardTitle className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
               <Clock className="w-4 h-4 text-primary" />
               Speaking Distribution
             </CardTitle>
@@ -151,13 +151,15 @@ export function AIInsightsDashboard({ insight }: AIInsightsDashboardProps) {
                         borderColor: "#27272a",
                         borderRadius: "8px",
                       }}
+                      itemStyle={{ color: "#ffffff" }}
+                      labelStyle={{ color: "#a1a1aa" }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
                 {/* Center text representing dominant speaker */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                   <span className="text-[10px] text-muted-foreground font-semibold uppercase">Dominant</span>
-                  <span className="text-[11px] font-bold text-white max-w-[80px] truncate text-center">
+                  <span className="text-[11px] font-bold text-zinc-900 dark:text-white max-w-[80px] truncate text-center">
                     {insight.mostActiveParticipant}
                   </span>
                 </div>
@@ -167,9 +169,9 @@ export function AIInsightsDashboard({ insight }: AIInsightsDashboardProps) {
         </Card>
 
         {/* Dynamic Speaking bar chart & key contributors */}
-        <Card className="bg-card/30 border-white/5 backdrop-blur-md lg:col-span-2">
+        <Card className="bg-white dark:bg-card/30 border border-zinc-200 dark:border-white/5 backdrop-blur-md lg:col-span-2 shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
+            <CardTitle className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
               <Activity className="w-4 h-4 text-primary" />
               Contributor Contributions
             </CardTitle>
@@ -191,6 +193,8 @@ export function AIInsightsDashboard({ insight }: AIInsightsDashboardProps) {
                       borderColor: "#27272a",
                       borderRadius: "8px",
                     }}
+                    itemStyle={{ color: "#ffffff" }}
+                    labelStyle={{ color: "#a1a1aa" }}
                   />
                   <Bar dataKey="value" name="Speaker %" fill="#8b5cf6" radius={[0, 4, 4, 0]} barSize={12} />
                 </BarChart>
@@ -203,10 +207,10 @@ export function AIInsightsDashboard({ insight }: AIInsightsDashboardProps) {
       {/* Topics and Sentiment text */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Sentiment Analysis text */}
-        <Card className="bg-card/30 border-white/5 backdrop-blur-md">
+        <Card className="bg-white dark:bg-card/30 border border-zinc-200 dark:border-white/5 backdrop-blur-md shadow-sm">
           <CardHeader>
-            <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
-              <MessageSquareCode className="w-4 h-4 text-amber-400" />
+            <CardTitle className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+              <MessageSquareCode className="w-4 h-4 text-amber-500" />
               Sentiment Analysis
             </CardTitle>
             <CardDescription className="text-xs">AI qualitative evaluation of meeting dynamics</CardDescription>
@@ -215,24 +219,24 @@ export function AIInsightsDashboard({ insight }: AIInsightsDashboardProps) {
             <p className="text-xs text-muted-foreground leading-relaxed italic">
               "{insight.sentimentAnalysis}"
             </p>
-            <div className="flex gap-4 border-t border-white/5 pt-3 text-xs">
+            <div className="flex gap-4 border-t border-zinc-200 dark:border-white/5 pt-3 text-xs">
               <div>
                 <span className="text-[10px] text-muted-foreground uppercase font-semibold">Most Active</span>
-                <p className="font-bold text-white mt-0.5">{insight.mostActiveParticipant || "—"}</p>
+                <p className="font-bold text-zinc-900 dark:text-white mt-0.5">{insight.mostActiveParticipant || "—"}</p>
               </div>
-              <div className="border-l border-white/5 pl-4">
+              <div className="border-l border-zinc-200 dark:border-white/5 pl-4">
                 <span className="text-[10px] text-muted-foreground uppercase font-semibold">Least Active</span>
-                <p className="font-bold text-white mt-0.5">{insight.leastActiveParticipant || "—"}</p>
+                <p className="font-bold text-zinc-900 dark:text-white mt-0.5">{insight.leastActiveParticipant || "—"}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Topic model checklist */}
-        <Card className="bg-card/30 border-white/5 backdrop-blur-md">
+        <Card className="bg-white dark:bg-card/30 border border-zinc-200 dark:border-white/5 backdrop-blur-md shadow-sm">
           <CardHeader>
-            <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-emerald-400" />
+            <CardTitle className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-emerald-500" />
               Key Discussion Topics
             </CardTitle>
             <CardDescription className="text-xs">Primary content themes captured by AI</CardDescription>
@@ -245,12 +249,12 @@ export function AIInsightsDashboard({ insight }: AIInsightsDashboardProps) {
                 {insight.topicAnalysis.map((topic, index) => (
                   <div
                     key={index}
-                    className="flex items-center gap-3 bg-muted/20 px-3.5 py-2.5 rounded-xl border border-white/5 hover:border-white/10 transition-colors"
+                    className="flex items-center gap-3 bg-zinc-50 dark:bg-muted/20 px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-white/5 hover:border-zinc-300 dark:hover:border-white/10 transition-colors"
                   >
                     <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center font-bold text-[10px] text-primary">
                       #{index + 1}
                     </div>
-                    <span className="text-xs font-semibold text-white">{topic}</span>
+                    <span className="text-xs font-semibold text-zinc-900 dark:text-white">{topic}</span>
                   </div>
                 ))}
               </div>
