@@ -1,23 +1,24 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
 import {
   useListMeetings,
   useGetDashboardStats,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Video,
   Clock,
   CheckSquare,
   AlertCircle,
   ChevronRight,
-  ArrowLeft,
-  Plus,
   Calendar,
   Users,
-  FileText,
-  BarChart2,
-  Square,
+  Activity,
+  ArrowRight,
+  TrendingUp,
 } from "lucide-react";
 
 function formatDuration(seconds: number | null): string {
@@ -55,173 +56,272 @@ function timeAgo(iso: string): string {
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
-  const { data: meetings, isLoading } = useListMeetings();
-  const { data: stats } = useGetDashboardStats();
-  const [filter, setFilter] = useState<"all" | "with-notes" | "open-items">("all");
+  const { isAuthenticated, user, token } = useAuth();
 
-  const filtered = (meetings ?? []).filter((m) => {
-    if (filter === "with-notes") return m.hasNotes;
-    if (filter === "open-items") return m.openActionItemCount > 0;
-    return true;
-  });
+  const [recentTasks, setRecentTasks] = useState<any[]>([]);
+  const [activityLogs, setActivityLogs] = useState<any[]>([]);
+  const [isLoadingActivities, setIsLoadingActivities] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setLocation("/auth");
+    }
+  }, [isAuthenticated, setLocation]);
+
+  // REST stats and meetings
+  const { data: meetings, isLoading: isMeetingsLoading } = useListMeetings();
+  const { data: stats } = useGetDashboardStats();
+
+  useEffect(() => {
+    if (token && user) {
+      // Fetch recent tasks assigned to me
+      fetch(`/api/tasks?assignee=${user.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => (res.ok ? res.json() : []))
+        .then((data) => {
+          // Keep active ones
+          const active = data.filter((t: any) => t.status !== "Done");
+          setRecentTasks(active.slice(0, 5));
+        })
+        .catch((err) => console.error(err));
+
+      // Fetch activity logs
+      setIsLoadingActivities(true);
+      fetch("/api/organizations", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => (res.ok ? res.json() : []))
+        .then(async (orgs) => {
+          if (orgs.length > 0) {
+            const logsRes = await fetch(`/api/organizations/${orgs[0]._id}/activity-logs`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (logsRes.ok) {
+              setActivityLogs(await logsRes.json());
+            }
+          }
+        })
+        .catch((err) => console.error(err))
+        .finally(() => setIsLoadingActivities(false));
+    }
+  }, [token, user]);
+
+  // Filters for upcoming meetings
+  const upcomingMeetings = useMemo(() => {
+    if (!meetings) return [];
+    return meetings
+      .filter((m: any) => {
+        const startTime = new Date(m.startedAt).getTime();
+        return startTime > Date.now() && !m.endedAt;
+      })
+      .slice(0, 4);
+  }, [meetings]);
+
+  if (!isAuthenticated || !user) return null;
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
-      {/* Header */}
-      <header className="border-b border-border bg-card px-6 py-4 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-2 text-muted-foreground hover:text-foreground"
-            onClick={() => setLocation("/")}
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back
-          </Button>
-          <div className="h-5 w-px bg-border" />
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-              <BarChart2 className="w-4 h-4 text-primary" />
+    <div className="flex-1 flex flex-col min-h-0 space-y-6">
+      {/* Top Welcome Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
+        <div>
+          <h1 className="font-semibold text-lg text-white font-sans">
+            Welcome back, {user.name}!
+          </h1>
+          <p className="text-xs text-zinc-500">
+            Here's a quick overview of your workspace meetings, tasks, and team activities.
+          </p>
+        </div>
+      </div>
+
+      {/* Quick Stats Dashboard Widgets */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <StatCard
+          icon={<Video className="w-5 h-5 text-primary" />}
+          label="Total Meetings"
+          value={String(stats?.totalMeetings ?? 0)}
+          sub={`${stats?.meetingsThisWeek ?? 0} this week`}
+        />
+        <StatCard
+          icon={<Clock className="w-5 h-5 text-cyan-400" />}
+          label="Time in Meetings"
+          value={formatDuration(stats?.totalDurationSeconds ?? 0)}
+          sub="total recorded time"
+        />
+        <StatCard
+          icon={<AlertCircle className="w-5 h-5 text-amber-400" />}
+          label="Open Action Items"
+          value={String(stats?.openActionItems ?? 0)}
+          sub={`${stats?.completedActionItems ?? 0} completed`}
+        />
+        <StatCard
+          icon={<CheckSquare className="w-5 h-5 text-emerald-400" />}
+          label="Completion Rate"
+          value={
+            (stats?.openActionItems ?? 0) + (stats?.completedActionItems ?? 0) > 0
+              ? `${Math.round(
+                  ((stats?.completedActionItems ?? 0) /
+                    ((stats?.openActionItems ?? 0) + (stats?.completedActionItems ?? 0))) *
+                    100
+                )}%`
+              : "0%"
+          }
+          sub="action items done"
+        />
+      </div>
+
+      {/* Main Grid Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column (Upcoming Meetings & Recent Tasks) */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Upcoming Meetings */}
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
+                Upcoming Meetings
+              </h3>
+              <Button
+                variant="link"
+                size="sm"
+                onClick={() => setLocation("/")}
+                className="text-xs text-primary px-0 font-bold"
+              >
+                Go to Meetings Center <ArrowRight className="w-3 h-3 ml-1" />
+              </Button>
             </div>
-            <h1 className="font-semibold text-base">Meeting Dashboard</h1>
+
+            <div className="space-y-3">
+              {isMeetingsLoading ? (
+                <div className="space-y-3">
+                  {[...Array(2)].map((_, i) => (
+                    <div key={i} className="h-16 bg-white/5 rounded-xl animate-pulse" />
+                  ))}
+                </div>
+              ) : upcomingMeetings.length === 0 ? (
+                <div className="text-center py-8 bg-card border border-white/5 rounded-2xl text-xs text-zinc-500 italic">
+                  No upcoming meetings scheduled.
+                </div>
+              ) : (
+                upcomingMeetings.map((meeting: any) => (
+                  <div
+                    key={meeting.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between bg-card border border-white/5 hover:border-white/15 transition-all px-5 py-4 rounded-xl cursor-pointer gap-4"
+                    onClick={() => setLocation(`/`)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                        <Calendar className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="font-bold text-xs text-white block">
+                          {meeting.title || meeting.name}
+                        </span>
+                        <span className="text-[10px] text-zinc-500 block">
+                          Starts {formatDate(meeting.startedAt)}
+                        </span>
+                      </div>
+                    </div>
+                    <Button size="sm" className="h-8 rounded-full text-xs font-bold">
+                      View details
+                    </Button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Recent Tasks */}
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
+                My Pending Tasks
+              </h3>
+              <Button
+                variant="link"
+                size="sm"
+                onClick={() => setLocation("/todo-manager")}
+                className="text-xs text-primary px-0 font-bold"
+              >
+                Go to Todo Manager <ArrowRight className="w-3 h-3 ml-1" />
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              {recentTasks.length === 0 ? (
+                <div className="text-center py-8 bg-card border border-white/5 rounded-2xl text-xs text-zinc-500 italic">
+                  No pending tasks assigned to you.
+                </div>
+              ) : (
+                recentTasks.map((task) => {
+                  const priorityColor = ( {
+                    Low: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
+                    Medium: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+                    High: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+                    Critical: "bg-red-500/10 text-red-400 border-red-500/20",
+                  } as any )[task.priority || "Medium"];
+
+                  return (
+                    <div
+                      key={task.id}
+                      className="flex items-center justify-between bg-card border border-white/5 hover:border-white/15 px-4 py-3 rounded-xl cursor-pointer gap-4 transition-all"
+                      onClick={() => setLocation("/todo-manager")}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <span className="font-bold text-xs text-white block truncate">
+                          {task.title}
+                        </span>
+                        <span className="text-[10px] text-zinc-500 truncate block mt-0.5">
+                          {task.description || "No description"}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Badge variant="outline" className={`text-[8px] font-bold ${priorityColor}`}>
+                          {task.priority}
+                        </Badge>
+                        <Badge variant="secondary" className="text-[8px] font-bold bg-white/5 text-zinc-400">
+                          {task.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         </div>
-        <Button
-          size="sm"
-          className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-4"
-          onClick={() => setLocation("/")}
-        >
-          <Plus className="w-4 h-4" />
-          New Meeting
-        </Button>
-      </header>
 
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
-
-          {/* Stats row */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <StatCard
-              icon={<Video className="w-5 h-5 text-primary" />}
-              label="Total Meetings"
-              value={String(stats?.totalMeetings ?? 0)}
-              sub={`${stats?.meetingsThisWeek ?? 0} this week`}
-            />
-            <StatCard
-              icon={<Clock className="w-5 h-5 text-cyan-400" />}
-              label="Time in Meetings"
-              value={formatDuration(stats?.totalDurationSeconds ?? 0)}
-              sub="total recorded time"
-            />
-            <StatCard
-              icon={<AlertCircle className="w-5 h-5 text-amber-400" />}
-              label="Open Action Items"
-              value={String(stats?.openActionItems ?? 0)}
-              sub={`${stats?.completedActionItems ?? 0} completed`}
-            />
-            <StatCard
-              icon={<CheckSquare className="w-5 h-5 text-emerald-400" />}
-              label="Completion Rate"
-              value={
-                (stats?.openActionItems ?? 0) + (stats?.completedActionItems ?? 0) > 0
-                  ? `${Math.round(((stats?.completedActionItems ?? 0) / ((stats?.openActionItems ?? 0) + (stats?.completedActionItems ?? 0))) * 100)}%`
-                  : "—"
-              }
-              sub="action items done"
-            />
-          </div>
-
-          {/* Meetings list */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">
-                Meeting History
-              </h2>
-              <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
-                {(["all", "with-notes", "open-items"] as const).map((f) => (
-                  <button
-                    key={f}
-                    onClick={() => setFilter(f)}
-                    className={`text-xs px-3 py-1 rounded-md transition-colors ${
-                      filter === f
-                        ? "bg-card text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    {f === "all" ? "All" : f === "with-notes" ? "Has Notes" : "Open Items"}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {isLoading ? (
-              <div className="space-y-3">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="h-20 bg-muted/40 rounded-xl animate-pulse" />
-                ))}
-              </div>
-            ) : filtered.length === 0 ? (
-              <EmptyState filter={filter} onNewMeeting={() => setLocation("/")} />
-            ) : (
-              <div className="space-y-3">
-                {filtered.map((meeting) => (
-                  <button
-                    key={meeting.id}
-                    onClick={() => setLocation(`/dashboard/meeting/${meeting.id}`)}
-                    className="w-full text-left bg-card border border-border hover:border-primary/40 hover:bg-card/80 rounded-xl px-5 py-4 transition-all group"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                        <Video className="w-5 h-5 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-semibold truncate">{meeting.name}</span>
-                          {meeting.openActionItemCount > 0 && (
-                            <span className="shrink-0 text-xs bg-amber-500/15 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full">
-                              {meeting.openActionItemCount} open
-                            </span>
-                          )}
-                          {meeting.hasNotes && (
-                            <span className="shrink-0 text-xs bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-                              Notes
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-3.5 h-3.5" />
-                            {timeAgo(meeting.startedAt)}
-                          </span>
-                          {meeting.durationSeconds && (
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-3.5 h-3.5" />
-                              {formatDuration(meeting.durationSeconds)}
-                            </span>
-                          )}
-                          {meeting.participantNames.length > 0 && (
-                            <span className="flex items-center gap-1 truncate">
-                              <Users className="w-3.5 h-3.5 shrink-0" />
-                              {meeting.participantNames.slice(0, 3).join(", ")}
-                              {meeting.participantNames.length > 3 && ` +${meeting.participantNames.length - 3}`}
-                            </span>
-                          )}
-                          {meeting.actionItemCount > 0 && (
-                            <span className="flex items-center gap-1">
-                              <CheckSquare className="w-3.5 h-3.5" />
-                              {meeting.actionItemCount} action {meeting.actionItemCount === 1 ? "item" : "items"}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+        {/* Right Column (Recent Activity) */}
+        <div className="space-y-3">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
+            Recent Activity Log
+          </h3>
+          <Card className="bg-card border-white/5 rounded-2xl p-4 min-h-[350px]">
+            <CardContent className="p-0 space-y-4 max-h-[500px] overflow-y-auto scrollbar-thin">
+              {isLoadingActivities ? (
+                <div className="space-y-4">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="h-10 bg-white/5 rounded-lg animate-pulse" />
+                  ))}
+                </div>
+              ) : activityLogs.length === 0 ? (
+                <div className="py-12 text-center text-xs text-zinc-500 italic">
+                  No activity logs recorded.
+                </div>
+              ) : (
+                activityLogs.slice(0, 8).map((log) => (
+                  <div key={log._id} className="text-xs space-y-1">
+                    <div className="flex justify-between items-start font-bold text-white/95 leading-none">
+                      <span className="truncate max-w-[130px]">{log.actionType?.replace(/_/g, " ").toUpperCase()}</span>
+                      <span className="text-[8px] text-zinc-500 font-normal">{timeAgo(log.createdAt)}</span>
                     </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+                    <p className="text-[11px] text-zinc-400 leading-normal">{log.details}</p>
+                    <div className="h-px bg-white/5 pt-1" />
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
@@ -240,47 +340,15 @@ function StatCard({
   sub: string;
 }) {
   return (
-    <div className="bg-card border border-border rounded-xl px-5 py-4">
-      <div className="flex items-center gap-2 mb-3">
+    <div className="bg-card border border-white/5 rounded-2xl px-5 py-4 flex flex-col justify-between space-y-2">
+      <div className="flex items-center gap-2">
         {icon}
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
           {label}
         </span>
       </div>
-      <p className="text-2xl font-bold tabular-nums">{value}</p>
-      <p className="text-xs text-muted-foreground mt-1">{sub}</p>
-    </div>
-  );
-}
-
-function EmptyState({
-  filter,
-  onNewMeeting,
-}: {
-  filter: string;
-  onNewMeeting: () => void;
-}) {
-  if (filter !== "all") {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <FileText className="w-10 h-10 text-muted-foreground/40 mb-4" />
-        <p className="text-muted-foreground text-sm">No meetings match this filter.</p>
-      </div>
-    );
-  }
-  return (
-    <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-5">
-        <Video className="w-8 h-8 text-primary" />
-      </div>
-      <h3 className="font-semibold text-lg mb-2">No meetings yet</h3>
-      <p className="text-muted-foreground text-sm mb-6 max-w-xs">
-        Start a meeting and your history will appear here after the call ends.
-      </p>
-      <Button onClick={onNewMeeting} className="rounded-full px-6">
-        <Plus className="w-4 h-4 mr-2" />
-        Start a Meeting
-      </Button>
+      <p className="text-2xl font-bold tabular-nums text-white leading-none">{value}</p>
+      <p className="text-[9px] text-zinc-500 leading-none">{sub}</p>
     </div>
   );
 }

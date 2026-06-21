@@ -11,6 +11,6 @@ export interface ActionItemUpdate {
   /** @nullable */
   assigneeName?: string | null;
   /** @nullable */
-  dueDate?: string | null;
+  dueDate?: Date | null;
   isDone?: boolean;
 }

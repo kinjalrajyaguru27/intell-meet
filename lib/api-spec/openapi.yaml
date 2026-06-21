@@ -9,6 +9,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: User authentication operations
   - name: rooms
     description: Meeting room operations
   - name: meetings
@@ -17,6 +19,12 @@ tags:
     description: Meeting notes and summaries
   - name: actionItems
     description: Action item tracking
+  - name: tasks
+    description: Kanban task tracking
+  - name: teams
+    description: Team and workspace operations
+  - name: analytics
+    description: Analytics and insights
 paths:
   /healthz:
     get:
@@ -30,6 +38,287 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/signup:
+    post:
+      operationId: signup
+      tags: [auth]
+      summary: User registration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserSignup"
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: User login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserLogin"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      tags: [auth]
+      summary: Get active user profile
+      responses:
+        "200":
+          description: Profile retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+
+  /auth/profile:
+    patch:
+      operationId: updateProfile
+      tags: [auth]
+      summary: Update active user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserProfileUpdate"
+      responses:
+        "200":
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /auth/oauth:
+    post:
+      operationId: oauthLogin
+      tags: [auth]
+      summary: OAuth2 login / signup simulator
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OAuthLoginInput"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /auth/google:
+    post:
+      operationId: googleLogin
+      tags: [auth]
+      summary: Google OAuth2 Login & Registration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GoogleLoginInput"
+      responses:
+        "200":
+          description: Logged in / registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /auth/google/disconnect:
+    post:
+      operationId: googleDisconnect
+      tags: [auth]
+      summary: Disconnect Google account from profile
+      responses:
+        "200":
+          description: Google account disconnected successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required: [message]
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: User registration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserSignup"
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: User logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required: [message]
+
+  /auth/refresh:
+    post:
+      operationId: refreshToken
+      tags: [auth]
+      summary: Refresh JWT token
+      responses:
+        "200":
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                required: [token]
+
+  /auth/forgot-password:
+    post:
+      operationId: forgotPassword
+      tags: [auth]
+      summary: Request password reset link
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgotPasswordInput"
+      responses:
+        "200":
+          description: Reset link generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  resetLink:
+                    type: string
+                required: [message, resetLink]
+
+  /auth/reset-password:
+    post:
+      operationId: resetPassword
+      tags: [auth]
+      summary: Reset password with token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordInput"
+      responses:
+        "200":
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required: [message]
+
+  /auth/change-password:
+    post:
+      operationId: changePassword
+      tags: [auth]
+      summary: Change password for active user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordInput"
+      responses:
+        "200":
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required: [message]
+
+  /users/profile:
+    get:
+      operationId: getUserProfile
+      tags: [auth]
+      summary: Get profile of authenticated user
+      responses:
+        "200":
+          description: Profile retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    put:
+      operationId: updateUserProfile
+      tags: [auth]
+      summary: Update profile of authenticated user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserProfileUpdate"
+      responses:
+        "200":
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
 
   /rooms:
     post:
@@ -95,6 +384,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Meeting"
+
+  /rooms/{roomId}/active-meeting:
+    get:
+      operationId: getActiveMeeting
+      tags: [meetings]
+      summary: Get the active (ongoing) meeting details for a room
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Active meeting found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeetingDetail"
+        "404":
+          description: Active meeting not found
 
   /meetings:
     get:
@@ -182,6 +492,27 @@ paths:
               schema:
                 $ref: "#/components/schemas/ActionItem"
 
+  /meetings/{meetingId}/ai-generate:
+    post:
+      operationId: generateAISummary
+      tags: [meetings]
+      summary: Trigger AI to generate summaries and extract action items based on transcription
+      parameters:
+        - name: meetingId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Summary generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeetingDetail"
+        "404":
+          description: Meeting not found
+
   /action-items/{actionItemId}:
     patch:
       operationId: updateActionItem
@@ -235,6 +566,684 @@ paths:
               schema:
                 $ref: "#/components/schemas/DashboardStats"
 
+  /tasks:
+    get:
+      operationId: listTasks
+      tags: [tasks]
+      summary: List all tasks for Kanban board
+      responses:
+        "200":
+          description: Tasks retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
+    post:
+      operationId: createTask
+      tags: [tasks]
+      summary: Create a new Kanban task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskInput"
+      responses:
+        "201":
+          description: Task created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+
+  /tasks/{taskId}:
+    patch:
+      operationId: updateTask
+      tags: [tasks]
+      summary: Update a Kanban task (status, description, assignee, etc.)
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskUpdate"
+      responses:
+        "200":
+          description: Task updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+    delete:
+      operationId: deleteTask
+      tags: [tasks]
+      summary: Delete a Kanban task
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /teams:
+    get:
+      operationId: listTeams
+      tags: [teams]
+      summary: List all teams the user belongs to
+      responses:
+        "200":
+          description: Teams retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Team"
+    post:
+      operationId: createTeam
+      tags: [teams]
+      summary: Create a new team workspace
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamInput"
+      responses:
+        "201":
+          description: Team created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Team"
+
+  /teams/{teamId}/invite:
+    post:
+      operationId: inviteTeamMember
+      tags: [teams]
+      summary: Invite a user to a team
+      parameters:
+        - name: teamId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamInviteInput"
+      responses:
+        "200":
+          description: User invited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Team"
+        "404":
+          description: User or team not found
+
+  /team/invite:
+    post:
+      operationId: inviteToTeam
+      tags: [teams]
+      summary: Invite a user by email to a team
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamInviteRequestInput"
+      responses:
+        "200":
+          description: Invitation created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  invitation:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      email:
+                        type: string
+                      teamId:
+                        type: string
+                      invitedBy:
+                        type: string
+                      role:
+                        type: string
+                      status:
+                        type: string
+                      token:
+                        type: string
+                required: [message, invitation]
+
+  /team/accept:
+    post:
+      operationId: acceptTeamInvite
+      tags: [teams]
+      summary: Accept a team invitation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamInvitationActionInput"
+      responses:
+        "200":
+          description: Joined team successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  teamId:
+                    type: string
+                required: [message, teamId]
+
+  /team/reject:
+    post:
+      operationId: rejectTeamInvite
+      tags: [teams]
+      summary: Reject a team invitation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamInvitationActionInput"
+      responses:
+        "200":
+          description: Invitation rejected
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required: [message]
+
+  /admin/users:
+    get:
+      operationId: adminListUsers
+      tags: [analytics]
+      summary: List all registered platform users (Admin only)
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+
+  /admin/users/{userId}/role:
+    put:
+      operationId: adminUpdateUserRole
+      tags: [analytics]
+      summary: Update user platform role (Admin only)
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminUpdateUserRoleInput"
+      responses:
+          "200":
+            description: Role updated
+            content:
+              application/json:
+                schema:
+                  $ref: "#/components/schemas/User"
+
+  /admin/users/{userId}:
+    delete:
+      operationId: adminDeleteUser
+      tags: [analytics]
+      summary: Delete a user account (Admin only)
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required: [message]
+
+  /analytics/insights:
+    get:
+      operationId: getAnalyticsInsights
+      tags: [analytics]
+      summary: Get analytics charts data and engagement reports
+      responses:
+        "200":
+          description: Analytics retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsInsights"
+
+  /meetings/create:
+    post:
+      operationId: createMeeting
+      tags: [meetings]
+      summary: Create a new meeting (instant, scheduled, or recurring)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMeetingInput"
+      responses:
+        "201":
+          description: Meeting created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeetingDetail"
+
+  /meetings/join:
+    post:
+      operationId: joinMeeting
+      tags: [meetings]
+      summary: Validate credentials and join a meeting
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JoinMeetingInput"
+      responses:
+        "200":
+          description: Access allowed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeetingDetail"
+        "401":
+          description: Invalid password or unauthorized
+        "404":
+          description: Meeting not found
+
+  /meetings/leave:
+    post:
+      operationId: leaveMeeting
+      tags: [meetings]
+      summary: Register that a participant is leaving the room
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeaveMeetingInput"
+      responses:
+        "200":
+          description: Left successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required: [message]
+
+  /participants/mute:
+    post:
+      operationId: muteParticipant
+      tags: [meetings]
+      summary: Toggle mute status of a participant (Host only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MuteParticipantInput"
+      responses:
+        "200":
+          description: Participant mute updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Participant"
+
+  /participants/remove:
+    post:
+      operationId: removeParticipant
+      tags: [meetings]
+      summary: Remove a participant from the meeting (Host only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RemoveParticipantInput"
+      responses:
+        "200":
+          description: Participant removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required: [message]
+
+  /participants/raise-hand:
+    post:
+      operationId: raiseHandParticipant
+      tags: [meetings]
+      summary: Toggle hand-raised status of a participant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RaiseHandInput"
+      responses:
+        "200":
+          description: Hand-raised status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Participant"
+
+  /recordings/start:
+    post:
+      operationId: startRecording
+      tags: [meetings]
+      summary: Start recording meeting session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartRecordingInput"
+      responses:
+        "200":
+          description: Recording started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Recording"
+
+  /recordings/stop:
+    post:
+      operationId: stopRecording
+      tags: [meetings]
+      summary: Stop recording and save files
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StopRecordingInput"
+      responses:
+        "200":
+          description: Recording stopped
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Recording"
+
+  /ai/transcribe:
+    post:
+      operationId: aiTranscribe
+      tags: [meetings]
+      summary: Transcribe audio to text using OpenAI Whisper / HF
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AITranscribeInput"
+      responses:
+        "200":
+          description: Transcribed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AITranscriptLine"
+
+  /ai/summarize:
+    post:
+      operationId: aiSummarize
+      tags: [meetings]
+      summary: Generate summaries for a meeting (Short, Detailed, Management, Client)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AISummarizeInput"
+      responses:
+        "200":
+          description: Summary generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AISummary"
+
+  /ai/action-items:
+    get:
+      operationId: listAIActionItems
+      tags: [meetings]
+      summary: Fetch action items filtered by meetingId
+      parameters:
+        - name: meetingId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Action items list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AIActionItem"
+    post:
+      operationId: aiExtractActionItems
+      tags: [meetings]
+      summary: Extract action items and sync with Team Kanban tasks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AIIntelligenceInput"
+      responses:
+        "200":
+          description: Action items extracted and created
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AIActionItem"
+
+  /ai/insights:
+    get:
+      operationId: getAiInsights
+      tags: [meetings]
+      summary: Fetch meeting insights filtered by meetingId
+      parameters:
+        - name: meetingId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Insights details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AIInsight"
+    post:
+      operationId: aiGenerateInsights
+      tags: [meetings]
+      summary: Generate productivity, engagement and speaking analytics
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AIIntelligenceInput"
+      responses:
+        "200":
+          description: Insights generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AIInsight"
+
+  /ai/summaries:
+    get:
+      operationId: listAISummaries
+      tags: [meetings]
+      summary: Fetch summaries filtered by meetingId
+      parameters:
+        - name: meetingId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Summaries list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AISummary"
+
+  /ai/transcripts:
+    get:
+      operationId: listAITranscripts
+      tags: [meetings]
+      summary: Fetch transcripts filtered by meetingId
+      parameters:
+        - name: meetingId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Transcripts list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AITranscriptLine"
+
+  /ai/decisions:
+    get:
+      operationId: listAIDecisions
+      tags: [meetings]
+      summary: Fetch decisions filtered by meetingId or query search
+      parameters:
+        - name: meetingId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Decisions list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AIDecision"
+
+  /ai/search:
+    get:
+      operationId: aiSearch
+      tags: [meetings]
+      summary: Enterprise AI search engine across content, actions, decisions, participants
+      parameters:
+        - name: query
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: date
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: teamId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: meetingId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: user
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AISearchResults"
+
 components:
   schemas:
     HealthStatus:
@@ -243,6 +1252,89 @@ components:
         status:
           type: string
       required: [status]
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [Admin, Manager, Member]
+        phoneNumber:
+          type: ["string", "null"]
+        jobTitle:
+          type: ["string", "null"]
+        department:
+          type: ["string", "null"]
+        bio:
+          type: ["string", "null"]
+        timezone:
+          type: ["string", "null"]
+        avatar:
+          type: ["string", "null"]
+        authProvider:
+          type: string
+          enum: [local, google]
+        googleId:
+          type: ["string", "null"]
+        profilePicture:
+          type: ["string", "null"]
+        emailVerified:
+          type: boolean
+        hasPassword:
+          type: boolean
+        notificationSettings:
+          type: object
+          properties:
+            email:
+              type: boolean
+            push:
+              type: boolean
+            sms:
+              type: boolean
+          required: [email, push, sms]
+        createdAt:
+          type: string
+      required: [id, name, email, role, createdAt, authProvider, emailVerified, hasPassword]
+
+    UserSignup:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        role:
+          type: string
+          enum: [Admin, Manager, Member]
+      required: [name, email, password]
+
+    UserLogin:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+        rememberMe:
+          type: boolean
+      required: [email, password]
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+      required: [token, user]
 
     Room:
       type: object
@@ -263,6 +1355,17 @@ components:
         name:
           type: string
       required: [name]
+
+    TranscriptLine:
+      type: object
+      properties:
+        speaker:
+          type: string
+        text:
+          type: string
+        timestamp:
+          type: number
+      required: [speaker, text, timestamp]
 
     Meeting:
       type: object
@@ -289,6 +1392,12 @@ components:
           type: integer
         hasNotes:
           type: boolean
+        notes:
+          type: ["string", "null"]
+        transcript:
+          type: array
+          items:
+            $ref: "#/components/schemas/TranscriptLine"
       required:
         - id
         - roomId
@@ -300,6 +1409,8 @@ components:
         - actionItemCount
         - openActionItemCount
         - hasNotes
+        - notes
+        - transcript
 
     MeetingDetail:
       type: object
@@ -322,6 +1433,10 @@ components:
             type: string
         notes:
           type: ["string", "null"]
+        transcript:
+          type: array
+          items:
+            $ref: "#/components/schemas/TranscriptLine"
         actionItems:
           type: array
           items:
@@ -346,6 +1461,10 @@ components:
             type: string
         durationSeconds:
           type: integer
+        transcript:
+          type: array
+          items:
+            $ref: "#/components/schemas/TranscriptLine"
       required: [participantNames, durationSeconds]
 
     Notes:
@@ -407,6 +1526,7 @@ components:
           type: ["string", "null"]
         dueDate:
           type: ["string", "null"]
+          format: date
         isDone:
           type: boolean
 
@@ -429,3 +1549,565 @@ components:
         - openActionItems
         - completedActionItems
         - meetingsThisWeek
+
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [Todo, In Progress, Done]
+        assignee:
+          $ref: "#/components/schemas/User"
+        dueDate:
+          type: ["string", "null"]
+        teamId:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required: [id, title, description, status, dueDate, teamId, createdAt]
+
+    TaskInput:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [Todo, In Progress, Done]
+        assigneeId:
+          type: ["string", "null"]
+        dueDate:
+          type: ["string", "null"]
+        teamId:
+          type: ["string", "null"]
+      required: [title]
+
+    TaskUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [Todo, In Progress, Done]
+        assigneeId:
+          type: ["string", "null"]
+        dueDate:
+          type: ["string", "null"]
+
+    Team:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        members:
+          type: array
+          items:
+            type: object
+            properties:
+              user:
+                $ref: "#/components/schemas/User"
+              role:
+                type: string
+                enum: [Admin, Manager, Member]
+            required: [user, role]
+        createdAt:
+          type: string
+      required: [id, name, members, createdAt]
+
+    TeamInput:
+      type: object
+      properties:
+        name:
+          type: string
+      required: [name]
+
+    MonthlyTrend:
+      type: object
+      properties:
+        month:
+          type: string
+        count:
+          type: integer
+        totalDurationMinutes:
+          type: integer
+      required: [month, count, totalDurationMinutes]
+
+    ProductivityStats:
+      type: object
+      properties:
+        completedTasks:
+          type: integer
+        openTasks:
+          type: integer
+        taskCompletionRate:
+          type: number
+      required: [completedTasks, openTasks, taskCompletionRate]
+
+    EngagementReport:
+      type: object
+      properties:
+        name:
+          type: string
+        meetingCount:
+          type: integer
+        averageDurationMinutes:
+          type: number
+      required: [name, meetingCount, averageDurationMinutes]
+
+    AnalyticsInsights:
+      type: object
+      properties:
+        monthlyTrends:
+          type: array
+          items:
+            $ref: "#/components/schemas/MonthlyTrend"
+        productivity:
+          $ref: "#/components/schemas/ProductivityStats"
+        engagement:
+          type: array
+          items:
+            $ref: "#/components/schemas/EngagementReport"
+      required: [monthlyTrends, productivity, engagement]
+
+    UserProfileUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        phoneNumber:
+          type: ["string", "null"]
+        jobTitle:
+          type: ["string", "null"]
+        department:
+          type: ["string", "null"]
+        bio:
+          type: ["string", "null"]
+        timezone:
+          type: ["string", "null"]
+        avatar:
+          type: ["string", "null"]
+        notificationSettings:
+          type: object
+          properties:
+            email:
+              type: boolean
+            push:
+              type: boolean
+            sms:
+              type: boolean
+
+    TeamInviteInput:
+      type: object
+      properties:
+        email:
+          type: string
+        role:
+          type: string
+          enum: [Admin, Manager, Member]
+      required: [email, role]
+
+    TeamInviteRequestInput:
+      type: object
+      properties:
+        email:
+          type: string
+        teamId:
+          type: string
+        role:
+          type: string
+          enum: [Admin, Manager, Member]
+      required: [email, teamId, role]
+
+    TeamInvitationActionInput:
+      type: object
+      properties:
+        token:
+          type: string
+      required: [token]
+
+    ForgotPasswordInput:
+      type: object
+      properties:
+        email:
+          type: string
+      required: [email]
+
+    ResetPasswordInput:
+      type: object
+      properties:
+        token:
+          type: string
+        password:
+          type: string
+      required: [token, password]
+
+    ChangePasswordInput:
+      type: object
+      properties:
+        oldPassword:
+          type: string
+        newPassword:
+          type: string
+      required: [oldPassword, newPassword]
+
+    OAuthLoginInput:
+      type: object
+      properties:
+        provider:
+          type: string
+          enum: [google, github]
+        email:
+          type: string
+        name:
+          type: string
+      required: [provider, email, name]
+
+    AdminUpdateUserRoleInput:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [Admin, Manager, Member]
+      required: [role]
+
+    GoogleLoginInput:
+      type: object
+      properties:
+        idToken:
+          type: string
+      required: [idToken]
+
+    CreateMeetingInput:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        password:
+          type: string
+        isRecurring:
+          type: boolean
+        recurrenceRule:
+          type: string
+        waitingRoomEnabled:
+          type: boolean
+        startTime:
+          type: string
+          format: date-time
+      required: [title]
+
+    JoinMeetingInput:
+      type: object
+      properties:
+        meetingId:
+          type: string
+        password:
+          type: string
+      required: [meetingId]
+
+    MuteParticipantInput:
+      type: object
+      properties:
+        meetingId:
+          type: string
+        userId:
+          type: string
+        isMuted:
+          type: boolean
+      required: [meetingId, userId, isMuted]
+
+    RemoveParticipantInput:
+      type: object
+      properties:
+        meetingId:
+          type: string
+        userId:
+          type: string
+      required: [meetingId, userId]
+
+    RaiseHandInput:
+      type: object
+      properties:
+        meetingId:
+          type: string
+        userId:
+          type: string
+        isRaisedHand:
+          type: boolean
+      required: [meetingId, userId, isRaisedHand]
+
+    StartRecordingInput:
+      type: object
+      properties:
+        meetingId:
+          type: string
+        title:
+          type: string
+      required: [meetingId, title]
+
+    StopRecordingInput:
+      type: object
+      properties:
+        meetingId:
+          type: string
+        durationSeconds:
+          type: integer
+        sizeBytes:
+          type: integer
+      required: [meetingId, durationSeconds, sizeBytes]
+
+    Recording:
+      type: object
+      properties:
+        id:
+          type: string
+        meetingId:
+          type: string
+        title:
+          type: string
+        fileUrl:
+          type: string
+        durationSeconds:
+          type: integer
+        sizeBytes:
+          type: integer
+        recordedBy:
+          type: string
+        createdAt:
+          type: string
+      required: [id, meetingId, title, fileUrl, durationSeconds, sizeBytes, recordedBy, createdAt]
+
+    Participant:
+      type: object
+      properties:
+        id:
+          type: string
+        meetingId:
+          type: string
+        userId:
+          type: ["string", "null"]
+        displayName:
+          type: string
+        role:
+          type: string
+          enum: [host, co-host, participant]
+        status:
+          type: string
+          enum: [waiting, admitted, rejected, left]
+        isMuted:
+          type: boolean
+        isCameraOff:
+          type: boolean
+        isRaisedHand:
+          type: boolean
+        joinedAt:
+          type: string
+        leftAt:
+          type: ["string", "null"]
+      required: [id, meetingId, displayName, role, status, isMuted, isCameraOff, isRaisedHand, joinedAt]
+
+    LeaveMeetingInput:
+      type: object
+      properties:
+        meetingId:
+          type: string
+        userId:
+          type: string
+      required: [meetingId, userId]
+
+    AITranscriptLine:
+      type: object
+      properties:
+        id:
+          type: string
+        meetingId:
+          type: string
+        speaker:
+          type: string
+        text:
+          type: string
+        timestamp:
+          type: number
+      required: [id, meetingId, speaker, text, timestamp]
+
+    AISummary:
+      type: object
+      properties:
+        id:
+          type: string
+        meetingId:
+          type: string
+        summaryType:
+          type: string
+        shortSummary:
+          type: string
+        detailedSummary:
+          type: string
+        executiveSummary:
+          type: string
+        keyPoints:
+          type: array
+          items:
+            type: string
+        decisions:
+          type: array
+          items:
+            type: string
+        outcomes:
+          type: array
+          items:
+            type: string
+        highlights:
+          type: array
+          items:
+            type: string
+        risks:
+          type: array
+          items:
+            type: string
+        opportunities:
+          type: array
+          items:
+            type: string
+      required: [id, meetingId, summaryType, shortSummary, detailedSummary, executiveSummary, keyPoints, decisions]
+
+    AIActionItem:
+      type: object
+      properties:
+        id:
+          type: string
+        meetingId:
+          type: string
+        taskId:
+          type: ["string", "null"]
+        title:
+          type: string
+        description:
+          type: string
+        assignee:
+          type: ["string", "null"]
+        assigneeName:
+          type: string
+        dueDate:
+          type: ["string", "null"]
+        priority:
+          type: string
+        status:
+          type: string
+      required: [id, meetingId, title, description, assigneeName, priority, status]
+
+    AIInsight:
+      type: object
+      properties:
+        id:
+          type: string
+        meetingId:
+          type: string
+        productivityScore:
+          type: number
+        engagementScore:
+          type: number
+        sentimentScore:
+          type: number
+        sentimentAnalysis:
+          type: string
+        participationScore:
+          type: number
+        speakingTimeAnalytics:
+          type: object
+          additionalProperties:
+            type: number
+        mostActiveParticipant:
+          type: string
+        leastActiveParticipant:
+          type: string
+        topicAnalysis:
+          type: array
+          items:
+            type: string
+      required: [id, meetingId, productivityScore, engagementScore, sentimentScore, sentimentAnalysis, participationScore, speakingTimeAnalytics, mostActiveParticipant, leastActiveParticipant, topicAnalysis]
+
+    AIDecision:
+      type: object
+      properties:
+        id:
+          type: string
+        meetingId:
+          type: string
+        decision:
+          type: string
+        owner:
+          type: string
+        timestamp:
+          type: string
+        impact:
+          type: string
+        relatedTasks:
+          type: array
+          items:
+            type: string
+      required: [id, meetingId, decision, owner, timestamp, impact, relatedTasks]
+
+    AISearchResults:
+      type: object
+      properties:
+        meetings:
+          type: array
+          items:
+            $ref: "#/components/schemas/Meeting"
+        actionItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/AIActionItem"
+        decisions:
+          type: array
+          items:
+            $ref: "#/components/schemas/AIDecision"
+        summaries:
+          type: array
+          items:
+            $ref: "#/components/schemas/AISummary"
+      required: [meetings, actionItems, decisions, summaries]
+
+    AITranscribeInput:
+      type: object
+      properties:
+        meetingId:
+          type: string
+        speaker:
+          type: string
+        text:
+          type: string
+      required: [meetingId, speaker, text]
+
+    AISummarizeInput:
+      type: object
+      properties:
+        meetingId:
+          type: string
+        summaryType:
+          type: string
+          enum: [Short, Detailed, Management, Client]
+      required: [meetingId, summaryType]
+
+    AIIntelligenceInput:
+      type: object
+      properties:
+        meetingId:
+          type: string
+      required: [meetingId]
+

@@ -5,6 +5,7 @@
  * Intell Meet API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { TranscriptLine } from './transcriptLine';
 
 export interface Meeting {
   id: string;
@@ -19,4 +20,7 @@ export interface Meeting {
   actionItemCount: number;
   openActionItemCount: number;
   hasNotes: boolean;
+  /** @nullable */
+  notes: string | null;
+  transcript: TranscriptLine[];
 }

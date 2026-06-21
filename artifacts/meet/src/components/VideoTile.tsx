@@ -10,6 +10,8 @@ interface VideoTileProps {
   isCameraOff?: boolean;
   isScreenSharing?: boolean;
   isDominant?: boolean;
+  isSpeaking?: boolean;
+  isRaisedHand?: boolean;
 }
 
 export function VideoTile({
@@ -20,6 +22,8 @@ export function VideoTile({
   isCameraOff = false,
   isScreenSharing = false,
   isDominant = false,
+  isSpeaking = false,
+  isRaisedHand = false,
 }: VideoTileProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -64,7 +68,9 @@ export function VideoTile({
 
   return (
     <div
-      className={`relative rounded-xl overflow-hidden bg-[#1a1a1f] border border-border shadow-sm flex items-center justify-center transition-all ${
+      className={`relative rounded-xl overflow-hidden bg-[#1a1a1f] border transition-all flex items-center justify-center ${
+        isSpeaking ? "border-primary ring-2 ring-primary/40 shadow-[0_0_15px_rgba(99,102,241,0.25)]" : "border-border shadow-sm"
+      } ${
         isDominant ? "col-span-full aspect-video h-full max-h-[70vh] w-full" : "aspect-video"
       }`}
     >
@@ -76,7 +82,7 @@ export function VideoTile({
         muted={isLocal}
         className={`w-full h-full object-cover ${
           isLocal && !isScreenSharing ? "scale-x-[-1]" : ""
-        } ${showAvatar ? "hidden" : "block"}`}
+        } ${showAvatar ? "opacity-0 absolute pointer-events-none w-0 h-0" : "block"}`}
       />
 
       {/* Avatar shown when camera is off */}
@@ -91,12 +97,26 @@ export function VideoTile({
         </div>
       )}
 
+      {/* Hand raising indicator */}
+      {isRaisedHand && (
+        <div className="absolute top-3 right-3 bg-amber-500 text-white font-bold p-1.5 rounded-full shadow-lg animate-bounce flex items-center justify-center w-8 h-8 z-10 text-xs">
+          ✋
+        </div>
+      )}
+
       {/* Name + status bar */}
       <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
         <div className="bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-md text-sm font-medium text-white flex items-center space-x-1.5 max-w-[70%] truncate">
           <span className="truncate">{displayName}</span>
           {isLocal && (
             <span className="text-white/50 text-xs shrink-0">(You)</span>
+          )}
+          {isSpeaking && (
+            <div className="flex items-center gap-[2.5px] h-3.5 shrink-0 ml-1.5" title="Speaking">
+              <span className="w-[2.5px] h-2 bg-emerald-400 rounded-full animate-pulse" />
+              <span className="w-[2.5px] h-3 bg-emerald-400 rounded-full animate-pulse [animation-delay:200ms]" />
+              <span className="w-[2.5px] h-1.5 bg-emerald-400 rounded-full animate-pulse [animation-delay:400ms]" />
+            </div>
           )}
         </div>
 
@@ -123,3 +143,4 @@ export function VideoTile({
     </div>
   );
 }
+

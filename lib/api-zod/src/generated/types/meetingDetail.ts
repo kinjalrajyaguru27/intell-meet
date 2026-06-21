@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ActionItem } from './actionItem';
+import type { TranscriptLine } from './transcriptLine';
 
 export interface MeetingDetail {
   id: string;
@@ -19,5 +20,6 @@ export interface MeetingDetail {
   participantNames: string[];
   /** @nullable */
   notes: string | null;
+  transcript?: TranscriptLine[];
   actionItems: ActionItem[];
 }

@@ -17,6 +17,342 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
+ * @summary User registration
+ */
+export const SignupBody = zod.object({
+  "name": zod.string(),
+  "email": zod.string(),
+  "password": zod.string(),
+  "role": zod.enum(['Admin', 'Manager', 'Member']).optional()
+})
+
+
+/**
+ * @summary User login
+ */
+export const LoginBody = zod.object({
+  "email": zod.string(),
+  "password": zod.string(),
+  "rememberMe": zod.boolean().optional()
+})
+
+export const LoginResponse = zod.object({
+  "token": zod.string(),
+  "user": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "role": zod.enum(['Admin', 'Manager', 'Member']),
+  "phoneNumber": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "bio": zod.string().nullish(),
+  "timezone": zod.string().nullish(),
+  "avatar": zod.string().nullish(),
+  "authProvider": zod.enum(['local', 'google']),
+  "googleId": zod.string().nullish(),
+  "profilePicture": zod.string().nullish(),
+  "emailVerified": zod.boolean(),
+  "hasPassword": zod.boolean(),
+  "notificationSettings": zod.object({
+  "email": zod.boolean(),
+  "push": zod.boolean(),
+  "sms": zod.boolean()
+}).optional(),
+  "createdAt": zod.string()
+})
+})
+
+
+/**
+ * @summary Get active user profile
+ */
+export const GetCurrentUserResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "role": zod.enum(['Admin', 'Manager', 'Member']),
+  "phoneNumber": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "bio": zod.string().nullish(),
+  "timezone": zod.string().nullish(),
+  "avatar": zod.string().nullish(),
+  "authProvider": zod.enum(['local', 'google']),
+  "googleId": zod.string().nullish(),
+  "profilePicture": zod.string().nullish(),
+  "emailVerified": zod.boolean(),
+  "hasPassword": zod.boolean(),
+  "notificationSettings": zod.object({
+  "email": zod.boolean(),
+  "push": zod.boolean(),
+  "sms": zod.boolean()
+}).optional(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Update active user profile
+ */
+export const UpdateProfileBody = zod.object({
+  "name": zod.string().optional(),
+  "phoneNumber": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "bio": zod.string().nullish(),
+  "timezone": zod.string().nullish(),
+  "avatar": zod.string().nullish(),
+  "notificationSettings": zod.object({
+  "email": zod.boolean().optional(),
+  "push": zod.boolean().optional(),
+  "sms": zod.boolean().optional()
+}).optional()
+})
+
+export const UpdateProfileResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "role": zod.enum(['Admin', 'Manager', 'Member']),
+  "phoneNumber": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "bio": zod.string().nullish(),
+  "timezone": zod.string().nullish(),
+  "avatar": zod.string().nullish(),
+  "authProvider": zod.enum(['local', 'google']),
+  "googleId": zod.string().nullish(),
+  "profilePicture": zod.string().nullish(),
+  "emailVerified": zod.boolean(),
+  "hasPassword": zod.boolean(),
+  "notificationSettings": zod.object({
+  "email": zod.boolean(),
+  "push": zod.boolean(),
+  "sms": zod.boolean()
+}).optional(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary OAuth2 login / signup simulator
+ */
+export const OauthLoginBody = zod.object({
+  "provider": zod.enum(['google', 'github']),
+  "email": zod.string(),
+  "name": zod.string()
+})
+
+export const OauthLoginResponse = zod.object({
+  "token": zod.string(),
+  "user": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "role": zod.enum(['Admin', 'Manager', 'Member']),
+  "phoneNumber": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "bio": zod.string().nullish(),
+  "timezone": zod.string().nullish(),
+  "avatar": zod.string().nullish(),
+  "authProvider": zod.enum(['local', 'google']),
+  "googleId": zod.string().nullish(),
+  "profilePicture": zod.string().nullish(),
+  "emailVerified": zod.boolean(),
+  "hasPassword": zod.boolean(),
+  "notificationSettings": zod.object({
+  "email": zod.boolean(),
+  "push": zod.boolean(),
+  "sms": zod.boolean()
+}).optional(),
+  "createdAt": zod.string()
+})
+})
+
+
+/**
+ * @summary Google OAuth2 Login & Registration
+ */
+export const GoogleLoginBody = zod.object({
+  "idToken": zod.string()
+})
+
+export const GoogleLoginResponse = zod.object({
+  "token": zod.string(),
+  "user": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "role": zod.enum(['Admin', 'Manager', 'Member']),
+  "phoneNumber": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "bio": zod.string().nullish(),
+  "timezone": zod.string().nullish(),
+  "avatar": zod.string().nullish(),
+  "authProvider": zod.enum(['local', 'google']),
+  "googleId": zod.string().nullish(),
+  "profilePicture": zod.string().nullish(),
+  "emailVerified": zod.boolean(),
+  "hasPassword": zod.boolean(),
+  "notificationSettings": zod.object({
+  "email": zod.boolean(),
+  "push": zod.boolean(),
+  "sms": zod.boolean()
+}).optional(),
+  "createdAt": zod.string()
+})
+})
+
+
+/**
+ * @summary Disconnect Google account from profile
+ */
+export const GoogleDisconnectResponse = zod.object({
+  "message": zod.string()
+})
+
+
+/**
+ * @summary User registration
+ */
+export const RegisterBody = zod.object({
+  "name": zod.string(),
+  "email": zod.string(),
+  "password": zod.string(),
+  "role": zod.enum(['Admin', 'Manager', 'Member']).optional()
+})
+
+
+/**
+ * @summary User logout
+ */
+export const LogoutResponse = zod.object({
+  "message": zod.string()
+})
+
+
+/**
+ * @summary Refresh JWT token
+ */
+export const RefreshTokenResponse = zod.object({
+  "token": zod.string()
+})
+
+
+/**
+ * @summary Request password reset link
+ */
+export const ForgotPasswordBody = zod.object({
+  "email": zod.string()
+})
+
+export const ForgotPasswordResponse = zod.object({
+  "message": zod.string(),
+  "resetLink": zod.string()
+})
+
+
+/**
+ * @summary Reset password with token
+ */
+export const ResetPasswordBody = zod.object({
+  "token": zod.string(),
+  "password": zod.string()
+})
+
+export const ResetPasswordResponse = zod.object({
+  "message": zod.string()
+})
+
+
+/**
+ * @summary Change password for active user
+ */
+export const ChangePasswordBody = zod.object({
+  "oldPassword": zod.string(),
+  "newPassword": zod.string()
+})
+
+export const ChangePasswordResponse = zod.object({
+  "message": zod.string()
+})
+
+
+/**
+ * @summary Get profile of authenticated user
+ */
+export const GetUserProfileResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "role": zod.enum(['Admin', 'Manager', 'Member']),
+  "phoneNumber": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "bio": zod.string().nullish(),
+  "timezone": zod.string().nullish(),
+  "avatar": zod.string().nullish(),
+  "authProvider": zod.enum(['local', 'google']),
+  "googleId": zod.string().nullish(),
+  "profilePicture": zod.string().nullish(),
+  "emailVerified": zod.boolean(),
+  "hasPassword": zod.boolean(),
+  "notificationSettings": zod.object({
+  "email": zod.boolean(),
+  "push": zod.boolean(),
+  "sms": zod.boolean()
+}).optional(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Update profile of authenticated user
+ */
+export const UpdateUserProfileBody = zod.object({
+  "name": zod.string().optional(),
+  "phoneNumber": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "bio": zod.string().nullish(),
+  "timezone": zod.string().nullish(),
+  "avatar": zod.string().nullish(),
+  "notificationSettings": zod.object({
+  "email": zod.boolean().optional(),
+  "push": zod.boolean().optional(),
+  "sms": zod.boolean().optional()
+}).optional()
+})
+
+export const UpdateUserProfileResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "role": zod.enum(['Admin', 'Manager', 'Member']),
+  "phoneNumber": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "bio": zod.string().nullish(),
+  "timezone": zod.string().nullish(),
+  "avatar": zod.string().nullish(),
+  "authProvider": zod.enum(['local', 'google']),
+  "googleId": zod.string().nullish(),
+  "profilePicture": zod.string().nullish(),
+  "emailVerified": zod.boolean(),
+  "hasPassword": zod.boolean(),
+  "notificationSettings": zod.object({
+  "email": zod.boolean(),
+  "push": zod.boolean(),
+  "sms": zod.boolean()
+}).optional(),
+  "createdAt": zod.string()
+})
+
+
+/**
  * @summary Create a new meeting room
  */
 export const CreateRoomBody = zod.object({
@@ -48,7 +384,12 @@ export const EndMeetingParams = zod.object({
 
 export const EndMeetingBody = zod.object({
   "participantNames": zod.array(zod.string()),
-  "durationSeconds": zod.number()
+  "durationSeconds": zod.number(),
+  "transcript": zod.array(zod.object({
+  "speaker": zod.string(),
+  "text": zod.string(),
+  "timestamp": zod.number()
+})).optional()
 })
 
 export const EndMeetingResponse = zod.object({
@@ -61,7 +402,46 @@ export const EndMeetingResponse = zod.object({
   "participantNames": zod.array(zod.string()),
   "actionItemCount": zod.number(),
   "openActionItemCount": zod.number(),
-  "hasNotes": zod.boolean()
+  "hasNotes": zod.boolean(),
+  "notes": zod.string().nullable(),
+  "transcript": zod.array(zod.object({
+  "speaker": zod.string(),
+  "text": zod.string(),
+  "timestamp": zod.number()
+}))
+})
+
+
+/**
+ * @summary Get the active (ongoing) meeting details for a room
+ */
+export const GetActiveMeetingParams = zod.object({
+  "roomId": zod.coerce.string()
+})
+
+export const GetActiveMeetingResponse = zod.object({
+  "id": zod.string(),
+  "roomId": zod.string(),
+  "name": zod.string(),
+  "startedAt": zod.string(),
+  "endedAt": zod.string().nullable(),
+  "durationSeconds": zod.number().nullable(),
+  "participantNames": zod.array(zod.string()),
+  "notes": zod.string().nullable(),
+  "transcript": zod.array(zod.object({
+  "speaker": zod.string(),
+  "text": zod.string(),
+  "timestamp": zod.number()
+})).optional(),
+  "actionItems": zod.array(zod.object({
+  "id": zod.string(),
+  "meetingId": zod.string(),
+  "text": zod.string(),
+  "assigneeName": zod.string().nullable(),
+  "dueDate": zod.string().nullable(),
+  "isDone": zod.boolean(),
+  "createdAt": zod.string()
+}))
 })
 
 
@@ -78,7 +458,13 @@ export const ListMeetingsResponseItem = zod.object({
   "participantNames": zod.array(zod.string()),
   "actionItemCount": zod.number(),
   "openActionItemCount": zod.number(),
-  "hasNotes": zod.boolean()
+  "hasNotes": zod.boolean(),
+  "notes": zod.string().nullable(),
+  "transcript": zod.array(zod.object({
+  "speaker": zod.string(),
+  "text": zod.string(),
+  "timestamp": zod.number()
+}))
 })
 export const ListMeetingsResponse = zod.array(ListMeetingsResponseItem)
 
@@ -99,6 +485,11 @@ export const GetMeetingResponse = zod.object({
   "durationSeconds": zod.number().nullable(),
   "participantNames": zod.array(zod.string()),
   "notes": zod.string().nullable(),
+  "transcript": zod.array(zod.object({
+  "speaker": zod.string(),
+  "text": zod.string(),
+  "timestamp": zod.number()
+})).optional(),
   "actionItems": zod.array(zod.object({
   "id": zod.string(),
   "meetingId": zod.string(),
@@ -145,6 +536,39 @@ export const CreateActionItemBody = zod.object({
 
 
 /**
+ * @summary Trigger AI to generate summaries and extract action items based on transcription
+ */
+export const GenerateAISummaryParams = zod.object({
+  "meetingId": zod.coerce.string()
+})
+
+export const GenerateAISummaryResponse = zod.object({
+  "id": zod.string(),
+  "roomId": zod.string(),
+  "name": zod.string(),
+  "startedAt": zod.string(),
+  "endedAt": zod.string().nullable(),
+  "durationSeconds": zod.number().nullable(),
+  "participantNames": zod.array(zod.string()),
+  "notes": zod.string().nullable(),
+  "transcript": zod.array(zod.object({
+  "speaker": zod.string(),
+  "text": zod.string(),
+  "timestamp": zod.number()
+})).optional(),
+  "actionItems": zod.array(zod.object({
+  "id": zod.string(),
+  "meetingId": zod.string(),
+  "text": zod.string(),
+  "assigneeName": zod.string().nullable(),
+  "dueDate": zod.string().nullable(),
+  "isDone": zod.boolean(),
+  "createdAt": zod.string()
+}))
+})
+
+
+/**
  * @summary Update an action item (toggle done, edit text/assignee)
  */
 export const UpdateActionItemParams = zod.object({
@@ -154,7 +578,7 @@ export const UpdateActionItemParams = zod.object({
 export const UpdateActionItemBody = zod.object({
   "text": zod.string().optional(),
   "assigneeName": zod.string().nullish(),
-  "dueDate": zod.string().nullish(),
+  "dueDate": zod.coerce.date().nullish(),
   "isDone": zod.boolean().optional()
 })
 
@@ -186,6 +610,773 @@ export const GetDashboardStatsResponse = zod.object({
   "openActionItems": zod.number(),
   "completedActionItems": zod.number(),
   "meetingsThisWeek": zod.number()
+})
+
+
+/**
+ * @summary List all tasks for Kanban board
+ */
+export const ListTasksResponseItem = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "status": zod.enum(['Todo', 'In Progress', 'Done']),
+  "assignee": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "role": zod.enum(['Admin', 'Manager', 'Member']),
+  "phoneNumber": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "bio": zod.string().nullish(),
+  "timezone": zod.string().nullish(),
+  "avatar": zod.string().nullish(),
+  "authProvider": zod.enum(['local', 'google']),
+  "googleId": zod.string().nullish(),
+  "profilePicture": zod.string().nullish(),
+  "emailVerified": zod.boolean(),
+  "hasPassword": zod.boolean(),
+  "notificationSettings": zod.object({
+  "email": zod.boolean(),
+  "push": zod.boolean(),
+  "sms": zod.boolean()
+}).optional(),
+  "createdAt": zod.string()
+}).optional(),
+  "dueDate": zod.string().nullable(),
+  "teamId": zod.string().nullable(),
+  "createdAt": zod.string()
+})
+export const ListTasksResponse = zod.array(ListTasksResponseItem)
+
+
+/**
+ * @summary Create a new Kanban task
+ */
+export const CreateTaskBody = zod.object({
+  "title": zod.string(),
+  "description": zod.string().optional(),
+  "status": zod.enum(['Todo', 'In Progress', 'Done']).optional(),
+  "assigneeId": zod.string().nullish(),
+  "dueDate": zod.string().nullish(),
+  "teamId": zod.string().nullish()
+})
+
+
+/**
+ * @summary Update a Kanban task (status, description, assignee, etc.)
+ */
+export const UpdateTaskParams = zod.object({
+  "taskId": zod.coerce.string()
+})
+
+export const UpdateTaskBody = zod.object({
+  "title": zod.string().optional(),
+  "description": zod.string().optional(),
+  "status": zod.enum(['Todo', 'In Progress', 'Done']).optional(),
+  "assigneeId": zod.string().nullish(),
+  "dueDate": zod.string().nullish()
+})
+
+export const UpdateTaskResponse = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "status": zod.enum(['Todo', 'In Progress', 'Done']),
+  "assignee": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "role": zod.enum(['Admin', 'Manager', 'Member']),
+  "phoneNumber": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "bio": zod.string().nullish(),
+  "timezone": zod.string().nullish(),
+  "avatar": zod.string().nullish(),
+  "authProvider": zod.enum(['local', 'google']),
+  "googleId": zod.string().nullish(),
+  "profilePicture": zod.string().nullish(),
+  "emailVerified": zod.boolean(),
+  "hasPassword": zod.boolean(),
+  "notificationSettings": zod.object({
+  "email": zod.boolean(),
+  "push": zod.boolean(),
+  "sms": zod.boolean()
+}).optional(),
+  "createdAt": zod.string()
+}).optional(),
+  "dueDate": zod.string().nullable(),
+  "teamId": zod.string().nullable(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Delete a Kanban task
+ */
+export const DeleteTaskParams = zod.object({
+  "taskId": zod.coerce.string()
+})
+
+
+/**
+ * @summary List all teams the user belongs to
+ */
+export const ListTeamsResponseItem = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "members": zod.array(zod.object({
+  "user": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "role": zod.enum(['Admin', 'Manager', 'Member']),
+  "phoneNumber": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "bio": zod.string().nullish(),
+  "timezone": zod.string().nullish(),
+  "avatar": zod.string().nullish(),
+  "authProvider": zod.enum(['local', 'google']),
+  "googleId": zod.string().nullish(),
+  "profilePicture": zod.string().nullish(),
+  "emailVerified": zod.boolean(),
+  "hasPassword": zod.boolean(),
+  "notificationSettings": zod.object({
+  "email": zod.boolean(),
+  "push": zod.boolean(),
+  "sms": zod.boolean()
+}).optional(),
+  "createdAt": zod.string()
+}),
+  "role": zod.enum(['Admin', 'Manager', 'Member'])
+})),
+  "createdAt": zod.string()
+})
+export const ListTeamsResponse = zod.array(ListTeamsResponseItem)
+
+
+/**
+ * @summary Create a new team workspace
+ */
+export const CreateTeamBody = zod.object({
+  "name": zod.string()
+})
+
+
+/**
+ * @summary Invite a user to a team
+ */
+export const InviteTeamMemberParams = zod.object({
+  "teamId": zod.coerce.string()
+})
+
+export const InviteTeamMemberBody = zod.object({
+  "email": zod.string(),
+  "role": zod.enum(['Admin', 'Manager', 'Member'])
+})
+
+export const InviteTeamMemberResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "members": zod.array(zod.object({
+  "user": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "role": zod.enum(['Admin', 'Manager', 'Member']),
+  "phoneNumber": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "bio": zod.string().nullish(),
+  "timezone": zod.string().nullish(),
+  "avatar": zod.string().nullish(),
+  "authProvider": zod.enum(['local', 'google']),
+  "googleId": zod.string().nullish(),
+  "profilePicture": zod.string().nullish(),
+  "emailVerified": zod.boolean(),
+  "hasPassword": zod.boolean(),
+  "notificationSettings": zod.object({
+  "email": zod.boolean(),
+  "push": zod.boolean(),
+  "sms": zod.boolean()
+}).optional(),
+  "createdAt": zod.string()
+}),
+  "role": zod.enum(['Admin', 'Manager', 'Member'])
+})),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Invite a user by email to a team
+ */
+export const InviteToTeamBody = zod.object({
+  "email": zod.string(),
+  "teamId": zod.string(),
+  "role": zod.enum(['Admin', 'Manager', 'Member'])
+})
+
+export const InviteToTeamResponse = zod.object({
+  "message": zod.string(),
+  "invitation": zod.object({
+  "id": zod.string().optional(),
+  "email": zod.string().optional(),
+  "teamId": zod.string().optional(),
+  "invitedBy": zod.string().optional(),
+  "role": zod.string().optional(),
+  "status": zod.string().optional(),
+  "token": zod.string().optional()
+})
+})
+
+
+/**
+ * @summary Accept a team invitation
+ */
+export const AcceptTeamInviteBody = zod.object({
+  "token": zod.string()
+})
+
+export const AcceptTeamInviteResponse = zod.object({
+  "message": zod.string(),
+  "teamId": zod.string()
+})
+
+
+/**
+ * @summary Reject a team invitation
+ */
+export const RejectTeamInviteBody = zod.object({
+  "token": zod.string()
+})
+
+export const RejectTeamInviteResponse = zod.object({
+  "message": zod.string()
+})
+
+
+/**
+ * @summary List all registered platform users (Admin only)
+ */
+export const AdminListUsersResponseItem = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "role": zod.enum(['Admin', 'Manager', 'Member']),
+  "phoneNumber": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "bio": zod.string().nullish(),
+  "timezone": zod.string().nullish(),
+  "avatar": zod.string().nullish(),
+  "authProvider": zod.enum(['local', 'google']),
+  "googleId": zod.string().nullish(),
+  "profilePicture": zod.string().nullish(),
+  "emailVerified": zod.boolean(),
+  "hasPassword": zod.boolean(),
+  "notificationSettings": zod.object({
+  "email": zod.boolean(),
+  "push": zod.boolean(),
+  "sms": zod.boolean()
+}).optional(),
+  "createdAt": zod.string()
+})
+export const AdminListUsersResponse = zod.array(AdminListUsersResponseItem)
+
+
+/**
+ * @summary Update user platform role (Admin only)
+ */
+export const AdminUpdateUserRoleParams = zod.object({
+  "userId": zod.coerce.string()
+})
+
+export const AdminUpdateUserRoleBody = zod.object({
+  "role": zod.enum(['Admin', 'Manager', 'Member'])
+})
+
+export const AdminUpdateUserRoleResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "role": zod.enum(['Admin', 'Manager', 'Member']),
+  "phoneNumber": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "bio": zod.string().nullish(),
+  "timezone": zod.string().nullish(),
+  "avatar": zod.string().nullish(),
+  "authProvider": zod.enum(['local', 'google']),
+  "googleId": zod.string().nullish(),
+  "profilePicture": zod.string().nullish(),
+  "emailVerified": zod.boolean(),
+  "hasPassword": zod.boolean(),
+  "notificationSettings": zod.object({
+  "email": zod.boolean(),
+  "push": zod.boolean(),
+  "sms": zod.boolean()
+}).optional(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Delete a user account (Admin only)
+ */
+export const AdminDeleteUserParams = zod.object({
+  "userId": zod.coerce.string()
+})
+
+export const AdminDeleteUserResponse = zod.object({
+  "message": zod.string()
+})
+
+
+/**
+ * @summary Get analytics charts data and engagement reports
+ */
+export const GetAnalyticsInsightsResponse = zod.object({
+  "monthlyTrends": zod.array(zod.object({
+  "month": zod.string(),
+  "count": zod.number(),
+  "totalDurationMinutes": zod.number()
+})),
+  "productivity": zod.object({
+  "completedTasks": zod.number(),
+  "openTasks": zod.number(),
+  "taskCompletionRate": zod.number()
+}),
+  "engagement": zod.array(zod.object({
+  "name": zod.string(),
+  "meetingCount": zod.number(),
+  "averageDurationMinutes": zod.number()
+}))
+})
+
+
+/**
+ * @summary Create a new meeting (instant, scheduled, or recurring)
+ */
+export const CreateMeetingBody = zod.object({
+  "title": zod.string(),
+  "description": zod.string().optional(),
+  "password": zod.string().optional(),
+  "isRecurring": zod.boolean().optional(),
+  "recurrenceRule": zod.string().optional(),
+  "waitingRoomEnabled": zod.boolean().optional(),
+  "startTime": zod.coerce.date().optional()
+})
+
+
+/**
+ * @summary Validate credentials and join a meeting
+ */
+export const JoinMeetingBody = zod.object({
+  "meetingId": zod.string(),
+  "password": zod.string().optional()
+})
+
+export const JoinMeetingResponse = zod.object({
+  "id": zod.string(),
+  "roomId": zod.string(),
+  "name": zod.string(),
+  "startedAt": zod.string(),
+  "endedAt": zod.string().nullable(),
+  "durationSeconds": zod.number().nullable(),
+  "participantNames": zod.array(zod.string()),
+  "notes": zod.string().nullable(),
+  "transcript": zod.array(zod.object({
+  "speaker": zod.string(),
+  "text": zod.string(),
+  "timestamp": zod.number()
+})).optional(),
+  "actionItems": zod.array(zod.object({
+  "id": zod.string(),
+  "meetingId": zod.string(),
+  "text": zod.string(),
+  "assigneeName": zod.string().nullable(),
+  "dueDate": zod.string().nullable(),
+  "isDone": zod.boolean(),
+  "createdAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary Register that a participant is leaving the room
+ */
+export const LeaveMeetingBody = zod.object({
+  "meetingId": zod.string(),
+  "userId": zod.string()
+})
+
+export const LeaveMeetingResponse = zod.object({
+  "message": zod.string()
+})
+
+
+/**
+ * @summary Toggle mute status of a participant (Host only)
+ */
+export const MuteParticipantBody = zod.object({
+  "meetingId": zod.string(),
+  "userId": zod.string(),
+  "isMuted": zod.boolean()
+})
+
+export const MuteParticipantResponse = zod.object({
+  "id": zod.string(),
+  "meetingId": zod.string(),
+  "userId": zod.string().nullish(),
+  "displayName": zod.string(),
+  "role": zod.enum(['host', 'co-host', 'participant']),
+  "status": zod.enum(['waiting', 'admitted', 'rejected', 'left']),
+  "isMuted": zod.boolean(),
+  "isCameraOff": zod.boolean(),
+  "isRaisedHand": zod.boolean(),
+  "joinedAt": zod.string(),
+  "leftAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary Remove a participant from the meeting (Host only)
+ */
+export const RemoveParticipantBody = zod.object({
+  "meetingId": zod.string(),
+  "userId": zod.string()
+})
+
+export const RemoveParticipantResponse = zod.object({
+  "message": zod.string()
+})
+
+
+/**
+ * @summary Toggle hand-raised status of a participant
+ */
+export const RaiseHandParticipantBody = zod.object({
+  "meetingId": zod.string(),
+  "userId": zod.string(),
+  "isRaisedHand": zod.boolean()
+})
+
+export const RaiseHandParticipantResponse = zod.object({
+  "id": zod.string(),
+  "meetingId": zod.string(),
+  "userId": zod.string().nullish(),
+  "displayName": zod.string(),
+  "role": zod.enum(['host', 'co-host', 'participant']),
+  "status": zod.enum(['waiting', 'admitted', 'rejected', 'left']),
+  "isMuted": zod.boolean(),
+  "isCameraOff": zod.boolean(),
+  "isRaisedHand": zod.boolean(),
+  "joinedAt": zod.string(),
+  "leftAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary Start recording meeting session
+ */
+export const StartRecordingBody = zod.object({
+  "meetingId": zod.string(),
+  "title": zod.string()
+})
+
+export const StartRecordingResponse = zod.object({
+  "id": zod.string(),
+  "meetingId": zod.string(),
+  "title": zod.string(),
+  "fileUrl": zod.string(),
+  "durationSeconds": zod.number(),
+  "sizeBytes": zod.number(),
+  "recordedBy": zod.string(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Stop recording and save files
+ */
+export const StopRecordingBody = zod.object({
+  "meetingId": zod.string(),
+  "durationSeconds": zod.number(),
+  "sizeBytes": zod.number()
+})
+
+export const StopRecordingResponse = zod.object({
+  "id": zod.string(),
+  "meetingId": zod.string(),
+  "title": zod.string(),
+  "fileUrl": zod.string(),
+  "durationSeconds": zod.number(),
+  "sizeBytes": zod.number(),
+  "recordedBy": zod.string(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Transcribe audio to text using OpenAI Whisper / HF
+ */
+export const AiTranscribeBody = zod.object({
+  "meetingId": zod.string(),
+  "speaker": zod.string(),
+  "text": zod.string()
+})
+
+export const AiTranscribeResponse = zod.object({
+  "id": zod.string(),
+  "meetingId": zod.string(),
+  "speaker": zod.string(),
+  "text": zod.string(),
+  "timestamp": zod.number()
+})
+
+
+/**
+ * @summary Generate summaries for a meeting (Short, Detailed, Management, Client)
+ */
+export const AiSummarizeBody = zod.object({
+  "meetingId": zod.string(),
+  "summaryType": zod.enum(['Short', 'Detailed', 'Management', 'Client'])
+})
+
+export const AiSummarizeResponse = zod.object({
+  "id": zod.string(),
+  "meetingId": zod.string(),
+  "summaryType": zod.string(),
+  "shortSummary": zod.string(),
+  "detailedSummary": zod.string(),
+  "executiveSummary": zod.string(),
+  "keyPoints": zod.array(zod.string()),
+  "decisions": zod.array(zod.string()),
+  "outcomes": zod.array(zod.string()).optional(),
+  "highlights": zod.array(zod.string()).optional(),
+  "risks": zod.array(zod.string()).optional(),
+  "opportunities": zod.array(zod.string()).optional()
+})
+
+
+/**
+ * @summary Fetch action items filtered by meetingId
+ */
+export const ListAIActionItemsQueryParams = zod.object({
+  "meetingId": zod.coerce.string().optional()
+})
+
+export const ListAIActionItemsResponseItem = zod.object({
+  "id": zod.string(),
+  "meetingId": zod.string(),
+  "taskId": zod.string().nullish(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "assignee": zod.string().nullish(),
+  "assigneeName": zod.string(),
+  "dueDate": zod.string().nullish(),
+  "priority": zod.string(),
+  "status": zod.string()
+})
+export const ListAIActionItemsResponse = zod.array(ListAIActionItemsResponseItem)
+
+
+/**
+ * @summary Extract action items and sync with Team Kanban tasks
+ */
+export const AiExtractActionItemsBody = zod.object({
+  "meetingId": zod.string()
+})
+
+export const AiExtractActionItemsResponseItem = zod.object({
+  "id": zod.string(),
+  "meetingId": zod.string(),
+  "taskId": zod.string().nullish(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "assignee": zod.string().nullish(),
+  "assigneeName": zod.string(),
+  "dueDate": zod.string().nullish(),
+  "priority": zod.string(),
+  "status": zod.string()
+})
+export const AiExtractActionItemsResponse = zod.array(AiExtractActionItemsResponseItem)
+
+
+/**
+ * @summary Fetch meeting insights filtered by meetingId
+ */
+export const GetAiInsightsQueryParams = zod.object({
+  "meetingId": zod.coerce.string()
+})
+
+export const GetAiInsightsResponse = zod.object({
+  "id": zod.string(),
+  "meetingId": zod.string(),
+  "productivityScore": zod.number(),
+  "engagementScore": zod.number(),
+  "sentimentScore": zod.number(),
+  "sentimentAnalysis": zod.string(),
+  "participationScore": zod.number(),
+  "speakingTimeAnalytics": zod.record(zod.string(), zod.number()),
+  "mostActiveParticipant": zod.string(),
+  "leastActiveParticipant": zod.string(),
+  "topicAnalysis": zod.array(zod.string())
+})
+
+
+/**
+ * @summary Generate productivity, engagement and speaking analytics
+ */
+export const AiGenerateInsightsBody = zod.object({
+  "meetingId": zod.string()
+})
+
+export const AiGenerateInsightsResponse = zod.object({
+  "id": zod.string(),
+  "meetingId": zod.string(),
+  "productivityScore": zod.number(),
+  "engagementScore": zod.number(),
+  "sentimentScore": zod.number(),
+  "sentimentAnalysis": zod.string(),
+  "participationScore": zod.number(),
+  "speakingTimeAnalytics": zod.record(zod.string(), zod.number()),
+  "mostActiveParticipant": zod.string(),
+  "leastActiveParticipant": zod.string(),
+  "topicAnalysis": zod.array(zod.string())
+})
+
+
+/**
+ * @summary Fetch summaries filtered by meetingId
+ */
+export const ListAISummariesQueryParams = zod.object({
+  "meetingId": zod.coerce.string()
+})
+
+export const ListAISummariesResponseItem = zod.object({
+  "id": zod.string(),
+  "meetingId": zod.string(),
+  "summaryType": zod.string(),
+  "shortSummary": zod.string(),
+  "detailedSummary": zod.string(),
+  "executiveSummary": zod.string(),
+  "keyPoints": zod.array(zod.string()),
+  "decisions": zod.array(zod.string()),
+  "outcomes": zod.array(zod.string()).optional(),
+  "highlights": zod.array(zod.string()).optional(),
+  "risks": zod.array(zod.string()).optional(),
+  "opportunities": zod.array(zod.string()).optional()
+})
+export const ListAISummariesResponse = zod.array(ListAISummariesResponseItem)
+
+
+/**
+ * @summary Fetch transcripts filtered by meetingId
+ */
+export const ListAITranscriptsQueryParams = zod.object({
+  "meetingId": zod.coerce.string()
+})
+
+export const ListAITranscriptsResponseItem = zod.object({
+  "id": zod.string(),
+  "meetingId": zod.string(),
+  "speaker": zod.string(),
+  "text": zod.string(),
+  "timestamp": zod.number()
+})
+export const ListAITranscriptsResponse = zod.array(ListAITranscriptsResponseItem)
+
+
+/**
+ * @summary Fetch decisions filtered by meetingId or query search
+ */
+export const ListAIDecisionsQueryParams = zod.object({
+  "meetingId": zod.coerce.string().optional(),
+  "search": zod.coerce.string().optional()
+})
+
+export const ListAIDecisionsResponseItem = zod.object({
+  "id": zod.string(),
+  "meetingId": zod.string(),
+  "decision": zod.string(),
+  "owner": zod.string(),
+  "timestamp": zod.string(),
+  "impact": zod.string(),
+  "relatedTasks": zod.array(zod.string())
+})
+export const ListAIDecisionsResponse = zod.array(ListAIDecisionsResponseItem)
+
+
+/**
+ * @summary Enterprise AI search engine across content, actions, decisions, participants
+ */
+export const AiSearchQueryParams = zod.object({
+  "query": zod.coerce.string().optional(),
+  "date": zod.coerce.string().optional(),
+  "teamId": zod.coerce.string().optional(),
+  "meetingId": zod.coerce.string().optional(),
+  "user": zod.coerce.string().optional()
+})
+
+export const AiSearchResponse = zod.object({
+  "meetings": zod.array(zod.object({
+  "id": zod.string(),
+  "roomId": zod.string(),
+  "name": zod.string(),
+  "startedAt": zod.string(),
+  "endedAt": zod.string().nullable(),
+  "durationSeconds": zod.number().nullable(),
+  "participantNames": zod.array(zod.string()),
+  "actionItemCount": zod.number(),
+  "openActionItemCount": zod.number(),
+  "hasNotes": zod.boolean(),
+  "notes": zod.string().nullable(),
+  "transcript": zod.array(zod.object({
+  "speaker": zod.string(),
+  "text": zod.string(),
+  "timestamp": zod.number()
+}))
+})),
+  "actionItems": zod.array(zod.object({
+  "id": zod.string(),
+  "meetingId": zod.string(),
+  "taskId": zod.string().nullish(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "assignee": zod.string().nullish(),
+  "assigneeName": zod.string(),
+  "dueDate": zod.string().nullish(),
+  "priority": zod.string(),
+  "status": zod.string()
+})),
+  "decisions": zod.array(zod.object({
+  "id": zod.string(),
+  "meetingId": zod.string(),
+  "decision": zod.string(),
+  "owner": zod.string(),
+  "timestamp": zod.string(),
+  "impact": zod.string(),
+  "relatedTasks": zod.array(zod.string())
+})),
+  "summaries": zod.array(zod.object({
+  "id": zod.string(),
+  "meetingId": zod.string(),
+  "summaryType": zod.string(),
+  "shortSummary": zod.string(),
+  "detailedSummary": zod.string(),
+  "executiveSummary": zod.string(),
+  "keyPoints": zod.array(zod.string()),
+  "decisions": zod.array(zod.string()),
+  "outcomes": zod.array(zod.string()).optional(),
+  "highlights": zod.array(zod.string()).optional(),
+  "risks": zod.array(zod.string()).optional(),
+  "opportunities": zod.array(zod.string()).optional()
+}))
 })
 
 

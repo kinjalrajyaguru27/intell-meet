@@ -5,8 +5,10 @@
  * Intell Meet API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { TranscriptLine } from './transcriptLine';
 
 export interface EndMeetingInput {
   participantNames: string[];
   durationSeconds: number;
+  transcript?: TranscriptLine[];
 }

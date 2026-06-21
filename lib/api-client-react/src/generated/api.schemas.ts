@@ -9,6 +9,84 @@ export interface HealthStatus {
   status: string;
 }
 
+export type UserRole = typeof UserRole[keyof typeof UserRole];
+
+
+export const UserRole = {
+  Admin: 'Admin',
+  Manager: 'Manager',
+  Member: 'Member',
+} as const;
+
+export type UserAuthProvider = typeof UserAuthProvider[keyof typeof UserAuthProvider];
+
+
+export const UserAuthProvider = {
+  local: 'local',
+  google: 'google',
+} as const;
+
+export type UserNotificationSettings = {
+  email: boolean;
+  push: boolean;
+  sms: boolean;
+};
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  /** @nullable */
+  phoneNumber?: string | null;
+  /** @nullable */
+  jobTitle?: string | null;
+  /** @nullable */
+  department?: string | null;
+  /** @nullable */
+  bio?: string | null;
+  /** @nullable */
+  timezone?: string | null;
+  /** @nullable */
+  avatar?: string | null;
+  authProvider: UserAuthProvider;
+  /** @nullable */
+  googleId?: string | null;
+  /** @nullable */
+  profilePicture?: string | null;
+  emailVerified: boolean;
+  hasPassword: boolean;
+  notificationSettings?: UserNotificationSettings;
+  createdAt: string;
+}
+
+export type UserSignupRole = typeof UserSignupRole[keyof typeof UserSignupRole];
+
+
+export const UserSignupRole = {
+  Admin: 'Admin',
+  Manager: 'Manager',
+  Member: 'Member',
+} as const;
+
+export interface UserSignup {
+  name: string;
+  email: string;
+  password: string;
+  role?: UserSignupRole;
+}
+
+export interface UserLogin {
+  email: string;
+  password: string;
+  rememberMe?: boolean;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: User;
+}
+
 export interface Room {
   id: string;
   name: string;
@@ -18,6 +96,12 @@ export interface Room {
 
 export interface RoomInput {
   name: string;
+}
+
+export interface TranscriptLine {
+  speaker: string;
+  text: string;
+  timestamp: number;
 }
 
 export interface Meeting {
@@ -33,6 +117,9 @@ export interface Meeting {
   actionItemCount: number;
   openActionItemCount: number;
   hasNotes: boolean;
+  /** @nullable */
+  notes: string | null;
+  transcript: TranscriptLine[];
 }
 
 export interface ActionItem {
@@ -59,12 +146,14 @@ export interface MeetingDetail {
   participantNames: string[];
   /** @nullable */
   notes: string | null;
+  transcript?: TranscriptLine[];
   actionItems: ActionItem[];
 }
 
 export interface EndMeetingInput {
   participantNames: string[];
   durationSeconds: number;
+  transcript?: TranscriptLine[];
 }
 
 export interface Notes {
@@ -102,4 +191,497 @@ export interface DashboardStats {
   completedActionItems: number;
   meetingsThisWeek: number;
 }
+
+export type TaskStatus = typeof TaskStatus[keyof typeof TaskStatus];
+
+
+export const TaskStatus = {
+  Todo: 'Todo',
+  In_Progress: 'In Progress',
+  Done: 'Done',
+} as const;
+
+export interface Task {
+  id: string;
+  title: string;
+  description: string;
+  status: TaskStatus;
+  assignee?: User;
+  /** @nullable */
+  dueDate: string | null;
+  /** @nullable */
+  teamId: string | null;
+  createdAt: string;
+}
+
+export type TaskInputStatus = typeof TaskInputStatus[keyof typeof TaskInputStatus];
+
+
+export const TaskInputStatus = {
+  Todo: 'Todo',
+  In_Progress: 'In Progress',
+  Done: 'Done',
+} as const;
+
+export interface TaskInput {
+  title: string;
+  description?: string;
+  status?: TaskInputStatus;
+  /** @nullable */
+  assigneeId?: string | null;
+  /** @nullable */
+  dueDate?: string | null;
+  /** @nullable */
+  teamId?: string | null;
+}
+
+export type TaskUpdateStatus = typeof TaskUpdateStatus[keyof typeof TaskUpdateStatus];
+
+
+export const TaskUpdateStatus = {
+  Todo: 'Todo',
+  In_Progress: 'In Progress',
+  Done: 'Done',
+} as const;
+
+export interface TaskUpdate {
+  title?: string;
+  description?: string;
+  status?: TaskUpdateStatus;
+  /** @nullable */
+  assigneeId?: string | null;
+  /** @nullable */
+  dueDate?: string | null;
+}
+
+export type TeamMembersItemRole = typeof TeamMembersItemRole[keyof typeof TeamMembersItemRole];
+
+
+export const TeamMembersItemRole = {
+  Admin: 'Admin',
+  Manager: 'Manager',
+  Member: 'Member',
+} as const;
+
+export type TeamMembersItem = {
+  user: User;
+  role: TeamMembersItemRole;
+};
+
+export interface Team {
+  id: string;
+  name: string;
+  members: TeamMembersItem[];
+  createdAt: string;
+}
+
+export interface TeamInput {
+  name: string;
+}
+
+export interface MonthlyTrend {
+  month: string;
+  count: number;
+  totalDurationMinutes: number;
+}
+
+export interface ProductivityStats {
+  completedTasks: number;
+  openTasks: number;
+  taskCompletionRate: number;
+}
+
+export interface EngagementReport {
+  name: string;
+  meetingCount: number;
+  averageDurationMinutes: number;
+}
+
+export interface AnalyticsInsights {
+  monthlyTrends: MonthlyTrend[];
+  productivity: ProductivityStats;
+  engagement: EngagementReport[];
+}
+
+export type UserProfileUpdateNotificationSettings = {
+  email?: boolean;
+  push?: boolean;
+  sms?: boolean;
+};
+
+export interface UserProfileUpdate {
+  name?: string;
+  /** @nullable */
+  phoneNumber?: string | null;
+  /** @nullable */
+  jobTitle?: string | null;
+  /** @nullable */
+  department?: string | null;
+  /** @nullable */
+  bio?: string | null;
+  /** @nullable */
+  timezone?: string | null;
+  /** @nullable */
+  avatar?: string | null;
+  notificationSettings?: UserProfileUpdateNotificationSettings;
+}
+
+export type TeamInviteInputRole = typeof TeamInviteInputRole[keyof typeof TeamInviteInputRole];
+
+
+export const TeamInviteInputRole = {
+  Admin: 'Admin',
+  Manager: 'Manager',
+  Member: 'Member',
+} as const;
+
+export interface TeamInviteInput {
+  email: string;
+  role: TeamInviteInputRole;
+}
+
+export type TeamInviteRequestInputRole = typeof TeamInviteRequestInputRole[keyof typeof TeamInviteRequestInputRole];
+
+
+export const TeamInviteRequestInputRole = {
+  Admin: 'Admin',
+  Manager: 'Manager',
+  Member: 'Member',
+} as const;
+
+export interface TeamInviteRequestInput {
+  email: string;
+  teamId: string;
+  role: TeamInviteRequestInputRole;
+}
+
+export interface TeamInvitationActionInput {
+  token: string;
+}
+
+export interface ForgotPasswordInput {
+  email: string;
+}
+
+export interface ResetPasswordInput {
+  token: string;
+  password: string;
+}
+
+export interface ChangePasswordInput {
+  oldPassword: string;
+  newPassword: string;
+}
+
+export type OAuthLoginInputProvider = typeof OAuthLoginInputProvider[keyof typeof OAuthLoginInputProvider];
+
+
+export const OAuthLoginInputProvider = {
+  google: 'google',
+  github: 'github',
+} as const;
+
+export interface OAuthLoginInput {
+  provider: OAuthLoginInputProvider;
+  email: string;
+  name: string;
+}
+
+export type AdminUpdateUserRoleInputRole = typeof AdminUpdateUserRoleInputRole[keyof typeof AdminUpdateUserRoleInputRole];
+
+
+export const AdminUpdateUserRoleInputRole = {
+  Admin: 'Admin',
+  Manager: 'Manager',
+  Member: 'Member',
+} as const;
+
+export interface AdminUpdateUserRoleInput {
+  role: AdminUpdateUserRoleInputRole;
+}
+
+export interface GoogleLoginInput {
+  idToken: string;
+}
+
+export interface CreateMeetingInput {
+  title: string;
+  description?: string;
+  password?: string;
+  isRecurring?: boolean;
+  recurrenceRule?: string;
+  waitingRoomEnabled?: boolean;
+  startTime?: string;
+}
+
+export interface JoinMeetingInput {
+  meetingId: string;
+  password?: string;
+}
+
+export interface MuteParticipantInput {
+  meetingId: string;
+  userId: string;
+  isMuted: boolean;
+}
+
+export interface RemoveParticipantInput {
+  meetingId: string;
+  userId: string;
+}
+
+export interface RaiseHandInput {
+  meetingId: string;
+  userId: string;
+  isRaisedHand: boolean;
+}
+
+export interface StartRecordingInput {
+  meetingId: string;
+  title: string;
+}
+
+export interface StopRecordingInput {
+  meetingId: string;
+  durationSeconds: number;
+  sizeBytes: number;
+}
+
+export interface Recording {
+  id: string;
+  meetingId: string;
+  title: string;
+  fileUrl: string;
+  durationSeconds: number;
+  sizeBytes: number;
+  recordedBy: string;
+  createdAt: string;
+}
+
+export type ParticipantRole = typeof ParticipantRole[keyof typeof ParticipantRole];
+
+
+export const ParticipantRole = {
+  host: 'host',
+  'co-host': 'co-host',
+  participant: 'participant',
+} as const;
+
+export type ParticipantStatus = typeof ParticipantStatus[keyof typeof ParticipantStatus];
+
+
+export const ParticipantStatus = {
+  waiting: 'waiting',
+  admitted: 'admitted',
+  rejected: 'rejected',
+  left: 'left',
+} as const;
+
+export interface Participant {
+  id: string;
+  meetingId: string;
+  /** @nullable */
+  userId?: string | null;
+  displayName: string;
+  role: ParticipantRole;
+  status: ParticipantStatus;
+  isMuted: boolean;
+  isCameraOff: boolean;
+  isRaisedHand: boolean;
+  joinedAt: string;
+  /** @nullable */
+  leftAt?: string | null;
+}
+
+export interface LeaveMeetingInput {
+  meetingId: string;
+  userId: string;
+}
+
+export interface AITranscriptLine {
+  id: string;
+  meetingId: string;
+  speaker: string;
+  text: string;
+  timestamp: number;
+}
+
+export interface AISummary {
+  id: string;
+  meetingId: string;
+  summaryType: string;
+  shortSummary: string;
+  detailedSummary: string;
+  executiveSummary: string;
+  keyPoints: string[];
+  decisions: string[];
+  outcomes?: string[];
+  highlights?: string[];
+  risks?: string[];
+  opportunities?: string[];
+}
+
+export interface AIActionItem {
+  id: string;
+  meetingId: string;
+  /** @nullable */
+  taskId?: string | null;
+  title: string;
+  description: string;
+  /** @nullable */
+  assignee?: string | null;
+  assigneeName: string;
+  /** @nullable */
+  dueDate?: string | null;
+  priority: string;
+  status: string;
+}
+
+export type AIInsightSpeakingTimeAnalytics = {[key: string]: number};
+
+export interface AIInsight {
+  id: string;
+  meetingId: string;
+  productivityScore: number;
+  engagementScore: number;
+  sentimentScore: number;
+  sentimentAnalysis: string;
+  participationScore: number;
+  speakingTimeAnalytics: AIInsightSpeakingTimeAnalytics;
+  mostActiveParticipant: string;
+  leastActiveParticipant: string;
+  topicAnalysis: string[];
+}
+
+export interface AIDecision {
+  id: string;
+  meetingId: string;
+  decision: string;
+  owner: string;
+  timestamp: string;
+  impact: string;
+  relatedTasks: string[];
+}
+
+export interface AISearchResults {
+  meetings: Meeting[];
+  actionItems: AIActionItem[];
+  decisions: AIDecision[];
+  summaries: AISummary[];
+}
+
+export interface AITranscribeInput {
+  meetingId: string;
+  speaker: string;
+  text: string;
+}
+
+export type AISummarizeInputSummaryType = typeof AISummarizeInputSummaryType[keyof typeof AISummarizeInputSummaryType];
+
+
+export const AISummarizeInputSummaryType = {
+  Short: 'Short',
+  Detailed: 'Detailed',
+  Management: 'Management',
+  Client: 'Client',
+} as const;
+
+export interface AISummarizeInput {
+  meetingId: string;
+  summaryType: AISummarizeInputSummaryType;
+}
+
+export interface AIIntelligenceInput {
+  meetingId: string;
+}
+
+export type GoogleDisconnect200 = {
+  message: string;
+};
+
+export type Logout200 = {
+  message: string;
+};
+
+export type RefreshToken200 = {
+  token: string;
+};
+
+export type ForgotPassword200 = {
+  message: string;
+  resetLink: string;
+};
+
+export type ResetPassword200 = {
+  message: string;
+};
+
+export type ChangePassword200 = {
+  message: string;
+};
+
+export type InviteToTeam200Invitation = {
+  id?: string;
+  email?: string;
+  teamId?: string;
+  invitedBy?: string;
+  role?: string;
+  status?: string;
+  token?: string;
+};
+
+export type InviteToTeam200 = {
+  message: string;
+  invitation: InviteToTeam200Invitation;
+};
+
+export type AcceptTeamInvite200 = {
+  message: string;
+  teamId: string;
+};
+
+export type RejectTeamInvite200 = {
+  message: string;
+};
+
+export type AdminDeleteUser200 = {
+  message: string;
+};
+
+export type LeaveMeeting200 = {
+  message: string;
+};
+
+export type RemoveParticipant200 = {
+  message: string;
+};
+
+export type ListAIActionItemsParams = {
+meetingId?: string;
+};
+
+export type GetAiInsightsParams = {
+meetingId: string;
+};
+
+export type ListAISummariesParams = {
+meetingId: string;
+};
+
+export type ListAITranscriptsParams = {
+meetingId: string;
+};
+
+export type ListAIDecisionsParams = {
+meetingId?: string;
+search?: string;
+};
+
+export type AiSearchParams = {
+query?: string;
+date?: string;
+teamId?: string;
+meetingId?: string;
+user?: string;
+};
 

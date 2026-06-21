@@ -2,7 +2,7 @@ import { Router } from "express";
 import { CreateRoomBody, GetRoomParams } from "@workspace/api-zod";
 import { getRoomParticipantCount } from "../signaling";
 import { logger } from "../lib/logger";
-import { db, meetingsTable } from "@workspace/db";
+import { Meeting } from "@workspace/db";
 
 const router = Router();
 
@@ -43,7 +43,18 @@ router.post("/rooms", async (req, res) => {
 
   // Persist meeting to DB for history tracking
   try {
-    await db.insert(meetingsTable).values({ roomId: id, name, startedAt: now });
+    const meeting = new Meeting({
+      roomId: id,
+      name,
+      startedAt: now,
+      title: name,
+      meetingId: id,
+      status: "active",
+      startTime: now,
+      waitingRoomEnabled: false,
+    });
+    await meeting.save();
+    req.log.info({ roomId: id, meetingId: meeting._id.toString() }, "Meeting persisted to MongoDB");
   } catch (err) {
     logger.warn({ err }, "Failed to persist meeting to DB");
   }
@@ -55,7 +66,7 @@ router.post("/rooms", async (req, res) => {
   });
 });
 
-router.get("/rooms/:roomId", (req, res) => {
+router.get("/rooms/:roomId", async (req, res) => {
   const parsed = GetRoomParams.safeParse(req.params);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid room ID" });
@@ -63,14 +74,34 @@ router.get("/rooms/:roomId", (req, res) => {
   }
   const { roomId } = parsed.data;
   const room = roomStore.get(roomId);
-  if (!room) {
-    res.status(404).json({ error: "Room not found" });
+  
+  if (room) {
+    res.json({
+      ...room,
+      participantCount: getRoomParticipantCount(roomId),
+    });
     return;
   }
-  res.json({
-    ...room,
-    participantCount: getRoomParticipantCount(roomId),
-  });
+
+  // Fallback to MongoDB Meeting collection for scheduled, recurring, or instant meetings
+  try {
+    const meeting = await Meeting.findOne({ roomId, endedAt: null }).sort({ startedAt: -1 });
+    if (meeting) {
+      res.json({
+        id: meeting.roomId,
+        name: meeting.title || meeting.name,
+        createdAt: meeting.startedAt.toISOString(),
+        participantCount: getRoomParticipantCount(roomId),
+        host: meeting.host?.toString() || "",
+        password: meeting.password || "",
+      });
+      return;
+    }
+  } catch (err) {
+    logger.warn({ err }, "Error checking meeting fallback for room");
+  }
+
+  res.status(404).json({ error: "Room not found" });
 });
 
 export default router;
