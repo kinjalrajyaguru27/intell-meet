@@ -32,6 +32,23 @@ setAuthTokenGetter(() => {
   return localStorage.getItem("intell_meet_token");
 });
 
+// Capture Google OAuth redirect token at root before any router redirects
+if (typeof window !== "undefined" && window.location.hash) {
+  try {
+    const hash = window.location.hash;
+    const params = new URLSearchParams(hash.substring(1));
+    const idToken = params.get("id_token");
+    const state = params.get("state");
+    if (idToken) {
+      sessionStorage.setItem("google_id_token", idToken);
+      const targetPath = state ? decodeURIComponent(state) : window.location.pathname + window.location.search;
+      window.history.replaceState(null, "", window.location.origin + targetPath);
+    }
+  } catch (e) {
+    console.error("Error parsing redirect hash", e);
+  }
+}
+
 const queryClient = new QueryClient();
 
 function AuthenticatedRoutes({ children }: { children: React.ReactNode }) {

@@ -177,7 +177,7 @@ export default function Dashboard() {
           {/* Upcoming Meetings */}
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-400">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
                 Upcoming Meetings
               </h3>
               <Button
@@ -198,7 +198,7 @@ export default function Dashboard() {
                   ))}
                 </div>
               ) : upcomingMeetings.length === 0 ? (
-                <div className="text-center py-8 bg-zinc-100/40 dark:bg-card border border-zinc-200 dark:border-white/5 rounded-2xl text-xs text-zinc-500 italic shadow-sm">
+                <div className="text-center py-8 bg-zinc-50/50 dark:bg-card border border-zinc-200 dark:border-white/5 rounded-2xl text-xs text-zinc-500 italic shadow-sm">
                   No upcoming meetings scheduled.
                 </div>
               ) : (
@@ -233,7 +233,7 @@ export default function Dashboard() {
           {/* Recent Tasks */}
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-400">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
                 My Pending Tasks
               </h3>
               <Button
@@ -248,7 +248,7 @@ export default function Dashboard() {
 
             <div className="space-y-3">
               {recentTasks.length === 0 ? (
-                <div className="text-center py-8 bg-zinc-100/40 dark:bg-card border border-zinc-200 dark:border-white/5 rounded-2xl text-xs text-zinc-500 italic shadow-sm">
+                <div className="text-center py-8 bg-zinc-50/50 dark:bg-card border border-zinc-200 dark:border-white/5 rounded-2xl text-xs text-zinc-500 italic shadow-sm">
                   No pending tasks assigned to you.
                 </div>
               ) : (
@@ -293,7 +293,7 @@ export default function Dashboard() {
 
         {/* Right Column (Recent Activity) */}
         <div className="space-y-3">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-400">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
             Recent Activity Log
           </h3>
           <Card className="bg-white dark:bg-card border border-zinc-200 dark:border-white/5 rounded-2xl p-4 min-h-[350px] shadow-sm">
