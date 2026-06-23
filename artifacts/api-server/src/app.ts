@@ -57,8 +57,21 @@ app.use("/api", router);
 
 import path from "node:path";
 import fs from "node:fs";
+import { fileURLToPath } from "node:url";
 
-const frontendDist = path.resolve(import.meta.dirname, "../../meet/dist/public");
+const getDirname = () => {
+  try {
+    if (typeof __dirname !== "undefined") {
+      return __dirname;
+    }
+    return path.dirname(fileURLToPath(import.meta.url));
+  } catch (e) {
+    return process.cwd();
+  }
+};
+
+const currentDir = getDirname();
+const frontendDist = path.resolve(currentDir, "../../meet/dist/public");
 const fallbackDist = path.resolve(process.cwd(), "../meet/dist/public");
 
 const staticDir = fs.existsSync(frontendDist) 

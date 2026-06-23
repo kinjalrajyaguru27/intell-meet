@@ -1,9 +1,22 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const getDirname = () => {
+  try {
+    if (typeof __dirname !== "undefined") {
+      return __dirname;
+    }
+    return path.dirname(fileURLToPath(import.meta.url));
+  } catch (e) {
+    return process.cwd();
+  }
+};
 
 // Load environment variables from .env file if it exists (checks multiple fallback locations)
 try {
-  const envPath1 = path.resolve(import.meta.dirname, "../.env");
+  const currentDir = getDirname();
+  const envPath1 = path.resolve(currentDir, "../.env");
   const envPath2 = path.resolve(process.cwd(), ".env");
   const envPath3 = path.resolve(process.cwd(), "artifacts/api-server/.env");
   
