@@ -57,26 +57,22 @@ app.use("/api", router);
 
 import path from "node:path";
 import fs from "node:fs";
-import { fileURLToPath } from "node:url";
 
-const getDirname = () => {
-  try {
-    if (typeof __dirname !== "undefined") {
-      return __dirname;
+const getStaticDir = () => {
+  const possiblePaths = [
+    path.resolve(process.cwd(), "artifacts/meet/dist/public"),
+    path.resolve(process.cwd(), "../meet/dist/public"),
+    path.resolve(process.cwd(), "meet/dist/public")
+  ];
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      return p;
     }
-    return path.dirname(fileURLToPath(import.meta.url));
-  } catch (e) {
-    return process.cwd();
   }
+  return null;
 };
 
-const currentDir = getDirname();
-const frontendDist = path.resolve(currentDir, "../../meet/dist/public");
-const fallbackDist = path.resolve(process.cwd(), "../meet/dist/public");
-
-const staticDir = fs.existsSync(frontendDist) 
-  ? frontendDist 
-  : (fs.existsSync(fallbackDist) ? fallbackDist : null);
+const staticDir = getStaticDir();
 
 if (staticDir) {
   logger.info({ staticDir }, "Serving frontend static assets from path");
