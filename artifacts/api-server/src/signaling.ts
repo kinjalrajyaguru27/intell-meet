@@ -267,6 +267,18 @@ export function initSignaling(httpServer: HttpServer) {
             await Meeting.findByIdAndUpdate(meeting._id, {
               $addToSet: { participantNames: displayName },
             });
+
+            // Log activity
+            const { logActivity } = await import("./lib/activity");
+            if (user?.id) {
+              await logActivity(
+                user.id,
+                "meeting_joined",
+                meeting._id.toString(),
+                "Meeting",
+                `Joined meeting "${meeting.title || meeting.name}"`
+              );
+            }
           }
 
           // If they are the host, send them the current waiting list

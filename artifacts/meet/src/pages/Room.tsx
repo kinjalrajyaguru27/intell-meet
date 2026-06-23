@@ -388,8 +388,14 @@ export default function Room() {
     prioritised.push(...speakers);
     prioritised.push(...others);
 
-    return prioritised.slice(0, 5);
+    return prioritised.slice(0, 11); // Allow up to 11 remote participants (12 total with local user)
   }, [participantList, speakingUsers]);
+
+  // Identify participants whose video tiles are not active on the screen but still need their audio played
+  const hiddenParticipants = useMemo(() => {
+    const activeIds = new Set(activeGridParticipants.map((p) => p.id));
+    return participantList.filter((p) => !activeIds.has(p.id));
+  }, [participantList, activeGridParticipants]);
 
   const handleLeave = useCallback(() => {
     hasEndedRef.current = true;
@@ -756,6 +762,28 @@ export default function Room() {
             ))}
           </div>
 
+          {/* Hidden audio/video elements for participants not in the grid to ensure we still hear/process their streams */}
+          <div className="hidden" aria-hidden="true">
+            {hiddenParticipants.map((p) => {
+              const stream = remoteStreams[p.id];
+              if (!stream) return null;
+              return (
+                <video
+                  key={p.id}
+                  ref={(el) => {
+                    if (el && el.srcObject !== stream) {
+                      el.srcObject = stream;
+                      el.play().catch(() => {});
+                    }
+                  }}
+                  autoPlay
+                  playsInline
+                  muted={false}
+                />
+              );
+            })}
+          </div>
+
           {/* Captions Overlay */}
           {transcript.length > 0 && (
             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 pointer-events-none bg-black/85 px-5 py-2.5 rounded-xl border border-white/10 max-w-xl text-center shadow-lg">
@@ -993,9 +1021,21 @@ export default function Room() {
                         </span>
                       </div>
                     </div>
-                    {isHandRaised && (
-                      <span className="text-xs animate-bounce" title="Hand Raised">✋</span>
-                    )}
+                    <div className="flex items-center gap-2 shrink-0">
+                      {isHandRaised && (
+                        <span className="text-xs animate-bounce" title="Hand Raised">✋</span>
+                      )}
+                      {isMuted ? (
+                        <span title="Muted"><MicOff className="w-3.5 h-3.5 text-red-500" /></span>
+                      ) : (
+                        <span title="Microphone On"><Mic className="w-3.5 h-3.5 text-emerald-500" /></span>
+                      )}
+                      {isCameraOff ? (
+                        <span title="Camera Off"><VideoOff className="w-3.5 h-3.5 text-red-500" /></span>
+                      ) : (
+                        <span title="Camera On"><Video className="w-3.5 h-3.5 text-emerald-500" /></span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Remote & Mock participants list */}
@@ -1021,12 +1061,19 @@ export default function Room() {
                               </span>
                             </div>
                           </div>
-                          <div className="flex items-center gap-1.5">
-                            {p.isRaisedHand && <span className="text-xs mr-1">✋</span>}
-                            {p.isMuted && (
-                              <span className="text-[9px] bg-red-500/10 text-red-400 border border-red-500/20 px-1.5 py-0.5 rounded-full shrink-0">
-                                Muted
-                              </span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {p.isRaisedHand && (
+                              <span className="text-xs animate-bounce" title="Hand Raised">✋</span>
+                            )}
+                            {p.isMuted ? (
+                              <span title="Muted"><MicOff className="w-3.5 h-3.5 text-red-500" /></span>
+                            ) : (
+                              <span title="Microphone On"><Mic className="w-3.5 h-3.5 text-emerald-500" /></span>
+                            )}
+                            {p.isCameraOff ? (
+                              <span title="Camera Off"><VideoOff className="w-3.5 h-3.5 text-red-500" /></span>
+                            ) : (
+                              <span title="Camera On"><Video className="w-3.5 h-3.5 text-emerald-500" /></span>
                             )}
                           </div>
                         </div>

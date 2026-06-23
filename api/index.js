@@ -814,6 +814,35 @@ var init_src = __esm({
   }
 });
 
+// src/lib/activity.ts
+var activity_exports = {};
+__export(activity_exports, {
+  logActivity: () => logActivity
+});
+async function logActivity(userId, action, entityId, entityType, details) {
+  try {
+    const log = new ActivityLog({
+      userId,
+      action,
+      entityId,
+      entityType,
+      details,
+      createdAt: /* @__PURE__ */ new Date()
+    });
+    await log.save();
+    logger.info({ userId, action, entityId, entityType }, "Activity logged successfully");
+  } catch (error) {
+    logger.error({ error }, "Failed to save ActivityLog");
+  }
+}
+var init_activity = __esm({
+  "src/lib/activity.ts"() {
+    "use strict";
+    init_src();
+    init_logger();
+  }
+});
+
 // src/signaling.ts
 var signaling_exports = {};
 __export(signaling_exports, {
@@ -983,6 +1012,16 @@ function initSignaling(httpServer) {
             await Meeting.findByIdAndUpdate(meeting._id, {
               $addToSet: { participantNames: displayName }
             });
+            const { logActivity: logActivity2 } = await Promise.resolve().then(() => (init_activity(), activity_exports));
+            if (user?.id) {
+              await logActivity2(
+                user.id,
+                "meeting_joined",
+                meeting._id.toString(),
+                "Meeting",
+                `Joined meeting "${meeting.title || meeting.name}"`
+              );
+            }
           }
           if (isHost) {
             const queue = waitingUsers.get(roomId) ?? [];
@@ -7299,6 +7338,14 @@ router3.put("/meetings/:meetingId/notes", requireAuth, async (req, res) => {
     }
     meeting.notes = body.data.content;
     await meeting.save();
+    const { logActivity: logActivity2 } = await Promise.resolve().then(() => (init_activity(), activity_exports));
+    await logActivity2(
+      req.user.id,
+      "notes_updated",
+      meeting._id.toString(),
+      "Meeting",
+      `Updated notes for meeting "${meeting.title || meeting.name}"`
+    );
     const { MeetingNotesVersion: MeetingNotesVersion2 } = await Promise.resolve().then(() => (init_src(), src_exports));
     const notesVersion = new MeetingNotesVersion2({
       meetingId: meeting._id,
@@ -7357,6 +7404,14 @@ router3.post("/meetings/:meetingId/notes/restore", requireAuth, async (req, res)
     }
     meeting.notes = version.content;
     await meeting.save();
+    const { logActivity: logActivity2 } = await Promise.resolve().then(() => (init_activity(), activity_exports));
+    await logActivity2(
+      req.user.id,
+      "notes_restored",
+      meeting._id.toString(),
+      "Meeting",
+      `Restored notes for meeting "${meeting.title || meeting.name}"`
+    );
     res.json({
       message: "Notes restored successfully",
       content: meeting.notes
@@ -7753,6 +7808,14 @@ router3.post("/meetings/create", requireAuth, async (req, res) => {
       waitingRoomEnabled: !!waitingRoomEnabled
     });
     await meeting.save();
+    const { logActivity: logActivity2 } = await Promise.resolve().then(() => (init_activity(), activity_exports));
+    await logActivity2(
+      req.user.id,
+      "meeting_created",
+      meeting._id.toString(),
+      "Meeting",
+      `Created meeting "${title}"`
+    );
     res.status(201).json({
       id: meeting._id.toString(),
       roomId: meeting.roomId,
@@ -8035,6 +8098,14 @@ var handleRegister = async (req, res) => {
     const { accessToken, refreshToken } = generateTokens(user);
     user.refreshToken = refreshToken;
     await user.save();
+    const { logActivity: logActivity2 } = await Promise.resolve().then(() => (init_activity(), activity_exports));
+    await logActivity2(
+      user._id.toString(),
+      "account_created",
+      user._id.toString(),
+      "User",
+      `Created account with email ${email.toLowerCase()}`
+    );
     res.status(201).json({
       token: accessToken,
       user: formatUserResponse(user)
@@ -8375,28 +8446,7 @@ var auth_default = router4;
 var import_express5 = require("express");
 init_src();
 init_signaling();
-
-// src/lib/activity.ts
-init_src();
-init_logger();
-async function logActivity(userId, action, entityId, entityType, details) {
-  try {
-    const log = new ActivityLog({
-      userId,
-      action,
-      entityId,
-      entityType,
-      details,
-      createdAt: /* @__PURE__ */ new Date()
-    });
-    await log.save();
-    logger.info({ userId, action, entityId, entityType }, "Activity logged successfully");
-  } catch (error) {
-    logger.error({ error }, "Failed to save ActivityLog");
-  }
-}
-
-// src/routes/tasks.ts
+init_activity();
 var router5 = (0, import_express5.Router)();
 router5.use(requireAuth);
 router5.get("/tasks", async (req, res) => {
@@ -9513,9 +9563,41 @@ router8.put("/profile", async (req, res) => {
       res.status(404).json({ error: "User profile not found" });
       return;
     }
+    const { logActivity: logActivity2 } = await Promise.resolve().then(() => (init_activity(), activity_exports));
+    if (data.notificationSettings !== void 0) {
+      await logActivity2(
+        req.user.id,
+        "settings_changed",
+        req.user.id,
+        "User",
+        "Updated notification settings"
+      );
+    } else {
+      await logActivity2(
+        req.user.id,
+        "profile_updated",
+        req.user.id,
+        "User",
+        "Updated profile details"
+      );
+    }
     res.json(formatUserResponse(user));
   } catch (error) {
     req.log.error({ error }, "Error updating profile details");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+router8.get("/activity-logs", async (req, res) => {
+  if (!req.user) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  try {
+    const { ActivityLog: ActivityLog2 } = await Promise.resolve().then(() => (init_src(), src_exports));
+    const logs = await ActivityLog2.find({ userId: req.user.id }).populate("userId", "name email").sort({ createdAt: -1 }).limit(50);
+    res.json(logs);
+  } catch (error) {
+    req.log.error({ error }, "Error fetching user activity logs");
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -9762,6 +9844,14 @@ router11.post("/recordings/start", requireAuth, async (req, res) => {
       recordedBy: req.user?.id
     });
     await recording.save();
+    const { logActivity: logActivity2 } = await Promise.resolve().then(() => (init_activity(), activity_exports));
+    await logActivity2(
+      req.user.id,
+      "recording_started",
+      recording._id.toString(),
+      "Recording",
+      `Started recording for meeting "${meeting.title || meeting.name}"`
+    );
     res.json({
       id: recording._id.toString(),
       meetingId: meeting.meetingId,
@@ -9803,6 +9893,14 @@ router11.post("/recordings/stop", requireAuth, async (req, res) => {
     recording.durationSeconds = durationSeconds;
     recording.sizeBytes = sizeBytes;
     await recording.save();
+    const { logActivity: logActivity2 } = await Promise.resolve().then(() => (init_activity(), activity_exports));
+    await logActivity2(
+      req.user.id,
+      "recording_stopped",
+      recording._id.toString(),
+      "Recording",
+      `Stopped recording for meeting "${meeting.title || meeting.name}"`
+    );
     res.json({
       id: recording._id.toString(),
       meetingId: meeting.meetingId,
@@ -10958,6 +11056,7 @@ var notifications_default = router16;
 // src/routes/organizations.ts
 var import_express17 = require("express");
 init_src();
+init_activity();
 var router17 = (0, import_express17.Router)();
 router17.use(requireAuth);
 router17.get("/organizations", async (req, res) => {
@@ -11118,6 +11217,7 @@ router17.get("/organizations/:id/activity-logs", async (req, res) => {
     });
     const taskIds = tasks.map((t) => t._id);
     const logs = await ActivityLog.find({
+      userId: req.user.id,
       $or: [
         { entityId: id, entityType: "Organization" },
         { entityId: { $in: teamIds }, entityType: "Team" },
@@ -11322,6 +11422,7 @@ var members_default = router18;
 // src/routes/projects.ts
 var import_express19 = require("express");
 init_src();
+init_activity();
 var router19 = (0, import_express19.Router)();
 router19.use(requireAuth);
 router19.get("/projects", async (req, res) => {
@@ -11548,6 +11649,7 @@ function securityHeaders(req, res, next) {
 }
 
 // src/app.ts
+init_signaling();
 init_src();
 var import_node_path2 = __toESM(require("node:path"), 1);
 var import_node_fs2 = __toESM(require("node:fs"), 1);
@@ -11588,6 +11690,15 @@ app.use(async (req, res, next) => {
     logger.error({ err }, "Database connection error in request middleware");
     res.status(500).json({ error: "Database connection failed" });
   }
+});
+app.all("/api/socket.io", (req, res, next) => {
+  const server = res.socket?.server;
+  if (server && !server.io) {
+    logger.info("Initializing Socket.io server on-demand on Vercel HTTP server instance");
+    initSignaling(server);
+    server.io = true;
+  }
+  next();
 });
 app.use("/api", routes_default);
 var getStaticDir = () => {

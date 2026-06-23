@@ -41,6 +41,16 @@ router.post("/recordings/start", requireAuth, async (req: AuthenticatedRequest, 
 
     await recording.save();
 
+    // Log activity
+    const { logActivity } = await import("../lib/activity");
+    await logActivity(
+      req.user!.id,
+      "recording_started",
+      recording._id.toString(),
+      "Recording",
+      `Started recording for meeting "${meeting.title || meeting.name}"`
+    );
+
     res.json({
       id: recording._id.toString(),
       meetingId: meeting.meetingId,
@@ -90,6 +100,16 @@ router.post("/recordings/stop", requireAuth, async (req: AuthenticatedRequest, r
     recording.durationSeconds = durationSeconds;
     recording.sizeBytes = sizeBytes;
     await recording.save();
+
+    // Log activity
+    const { logActivity } = await import("../lib/activity");
+    await logActivity(
+      req.user!.id,
+      "recording_stopped",
+      recording._id.toString(),
+      "Recording",
+      `Stopped recording for meeting "${meeting.title || meeting.name}"`
+    );
 
     res.json({
       id: recording._id.toString(),

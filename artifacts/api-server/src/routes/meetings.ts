@@ -305,6 +305,16 @@ router.put("/meetings/:meetingId/notes", requireAuth, async (req: AuthenticatedR
     meeting.notes = body.data.content;
     await meeting.save();
 
+    // Log activity
+    const { logActivity } = await import("../lib/activity");
+    await logActivity(
+      req.user!.id,
+      "notes_updated",
+      meeting._id.toString(),
+      "Meeting",
+      `Updated notes for meeting "${meeting.title || meeting.name}"`
+    );
+
     // Save notes version checkpoint
     const { MeetingNotesVersion } = await import("@workspace/db");
     const notesVersion = new MeetingNotesVersion({
@@ -376,6 +386,16 @@ router.post("/meetings/:meetingId/notes/restore", requireAuth, async (req: Authe
 
     meeting.notes = version.content;
     await meeting.save();
+
+    // Log activity
+    const { logActivity } = await import("../lib/activity");
+    await logActivity(
+      req.user!.id,
+      "notes_restored",
+      meeting._id.toString(),
+      "Meeting",
+      `Restored notes for meeting "${meeting.title || meeting.name}"`
+    );
 
     res.json({
       message: "Notes restored successfully",
@@ -847,6 +867,16 @@ router.post("/meetings/create", requireAuth, async (req: AuthenticatedRequest, r
     });
 
     await meeting.save();
+
+    // Log activity
+    const { logActivity } = await import("../lib/activity");
+    await logActivity(
+      req.user!.id,
+      "meeting_created",
+      meeting._id.toString(),
+      "Meeting",
+      `Created meeting "${title}"`
+    );
 
     res.status(201).json({
       id: meeting._id.toString(),

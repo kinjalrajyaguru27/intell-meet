@@ -74,9 +74,49 @@ router.put("/profile", async (req: AuthenticatedRequest, res) => {
       return;
     }
 
+    // Log activity
+    const { logActivity } = await import("../lib/activity");
+    if (data.notificationSettings !== undefined) {
+      await logActivity(
+        req.user.id,
+        "settings_changed",
+        req.user.id,
+        "User",
+        "Updated notification settings"
+      );
+    } else {
+      await logActivity(
+        req.user.id,
+        "profile_updated",
+        req.user.id,
+        "User",
+        "Updated profile details"
+      );
+    }
+
     res.json(formatUserResponse(user));
   } catch (error) {
     req.log.error({ error }, "Error updating profile details");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// GET /api/users/activity-logs - Fetch authenticated user's activity logs
+router.get("/activity-logs", async (req: AuthenticatedRequest, res) => {
+  if (!req.user) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  try {
+    const { ActivityLog } = await import("@workspace/db");
+    const logs = await ActivityLog.find({ userId: req.user.id })
+      .populate("userId", "name email")
+      .sort({ createdAt: -1 })
+      .limit(50);
+    res.json(logs);
+  } catch (error) {
+    req.log.error({ error }, "Error fetching user activity logs");
     res.status(500).json({ error: "Internal server error" });
   }
 });

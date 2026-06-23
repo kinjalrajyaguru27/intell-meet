@@ -216,6 +216,7 @@ router.get("/organizations/:id/activity-logs", async (req: AuthenticatedRequest,
 
     // Fetch all logs associated with any of these entities
     const logs = await ActivityLog.find({
+      userId: req.user!.id,
       $or: [
         { entityId: id, entityType: "Organization" },
         { entityId: { $in: teamIds }, entityType: "Team" },

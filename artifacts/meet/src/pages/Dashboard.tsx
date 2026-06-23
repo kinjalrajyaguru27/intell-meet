@@ -80,27 +80,18 @@ export default function Dashboard() {
       })
         .then((res) => (res.ok ? res.json() : []))
         .then((data) => {
-          // Keep active ones
-          const active = data.filter((t: any) => t.status !== "Done");
-          setRecentTasks(active.slice(0, 5));
+          setRecentTasks(data.slice(0, 5));
         })
         .catch((err) => console.error(err));
 
       // Fetch activity logs
       setIsLoadingActivities(true);
-      fetch("/api/organizations", {
+      fetch("/api/users/activity-logs", {
         headers: { Authorization: `Bearer ${token}` },
       })
         .then((res) => (res.ok ? res.json() : []))
-        .then(async (orgs) => {
-          if (orgs.length > 0) {
-            const logsRes = await fetch(`/api/organizations/${orgs[0]._id}/activity-logs`, {
-              headers: { Authorization: `Bearer ${token}` },
-            });
-            if (logsRes.ok) {
-              setActivityLogs(await logsRes.json());
-            }
-          }
+        .then((data) => {
+          setActivityLogs(data);
         })
         .catch((err) => console.error(err))
         .finally(() => setIsLoadingActivities(false));
@@ -178,7 +169,7 @@ export default function Dashboard() {
           <div className="space-y-3">
             <div className="flex justify-between items-center">
               <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
-                Upcoming Meetings
+                Scheduled Meetings
               </h3>
               <Button
                 variant="link"
@@ -234,7 +225,7 @@ export default function Dashboard() {
           <div className="space-y-3">
             <div className="flex justify-between items-center">
               <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
-                My Pending Tasks
+                Task History
               </h3>
               <Button
                 variant="link"
@@ -249,7 +240,7 @@ export default function Dashboard() {
             <div className="space-y-3">
               {recentTasks.length === 0 ? (
                 <div className="text-center py-8 bg-zinc-50/50 dark:bg-card border border-zinc-200 dark:border-white/5 rounded-2xl text-xs text-zinc-500 italic shadow-sm">
-                  No pending tasks assigned to you.
+                  No task history found.
                 </div>
               ) : (
                 recentTasks.map((task) => {

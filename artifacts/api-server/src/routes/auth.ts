@@ -134,6 +134,16 @@ const handleRegister = async (req: any, res: any) => {
     user.refreshToken = refreshToken;
     await user.save();
 
+    // Log account creation
+    const { logActivity } = await import("../lib/activity");
+    await logActivity(
+      user._id.toString(),
+      "account_created",
+      user._id.toString(),
+      "User",
+      `Created account with email ${email.toLowerCase()}`
+    );
+
     // Do not set refresh token cookie on registration, requiring manual login afterwards
     // setRefreshTokenCookie(res, refreshToken, true);
 
