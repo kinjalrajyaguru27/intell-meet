@@ -6,6 +6,8 @@ import router from "./routes";
 import { logger } from "./lib/logger";
 import { securityHeaders } from "./middlewares/security";
 
+import { connectDB } from "@workspace/db";
+
 const app: Express = express();
 
 app.use(
@@ -39,6 +41,17 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Database connection middleware to ensure DB connection is active on Vercel / serverless requests
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    logger.error({ err }, "Database connection error in request middleware");
+    res.status(500).json({ error: "Database connection failed" });
+  }
+});
 
 app.use("/api", router);
 
