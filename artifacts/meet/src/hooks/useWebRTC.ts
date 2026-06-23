@@ -305,7 +305,8 @@ export function useWebRTC(
           isCameraOffRef.current = true;
           setIsMuted(true);
           isMutedRef.current = true;
-          setError("No camera or microphone found. Joining as a viewer.");
+          // Silently handle missing devices instead of triggering a connection error toast
+          console.warn("No camera or microphone found.");
         }
         blackTrackRef.current = createBlackVideoTrack();
         return;
@@ -407,7 +408,8 @@ export function useWebRTC(
         isCameraOffRef.current = true;
         setIsMuted(true);
         isMutedRef.current = true;
-        setError("Camera/microphone blocked or unavailable. Joining as a viewer.");
+        // Silently handle blocked devices instead of triggering a connection error toast
+        console.warn("Camera/microphone blocked or unavailable.");
       }
 
       blackTrackRef.current = createBlackVideoTrack();
