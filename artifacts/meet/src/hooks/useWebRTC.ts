@@ -310,7 +310,8 @@ export function useWebRTC(
       blackTrackRef.current = createBlackVideoTrack();
       silentAudioTrackRef.current = createSilentAudioTrack();
 
-      let realStream: MediaStream | null = null;
+      let realVideoTrack: MediaStreamTrack | null = null;
+      let realAudioTrack: MediaStreamTrack | null = null;
       let hasVideoDevice = false;
       let hasAudioDevice = false;
 
@@ -340,44 +341,34 @@ export function useWebRTC(
         channelCount: { ideal: 1 },
       };
 
-      // Try capturing real devices
-      if (mediaAvailable && (hasVideoDevice || hasAudioDevice)) {
-        try {
-          realStream = await navigator.mediaDevices.getUserMedia({
-            video: hasVideoDevice ? videoConstraints : false,
-            audio: hasAudioDevice ? audioConstraints : false,
-          });
-        } catch (mediaErr) {
-          console.warn("Could not capture both camera/mic streams:", mediaErr);
-          
-          // Fallback: Try capturing audio only
-          if (hasAudioDevice) {
-            try {
-              realStream = await navigator.mediaDevices.getUserMedia({
-                audio: audioConstraints,
-                video: false,
-              });
-            } catch (audioErr) {
-              console.warn("Could not capture audio only stream:", audioErr);
-            }
+      // Try capturing real devices separately for maximum reliability on all devices
+      if (mediaAvailable) {
+        if (hasVideoDevice) {
+          try {
+            const videoStream = await navigator.mediaDevices.getUserMedia({
+              video: videoConstraints,
+            });
+            realVideoTrack = videoStream.getVideoTracks()[0];
+          } catch (videoErr) {
+            console.warn("Could not capture camera stream:", videoErr);
           }
+        }
 
-          // Fallback: Try capturing video only
-          if (!realStream && hasVideoDevice) {
-            try {
-              realStream = await navigator.mediaDevices.getUserMedia({
-                video: videoConstraints,
-                audio: false,
-              });
-            } catch (videoErr) {
-              console.warn("Could not capture video only stream:", videoErr);
-            }
+        if (hasAudioDevice) {
+          try {
+            const audioStream = await navigator.mediaDevices.getUserMedia({
+              audio: audioConstraints,
+            });
+            realAudioTrack = audioStream.getAudioTracks()[0];
+          } catch (audioErr) {
+            console.warn("Could not capture microphone stream:", audioErr);
           }
         }
       }
 
       if (!mounted) {
-        realStream?.getTracks().forEach((t) => t.stop());
+        realVideoTrack?.stop();
+        realAudioTrack?.stop();
         blackTrackRef.current?.stop();
         silentAudioTrackRef.current?.stop();
         return;
@@ -385,8 +376,6 @@ export function useWebRTC(
 
       // Build the unified local stream containing exactly 1 video track and 1 audio track
       const localStreamObj = new MediaStream();
-      const realVideoTrack = realStream?.getVideoTracks()[0];
-      const realAudioTrack = realStream?.getAudioTracks()[0];
 
       let currentDevices: MediaDeviceInfo[] = [];
       if (mediaAvailable) {
