@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "pnpm run build && pnpm run start:local",
     "build": "node ./build.mjs",
-    "start": "node --enable-source-maps ./dist/index.mjs",
+    "start": "pnpm run build && node --enable-source-maps ./dist/index.mjs",
     "start:local": "node --enable-source-maps --env-file=.env ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

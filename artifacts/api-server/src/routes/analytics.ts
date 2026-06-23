@@ -1,19 +1,82 @@
 import { Router } from "express";
 import { requireAuth, type AuthenticatedRequest } from "../middlewares/auth";
-import { User, Meeting, Project, Task, Message, Forecast, Report, Team } from "@workspace/db";
+import { User, Meeting, Project, Task, Message, Forecast, Report, Team, Participant, Channel } from "@workspace/db";
 
 const router = Router();
 router.use(requireAuth);
 
+// Helper to get allowed meeting, team, project, channel and task scopes
+async function getUserScope(userId: string) {
+  const userTeams = await Team.find({
+    $or: [
+      { owner: userId },
+      { "members.user": userId }
+    ]
+  }).select("_id");
+  const teamIds = userTeams.map((t) => t._id);
+
+  const participantMeetings = await Participant.find({ user: userId }).select("meeting");
+  const meetingIds = participantMeetings.map((p) => p.meeting);
+
+  const allowedMeetings = await Meeting.find({
+    $or: [
+      { host: userId },
+      { _id: { $in: meetingIds } }
+    ]
+  }).select("_id");
+  const allowedMeetingIds = allowedMeetings.map((m) => m._id);
+
+  const userChannels = await Channel.find({ teamId: { $in: teamIds } }).select("_id");
+  const channelIds = userChannels.map((c) => c._id);
+
+  return {
+    teamIds,
+    allowedMeetingIds,
+    channelIds
+  };
+}
+
 // GET /analytics/executive - Executive dashboard metrics
 router.get("/executive", async (req: AuthenticatedRequest, res) => {
   try {
-    const totalUsers = await User.countDocuments();
-    const activeUsers = Math.max(1, Math.round(totalUsers * 0.8)); // Simulate active users ratio
-    const totalMeetings = await Meeting.countDocuments();
-    const totalProjects = await Project.countDocuments();
-    const totalTasks = await Task.countDocuments();
-    const completedTasks = await Task.countDocuments({ status: "Done" });
+    const scope = await getUserScope(req.user!.id);
+
+    // Users count in user's teams
+    const teams = await Team.find({ _id: { $in: scope.teamIds } });
+    const userIdsInTeams = new Set<string>();
+    userIdsInTeams.add(req.user!.id);
+    teams.forEach((t) => {
+      if (t.owner) userIdsInTeams.add(t.owner.toString());
+      t.members.forEach((m: any) => {
+        if (m.user) userIdsInTeams.add(m.user.toString());
+      });
+    });
+
+    const totalUsers = scope.teamIds.length > 0 ? userIdsInTeams.size : 0;
+    const activeUsers = totalUsers > 0 ? Math.max(1, Math.round(totalUsers * 0.8)) : 0; // Simulate active users ratio
+    const totalMeetings = await Meeting.countDocuments({ _id: { $in: scope.allowedMeetingIds } });
+    const totalProjects = await Project.countDocuments({
+      $or: [
+        { owner: req.user!.id },
+        { teamId: { $in: scope.teamIds } }
+      ]
+    });
+
+    const totalTasks = await Task.countDocuments({
+      $or: [
+        { assignee: req.user!.id },
+        { reporter: req.user!.id }
+      ]
+    });
+
+    const completedTasks = await Task.countDocuments({
+      status: "Done",
+      $or: [
+        { assignee: req.user!.id },
+        { reporter: req.user!.id }
+      ]
+    });
+
     const productivityRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
     res.json({
@@ -33,7 +96,9 @@ router.get("/executive", async (req: AuthenticatedRequest, res) => {
 // GET /analytics/insights - Analytics charts data and engagement reports
 router.get("/insights", async (req: AuthenticatedRequest, res) => {
   try {
-    const meetings = await Meeting.find();
+    const scope = await getUserScope(req.user!.id);
+
+    const meetings = await Meeting.find({ _id: { $in: scope.allowedMeetingIds } });
     
     // 1. Monthly Trends
     const trendsMap: Record<string, { count: number; totalDurationMinutes: number }> = {};
@@ -54,15 +119,23 @@ router.get("/insights", async (req: AuthenticatedRequest, res) => {
     }));
     
     if (monthlyTrends.length === 0) {
-      monthlyTrends = [
-        { month: "Jun 2026", count: 5, totalDurationMinutes: 150 },
-        { month: "Jul 2026", count: 8, totalDurationMinutes: 240 }
-      ];
+      monthlyTrends = [];
     }
 
     // 2. Productivity Stats
-    const totalTasks = await Task.countDocuments();
-    const completedTasks = await Task.countDocuments({ status: "Done" });
+    const totalTasks = await Task.countDocuments({
+      $or: [
+        { assignee: req.user!.id },
+        { reporter: req.user!.id }
+      ]
+    });
+    const completedTasks = await Task.countDocuments({
+      status: "Done",
+      $or: [
+        { assignee: req.user!.id },
+        { reporter: req.user!.id }
+      ]
+    });
     const openTasks = totalTasks - completedTasks;
     const taskCompletionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
     const productivity = {
@@ -93,10 +166,7 @@ router.get("/insights", async (req: AuthenticatedRequest, res) => {
     }));
 
     if (engagement.length === 0) {
-      engagement = [
-        { name: "User A", meetingCount: 4, averageDurationMinutes: 30 },
-        { name: "User B", meetingCount: 3, averageDurationMinutes: 45 }
-      ];
+      engagement = [];
     }
 
     res.json({
@@ -113,7 +183,8 @@ router.get("/insights", async (req: AuthenticatedRequest, res) => {
 // GET /analytics/meetings - Detailed meetings analytics
 router.get("/meetings", async (req: AuthenticatedRequest, res) => {
   try {
-    const meetings = await Meeting.find();
+    const scope = await getUserScope(req.user!.id);
+    const meetings = await Meeting.find({ _id: { $in: scope.allowedMeetingIds } });
     const totalMeetings = meetings.length;
 
     let totalDurationSeconds = 0;
@@ -155,15 +226,30 @@ router.get("/meetings", async (req: AuthenticatedRequest, res) => {
 // GET /analytics/chat - Chat collaboration metrics
 router.get("/chat", async (req: AuthenticatedRequest, res) => {
   try {
-    const totalMessages = await Message.countDocuments();
-    const uniqueUsers = await Message.distinct("sender");
+    const scope = await getUserScope(req.user!.id);
+
+    const totalMessages = await Message.countDocuments({
+      $or: [
+        { sender: req.user!.id },
+        { recipient: req.user!.id },
+        { channel: { $in: scope.channelIds } }
+      ]
+    });
+
+    const uniqueUsers = await Message.distinct("sender", {
+      $or: [
+        { sender: req.user!.id },
+        { recipient: req.user!.id },
+        { channel: { $in: scope.channelIds } }
+      ]
+    });
     const activeChatUsers = uniqueUsers.length;
 
     res.json({
       messagesSent: totalMessages,
       activeUsers: activeChatUsers,
       interactionRate: totalMessages > 0 ? Number((totalMessages / Math.max(1, activeChatUsers)).toFixed(1)) : 0,
-      averageResponseTimeSeconds: 15, // Mocked response latency metric
+      averageResponseTimeSeconds: totalMessages > 0 ? 15 : 0, // Conditioned response latency metric
     });
   } catch (error) {
     req.log.error({ error }, "Error loading chat stats");
@@ -174,7 +260,8 @@ router.get("/chat", async (req: AuthenticatedRequest, res) => {
 // GET /analytics/teams - Team comparison stats
 router.get("/teams", async (req: AuthenticatedRequest, res) => {
   try {
-    const teams = await Team.find();
+    const scope = await getUserScope(req.user!.id);
+    const teams = await Team.find({ _id: { $in: scope.teamIds } });
     const results = [];
 
     for (const team of teams) {
@@ -207,8 +294,22 @@ router.get("/forecasts", async (req: AuthenticatedRequest, res) => {
   const { projectId } = req.query;
 
   try {
-    const filter: any = {};
-    if (projectId) filter._id = projectId;
+    const scope = await getUserScope(req.user!.id);
+
+    const filter: any = {
+      $and: [
+        {
+          $or: [
+            { owner: req.user!.id },
+            { teamId: { $in: scope.teamIds } }
+          ]
+        }
+      ]
+    };
+
+    if (projectId) {
+      filter.$and.push({ _id: projectId });
+    }
 
     const projects = await Project.find(filter);
     const results = [];
@@ -261,11 +362,17 @@ router.get("/reports/generate", async (req: AuthenticatedRequest, res) => {
   }
 
   try {
+    const scope = await getUserScope(req.user!.id);
     let reportContent = "";
     const title = `${type} Management Report`;
 
     if (type === "Project") {
-      const projects = await Project.find();
+      const projects = await Project.find({
+        $or: [
+          { owner: req.user!.id },
+          { teamId: { $in: scope.teamIds } }
+        ]
+      });
       if (format === "CSV") {
         reportContent = "Project Name,Status,Priority,Due Date\n";
         projects.forEach((p) => {
@@ -278,7 +385,7 @@ router.get("/reports/generate", async (req: AuthenticatedRequest, res) => {
         });
       }
     } else if (type === "Team") {
-      const teams = await Team.find();
+      const teams = await Team.find({ _id: { $in: scope.teamIds } });
       if (format === "CSV") {
         reportContent = "Team Name,Members Count\n";
         teams.forEach((t) => {
@@ -291,8 +398,13 @@ router.get("/reports/generate", async (req: AuthenticatedRequest, res) => {
         });
       }
     } else {
-      // Default fallback report
-      const tasks = await Task.find().populate("assignee", "name");
+      // Default fallback report (tasks)
+      const tasks = await Task.find({
+        $or: [
+          { assignee: req.user!.id },
+          { reporter: req.user!.id }
+        ]
+      }).populate("assignee", "name");
       if (format === "CSV") {
         reportContent = "Task Title,Status,Assignee\n";
         tasks.forEach((t) => {

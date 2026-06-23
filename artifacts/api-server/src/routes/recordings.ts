@@ -2,6 +2,7 @@ import { Router } from "express";
 import { Recording, Meeting } from "@workspace/db";
 import { StartRecordingBody, StopRecordingBody } from "@workspace/api-zod";
 import { requireAuth, AuthenticatedRequest } from "../middlewares/auth";
+import { canAccessMeeting } from "../lib/authHelpers";
 
 const router = Router();
 
@@ -18,6 +19,13 @@ router.post("/recordings/start", requireAuth, async (req: AuthenticatedRequest, 
     const meeting = await Meeting.findOne({ meetingId });
     if (!meeting) {
       res.status(404).json({ error: "Meeting not found" });
+      return;
+    }
+
+    // Access check
+    const hasAccess = await canAccessMeeting(meeting._id, req.user!.id);
+    if (!hasAccess) {
+      res.status(403).json({ error: "Access denied: You do not have permission to record this meeting" });
       return;
     }
 
@@ -65,6 +73,13 @@ router.post("/recordings/stop", requireAuth, async (req: AuthenticatedRequest, r
       return;
     }
 
+    // Access check
+    const hasAccess = await canAccessMeeting(meeting._id, req.user!.id);
+    if (!hasAccess) {
+      res.status(403).json({ error: "Access denied: You do not have permission to modify recordings for this meeting" });
+      return;
+    }
+
     // Find the latest recording for this meeting that is not populated yet
     const recording = await Recording.findOne({ meeting: meeting._id }).sort({ createdAt: -1 });
     if (!recording) {
@@ -95,8 +110,24 @@ router.post("/recordings/stop", requireAuth, async (req: AuthenticatedRequest, r
 // ─── GET /recordings ──────────────────────────────────────────────────────────
 router.get("/recordings", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    // Return all recordings and populate meeting info
-    const recordings = await Recording.find().populate("meeting").sort({ createdAt: -1 });
+    // Find all meetings user has access to (host or participant)
+    const { Participant } = await import("@workspace/db");
+    const participantMeetings = await Participant.find({ user: req.user!.id }).select("meeting");
+    const meetingIds = participantMeetings.map((p) => p.meeting);
+
+    const allowedMeetings = await Meeting.find({
+      $or: [
+        { host: req.user!.id },
+        { _id: { $in: meetingIds } }
+      ]
+    }).select("_id");
+
+    const allowedMeetingIds = allowedMeetings.map((m) => m._id);
+
+    // Return recordings only for meetings the user is authorized to access
+    const recordings = await Recording.find({ meeting: { $in: allowedMeetingIds } })
+      .populate("meeting")
+      .sort({ createdAt: -1 });
 
     const results = recordings.map((r: any) => ({
       id: r._id.toString(),

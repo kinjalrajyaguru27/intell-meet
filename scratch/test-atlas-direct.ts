@@ -1,7 +1,7 @@
 import { mongoose } from "../lib/db/src";
 
 // Shard hostnames resolved from SRV lookup
-const directUri = "mongodb://rajyagurukinjal27_db_user:db_user@ac-47exnzh-shard-00-00.ebbde1m.mongodb.net:27017,ac-47exnzh-shard-00-01.ebbde1m.mongodb.net:27017,ac-47exnzh-shard-00-02.ebbde1m.mongodb.net:27017/intell_meet?ssl=true&authSource=admin&retryWrites=true";
+const directUri = "mongodb://rajyagurukinjal27_db_user:kinjal276@ac-47exnzh-shard-00-00.ebbde1m.mongodb.net:27017,ac-47exnzh-shard-00-01.ebbde1m.mongodb.net:27017,ac-47exnzh-shard-00-02.ebbde1m.mongodb.net:27017/intell_meet?ssl=true&authSource=admin&retryWrites=true";
 
 async function main() {
   console.log("Connecting directly to Atlas shards...");

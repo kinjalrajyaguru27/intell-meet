@@ -3,8 +3,10 @@ import { CreateRoomBody, GetRoomParams } from "@workspace/api-zod";
 import { getRoomParticipantCount } from "../signaling";
 import { logger } from "../lib/logger";
 import { Meeting } from "@workspace/db";
+import { requireAuth, type AuthenticatedRequest } from "../middlewares/auth";
 
 const router = Router();
+router.use(requireAuth);
 
 // In-memory room store (sufficient for a signaling server; replace with DB if persistence needed)
 interface Room {
@@ -25,7 +27,7 @@ function generateRoomId(): string {
   return id;
 }
 
-router.post("/rooms", async (req, res) => {
+router.post("/rooms", async (req: AuthenticatedRequest, res) => {
   const parsed = CreateRoomBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid request body" });
@@ -52,6 +54,7 @@ router.post("/rooms", async (req, res) => {
       status: "active",
       startTime: now,
       waitingRoomEnabled: false,
+      host: req.user!.id,
     });
     await meeting.save();
     req.log.info({ roomId: id, meetingId: meeting._id.toString() }, "Meeting persisted to MongoDB");
@@ -66,7 +69,7 @@ router.post("/rooms", async (req, res) => {
   });
 });
 
-router.get("/rooms/:roomId", async (req, res) => {
+router.get("/rooms/:roomId", async (req: AuthenticatedRequest, res) => {
   const parsed = GetRoomParams.safeParse(req.params);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid room ID" });
@@ -93,7 +96,7 @@ router.get("/rooms/:roomId", async (req, res) => {
         createdAt: meeting.startedAt.toISOString(),
         participantCount: getRoomParticipantCount(roomId),
         host: meeting.host?.toString() || "",
-        password: meeting.password || "",
+        password: meeting.password ? "protected" : "",
       });
       return;
     }

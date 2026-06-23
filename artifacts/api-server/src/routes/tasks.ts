@@ -1,8 +1,9 @@
 import { Router } from "express";
 import { requireAuth, type AuthenticatedRequest } from "../middlewares/auth";
-import { Task, Subtask, Comment, Attachment, User, Project } from "@workspace/db";
+import { Task, Subtask, Comment, Attachment, User, Project, Team } from "@workspace/db";
 import { pushNotificationToUser } from "../signaling";
 import { logActivity } from "../lib/activity";
+import { canAccessTask, canAccessProject } from "../lib/authHelpers";
 
 const router = Router();
 router.use(requireAuth);
@@ -12,17 +13,27 @@ router.get("/tasks", async (req: AuthenticatedRequest, res) => {
   const { teamId, projectId, assignee, status, priority, parentTaskId } = req.query;
 
   try {
-    const filter: any = {};
-    if (teamId) filter.teamId = teamId;
-    if (projectId) filter.projectId = projectId;
-    if (assignee) filter.assignee = assignee;
-    if (status) filter.status = status;
-    if (priority) filter.priority = priority;
+    const filter: any = {
+      $and: [
+        {
+          $or: [
+            { assignee: req.user!.id },
+            { reporter: req.user!.id }
+          ]
+        }
+      ]
+    };
+
+    if (teamId) filter.$and.push({ teamId });
+    if (projectId) filter.$and.push({ projectId });
+    if (assignee) filter.$and.push({ assignee });
+    if (status) filter.$and.push({ status });
+    if (priority) filter.$and.push({ priority });
 
     if (parentTaskId === "null") {
-      filter.parentTaskId = null;
+      filter.$and.push({ parentTaskId: null });
     } else if (parentTaskId) {
-      filter.parentTaskId = parentTaskId;
+      filter.$and.push({ parentTaskId: parentTaskId });
     }
 
     const tasks = await Task.find(filter)
@@ -59,6 +70,12 @@ router.get("/tasks/:id", async (req: AuthenticatedRequest, res) => {
   const { id } = req.params;
 
   try {
+    const hasAccess = await canAccessTask(id as string, req.user!.id);
+    if (!hasAccess) {
+      res.status(403).json({ error: "Access denied: You do not have permission to access this task" });
+      return;
+    }
+
     const task = await Task.findById(id)
       .populate("assignee", "name email")
       .populate("reporter", "name email");
@@ -107,6 +124,26 @@ router.post("/tasks", async (req: AuthenticatedRequest, res) => {
   }
 
   try {
+    if (teamId) {
+      const team = await Team.findById(teamId);
+      if (!team) {
+        res.status(404).json({ error: "Team not found" });
+        return;
+      }
+      const isMember = team.owner?.toString() === req.user!.id || team.members.some((m: any) => m.user && m.user.toString() === req.user!.id);
+      if (!isMember) {
+        res.status(403).json({ error: "Access denied: You are not a member of this team" });
+        return;
+      }
+    }
+
+    if (projectId) {
+      const hasProjAccess = await canAccessProject(projectId, req.user.id);
+      if (!hasProjAccess) {
+        res.status(403).json({ error: "Access denied: You do not have permission to add tasks to this project" });
+        return;
+      }
+    }
     const task = new Task({
       title,
       description: description || "",
@@ -162,6 +199,12 @@ router.put("/tasks/:id", async (req: AuthenticatedRequest, res) => {
   const { title, description, status, assigneeId, priority, dueDate, projectId, teamId, parentTaskId } = req.body;
 
   try {
+    const hasAccess = await canAccessTask(id as string, req.user!.id);
+    if (!hasAccess) {
+      res.status(403).json({ error: "Access denied: You do not have permission to modify this task" });
+      return;
+    }
+
     const task = await Task.findById(id);
     if (!task) {
       res.status(404).json({ error: "Task not found" });
@@ -209,6 +252,12 @@ router.delete("/tasks/:id", async (req: AuthenticatedRequest, res) => {
   const { id } = req.params;
 
   try {
+    const hasAccess = await canAccessTask(id as string, req.user!.id);
+    if (!hasAccess) {
+      res.status(403).json({ error: "Access denied: You do not have permission to delete this task" });
+      return;
+    }
+
     const task = await Task.findById(id);
     if (!task) {
       res.status(404).json({ error: "Task not found" });
@@ -246,9 +295,14 @@ router.post("/tasks/:id/comments", async (req: AuthenticatedRequest, res) => {
   }
 
   try {
+    const hasAccess = await canAccessTask(id as string, req.user!.id);
+    if (!hasAccess) {
+      res.status(403).json({ error: "Access denied: You do not have permission to comment on this task" });
+      return;
+    }
     const comment = new Comment({
       taskId: id,
-      userId: req.user.id,
+      userId: req.user!.id,
       text,
       parentCommentId: parentCommentId || null,
     });
@@ -257,7 +311,7 @@ router.post("/tasks/:id/comments", async (req: AuthenticatedRequest, res) => {
     // Log comment activity
     const tDoc = await Task.findById(id);
     if (tDoc) {
-      await logActivity(req.user.id, "task_commented", id as string, "Task", `Commented on task "${tDoc.title}": "${text.substring(0, 30)}..."`);
+      await logActivity(req.user!.id, "task_commented", id as string, "Task", `Commented on task "${tDoc.title}": "${text.substring(0, 30)}..."`);
     }
 
     // Check for @mentions in comments (e.g. "@User Name") and trigger notification
@@ -266,12 +320,12 @@ router.post("/tasks/:id/comments", async (req: AuthenticatedRequest, res) => {
       for (const mention of mentions) {
         const username = mention.replace(/[@\[\]]/g, "");
         const user = await User.findOne({ name: new RegExp(`^${username}$`, "i") });
-        if (user && user._id.toString() !== req.user.id) {
+        if (user && user._id.toString() !== req.user!.id) {
           await pushNotificationToUser(
             user._id.toString(),
             "mention",
             "Mentioned in Task Comment",
-            `${req.user.name} mentioned you: "${text.substring(0, 50)}"`,
+            `${req.user!.name} mentioned you: "${text.substring(0, 50)}"`,
             `/dashboard?tab=kanban`
           );
         }
@@ -302,18 +356,23 @@ router.post("/tasks/:id/attachments", async (req: AuthenticatedRequest, res) => 
   }
 
   try {
+    const hasAccess = await canAccessTask(id as string, req.user!.id);
+    if (!hasAccess) {
+      res.status(403).json({ error: "Access denied: You do not have permission to add attachments to this task" });
+      return;
+    }
     const attachment = new Attachment({
       taskId: id,
       filename,
       mimeType,
       sizeBytes,
       fileUrl,
-      uploadedBy: req.user.id,
+      uploadedBy: req.user!.id,
     });
     await attachment.save();
     const tDoc = await Task.findById(id);
     if (tDoc) {
-      await logActivity(req.user.id, "task_attached", id as string, "Task", `Added attachment "${filename}" to task "${tDoc.title}"`);
+      await logActivity(req.user!.id, "task_attached", id as string, "Task", `Added attachment "${filename}" to task "${tDoc.title}"`);
     }
 
     const populated = await Attachment.findById(attachment._id).populate("uploadedBy", "name email");

@@ -89,6 +89,12 @@ router.post("/", async (req: AuthenticatedRequest, res) => {
   }
 
   try {
+    // Prevent creating notifications for other users unless caller is an Admin
+    if (recipient !== req.user.id && req.user.role !== "Admin") {
+      res.status(403).json({ error: "Forbidden: You can only create notifications for yourself" });
+      return;
+    }
+
     const notification = new Notification({
       recipient,
       type,

@@ -1,34 +1,43 @@
 import mongoose from "mongoose";
 
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://rajyagurukinjal27_db_user:db_user@intell-meet-cluster.ebbde1m.mongodb.net/intell_meet?retryWrites=true&w=majority";
+// Cached connection for serverless environment
+let cached = (global as any).mongoose;
+
+if (!cached) {
+  cached = (global as any).mongoose = { conn: null, promise: null };
+}
 
 export async function connectDB() {
-  if (mongoose.connection.readyState >= 1) {
-    return;
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
+    throw new Error("Please define the MONGODB_URI environment variable inside your environment config");
   }
-  try {
-    console.log(`Connecting to MongoDB: ${MONGODB_URI}`);
-    await mongoose.connect(MONGODB_URI, {
+
+  if (cached.conn) {
+    return cached.conn;
+  }
+
+  if (!cached.promise) {
+    const opts = {
+      bufferCommands: false,
       serverSelectionTimeoutMS: 5000
+    };
+
+    console.log("Connecting to MongoDB Atlas...");
+    cached.promise = mongoose.connect(uri, opts).then((m) => {
+      console.log("Connected to MongoDB Atlas successfully");
+      return m;
     });
-    console.log("Connected to MongoDB successfully");
-  } catch (error: any) {
-    console.warn("MongoDB connection failed:", error.message || error);
-    if (MONGODB_URI !== "mongodb://localhost:27017/intell_meet") {
-      console.warn("Falling back to local MongoDB database: mongodb://localhost:27017/intell_meet");
-      try {
-        await mongoose.connect("mongodb://localhost:27017/intell_meet", {
-          serverSelectionTimeoutMS: 5000
-        });
-        console.log("Connected to local MongoDB successfully");
-        return;
-      } catch (localError: any) {
-        console.error("Local MongoDB connection also failed:", localError.message || localError);
-        throw localError;
-      }
-    }
-    throw error;
   }
+
+  try {
+    cached.conn = await cached.promise;
+  } catch (e) {
+    cached.promise = null;
+    throw e;
+  }
+
+  return cached.conn;
 }
 
 export * from "./models/User";

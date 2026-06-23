@@ -10,6 +10,13 @@ router.get("/organizations/:orgId/members", async (req: AuthenticatedRequest, re
   const { orgId } = req.params;
 
   try {
+    // Verify caller belongs to the organization
+    const callerMember = await Member.findOne({ userId: req.user!.id, organizationId: orgId });
+    if (!callerMember && req.user!.role !== "Admin") {
+      res.status(403).json({ error: "Forbidden: You do not have access to this organization" });
+      return;
+    }
+
     const members = await Member.find({ organizationId: orgId }).populate("userId", "name email");
     res.json(members);
   } catch (error) {

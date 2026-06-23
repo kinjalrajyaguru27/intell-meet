@@ -167,6 +167,13 @@ router.get("/organizations/:id/settings", async (req: AuthenticatedRequest, res)
       return;
     }
 
+    // Verify caller belongs to the organization
+    const callerMember = await Member.findOne({ userId: req.user!.id, organizationId: id });
+    if (!callerMember && req.user!.role !== "Admin") {
+      res.status(403).json({ error: "Forbidden: You do not have access to this organization" });
+      return;
+    }
+
     res.json({
       organizationId: org._id,
       name: org.name,
@@ -189,6 +196,13 @@ router.get("/organizations/:id/activity-logs", async (req: AuthenticatedRequest,
   const { id } = req.params;
 
   try {
+    // Verify caller belongs to the organization
+    const callerMember = await Member.findOne({ userId: req.user!.id, organizationId: id });
+    if (!callerMember && req.user!.role !== "Admin") {
+      res.status(403).json({ error: "Forbidden: You do not have access to this organization" });
+      return;
+    }
+
     const teams = await Team.find({ organizationId: id });
     const teamIds = teams.map((t) => t._id);
 

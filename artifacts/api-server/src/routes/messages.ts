@@ -51,10 +51,10 @@ router.get("/channel/:channelId", async (req: AuthenticatedRequest, res) => {
       return;
     }
 
-    // Verify user belongs to the channel's team
+    // Verify user belongs to the channel's team (either owner or member)
     const team = await Team.findOne({
       _id: channel.teamId,
-      "members.user": req.user.id,
+      $or: [{ owner: req.user.id }, { "members.user": req.user.id }],
     });
     if (!team) {
       res.status(403).json({ error: "Forbidden: You do not have access to this channel" });
@@ -87,7 +87,9 @@ router.get("/search", async (req: AuthenticatedRequest, res) => {
   }
 
   try {
-    const userTeams = await Team.find({ "members.user": req.user.id });
+    const userTeams = await Team.find({
+      $or: [{ owner: req.user.id }, { "members.user": req.user.id }],
+    });
     const teamIds = userTeams.map((t) => t._id);
     const userChannels = await Channel.find({ teamId: { $in: teamIds } });
     const channelIds = userChannels.map((c) => c._id);
@@ -141,7 +143,10 @@ router.post("/", async (req: AuthenticatedRequest, res) => {
         res.status(404).json({ error: "Channel not found" });
         return;
       }
-      const team = await Team.findOne({ _id: channel.teamId, "members.user": req.user.id });
+      const team = await Team.findOne({
+        _id: channel.teamId,
+        $or: [{ owner: req.user.id }, { "members.user": req.user.id }],
+      });
       if (!team) {
         res.status(403).json({ error: "Forbidden: You do not have access to this channel" });
         return;

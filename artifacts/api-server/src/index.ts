@@ -1,3 +1,26 @@
+import fs from "node:fs";
+import path from "node:path";
+
+// Load environment variables from .env file if it exists (checks multiple fallback locations)
+try {
+  const envPath1 = path.resolve(import.meta.dirname, "../.env");
+  const envPath2 = path.resolve(process.cwd(), ".env");
+  const envPath3 = path.resolve(process.cwd(), "artifacts/api-server/.env");
+  
+  let loaded = false;
+  for (const envPath of [envPath1, envPath2, envPath3]) {
+    if (fs.existsSync(envPath)) {
+      if (typeof (process as any).loadEnvFile === "function") {
+        (process as any).loadEnvFile(envPath);
+        loaded = true;
+        break;
+      }
+    }
+  }
+} catch (e) {
+  console.warn("Failed to load .env file programmatically:", e);
+}
+
 import { createServer } from "http";
 import app from "./app";
 import { initSignaling } from "./signaling";
@@ -15,17 +38,19 @@ const httpServer = createServer(app);
 
 initSignaling(httpServer);
 
-// Connect to MongoDB and then start listening
+// Start listening immediately
+httpServer.listen(port, () => {
+  logger.info({ port }, "Server listening");
+  console.log(`\n🚀 Intell Meet is ready! Open http://localhost:${port} in your browser to view the application.\n`);
+});
+
+// Connect to MongoDB asynchronously in the background
 connectDB()
   .then(() => {
-    httpServer.listen(port, () => {
-      logger.info({ port }, "Server listening and connected to MongoDB");
-      console.log(`\n🚀 Intell Meet is ready! Open http://localhost:${port} in your browser to view the application.\n`);
-    });
+    logger.info("Connected to MongoDB successfully");
   })
   .catch((err) => {
-    logger.error({ err }, "Failed to connect to database. Server not started.");
-    process.exit(1);
+    logger.error({ err }, "Failed to connect to database. Server is running offline/without MongoDB.");
   });
 
 httpServer.on("error", (err) => {

@@ -46,7 +46,7 @@ export default function Profile() {
   const disconnectMutation = useGoogleDisconnect();
   const googleLoginMutation = useGoogleLogin();
 
-  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "335439563229-placeholder.apps.googleusercontent.com";
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 
   // Handle redirect callback (Google implicit flow fallback for linking)
   useEffect(() => {
@@ -91,6 +91,10 @@ export default function Profile() {
     let checkInterval: any = null;
     if (profile && !profile.googleId) {
       const initializeGoogleLink = () => {
+        if (!googleClientId) {
+          setGsiLoaded(false);
+          return;
+        }
         if (typeof window !== "undefined" && (window as any).google?.accounts?.id) {
           try {
             const isDark = document.documentElement.classList.contains("dark");
@@ -166,6 +170,14 @@ export default function Profile() {
   }, [profile, googleClientId, googleLoginMutation, toast, queryClient]);
 
   const handleGoogleRedirectLink = () => {
+    if (!googleClientId) {
+      toast({
+        title: "Google connection unavailable",
+        description: "Google Client ID is not configured. Please check your environment variables.",
+        variant: "destructive",
+      });
+      return;
+    }
     const nonce = Math.random().toString(36).substring(2) + Date.now().toString(36);
     const redirectUri = encodeURIComponent(`${window.location.origin}`);
     const state = encodeURIComponent('/profile?tab=connected');

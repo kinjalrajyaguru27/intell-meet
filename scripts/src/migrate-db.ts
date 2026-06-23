@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const LOCAL_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/intell_meet";
-const ATLAS_URI = process.env.ATLAS_URI || "mongodb+srv://rajyagurukinjal27_db_user:db_user@intell-meet-cluster.ebbde1m.mongodb.net/intell_meet?retryWrites=true&w=majority";
+const ATLAS_URI = process.env.ATLAS_URI || "mongodb://rajyagurukinjal27_db_user:kinjal276@ac-47exnzh-shard-00-00.ebbde1m.mongodb.net:27017,ac-47exnzh-shard-00-01.ebbde1m.mongodb.net:27017,ac-47exnzh-shard-00-02.ebbde1m.mongodb.net:27017/intell_meet?ssl=true&authSource=admin&retryWrites=true";
 
 async function runMigration() {
   console.log("==========================================================");

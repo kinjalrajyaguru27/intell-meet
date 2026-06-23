@@ -15,7 +15,12 @@ router.get("/", async (req: AuthenticatedRequest, res) => {
   }
 
   try {
-    const userTeams = await Team.find({ "members.user": req.user.id });
+    const userTeams = await Team.find({
+      $or: [
+        { owner: req.user.id },
+        { "members.user": req.user.id }
+      ]
+    });
     const teamIds = userTeams.map((t) => t._id);
     const channels = await Channel.find({ teamId: { $in: teamIds } }).sort({ name: 1 });
     res.json(channels);
@@ -35,7 +40,13 @@ router.get("/team/:teamId", async (req: AuthenticatedRequest, res) => {
   const { teamId } = req.params;
 
   try {
-    const team = await Team.findOne({ _id: teamId, "members.user": req.user.id });
+    const team = await Team.findOne({
+      _id: teamId,
+      $or: [
+        { owner: req.user.id },
+        { "members.user": req.user.id }
+      ]
+    });
     if (!team) {
       res.status(403).json({ error: "Forbidden: You are not a member of this team" });
       return;
@@ -70,9 +81,10 @@ router.post("/", async (req: AuthenticatedRequest, res) => {
       return;
     }
 
-    // Verify requesting user is a member of the team
+    // Verify requesting user is a member or owner of the team
     const member = team.members.find((m: any) => m.user.toString() === req.user?.id);
-    if (!member && req.user?.role !== "Admin") {
+    const isOwner = team.owner?.toString() === req.user?.id;
+    if (!member && !isOwner && req.user?.role !== "Admin") {
       res.status(403).json({ error: "Forbidden: You are not a member of this team" });
       return;
     }
@@ -114,10 +126,12 @@ router.delete("/:channelId", async (req: AuthenticatedRequest, res) => {
       return;
     }
 
-    // Verify user is Admin or Manager of the team, or global Admin
+    // Verify user is owner, Admin or Manager of the team, or global Admin
     const member = team.members.find((m: any) => m.user.toString() === req.user?.id);
+    const isOwner = team.owner?.toString() === req.user?.id;
     const isAuthorized =
       req.user.role === "Admin" ||
+      isOwner ||
       (member && (member.role === "Admin" || member.role === "Manager"));
 
     if (!isAuthorized) {

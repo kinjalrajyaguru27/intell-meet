@@ -127,14 +127,15 @@ const handleRegister = async (req: any, res: any) => {
       name,
       email: email.toLowerCase(),
       password: hashedPassword,
-      role: role || "Member",
+      role: "Member",
     });
 
     const { accessToken, refreshToken } = generateTokens(user);
     user.refreshToken = refreshToken;
     await user.save();
 
-    setRefreshTokenCookie(res, refreshToken, true); // default to auto log-in with persistence
+    // Do not set refresh token cookie on registration, requiring manual login afterwards
+    // setRefreshTokenCookie(res, refreshToken, true);
 
     res.status(201).json({
       token: accessToken,
@@ -236,7 +237,11 @@ router.post("/logout", async (req, res) => {
     // Suppress token verification failures on logout
   }
 
-  res.clearCookie("intell_meet_refresh_token");
+  res.clearCookie("intell_meet_refresh_token", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  });
   res.json({ message: "Logged out successfully" });
 });
 
@@ -392,6 +397,10 @@ router.get("/me", requireAuth, async (req: AuthenticatedRequest, res) => {
 
 // POST /api/auth/oauth
 router.post("/oauth", async (req, res) => {
+  if (process.env.NODE_ENV === "production") {
+    res.status(403).json({ error: "Simulated OAuth is disabled in production" });
+    return;
+  }
   const parsed = OauthLoginBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid OAuth payload", details: parsed.error.format() });
@@ -447,7 +456,12 @@ router.post("/google", rateLimiter(15 * 60 * 1000, 30), async (req, res) => {
       sub: string;
     };
 
-    const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "335439563229-placeholder.apps.googleusercontent.com";
+    const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+    if (!GOOGLE_CLIENT_ID) {
+      req.log.error("GOOGLE_CLIENT_ID environment variable is missing");
+      res.status(500).json({ error: "Google Authentication is not configured on this server" });
+      return;
+    }
 
     const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
     if (!response.ok) {
@@ -457,7 +471,7 @@ router.post("/google", rateLimiter(15 * 60 * 1000, 30), async (req, res) => {
 
     payload = (await response.json()) as any;
 
-    if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID !== "335439563229-placeholder.apps.googleusercontent.com" && payload.aud !== GOOGLE_CLIENT_ID) {
+    if (payload.aud !== GOOGLE_CLIENT_ID) {
       res.status(401).json({ error: "Google token client ID mismatch" });
       return;
     }

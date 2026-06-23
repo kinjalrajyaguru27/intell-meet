@@ -1,6 +1,6 @@
 import { mongoose } from "../lib/db/src";
 
-const ATLAS_URI = "mongodb+srv://rajyagurukinjal27_db_user:db_user@intell-meet-cluster.ebbde1m.mongodb.net/intell_meet?retryWrites=true&w=majority";
+const ATLAS_URI = "mongodb+srv://rajyagurukinjal27_db_user:kinjal276@intell-meet-cluster.ebbde1m.mongodb.net/intell_meet?retryWrites=true&w=majority";
 
 async function main() {
   console.log("Connecting to Atlas MongoDB...");

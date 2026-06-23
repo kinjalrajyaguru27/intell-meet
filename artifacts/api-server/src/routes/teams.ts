@@ -23,7 +23,10 @@ router.get("/teams", async (req: AuthenticatedRequest, res) => {
   }
   try {
     const teams = await Team.find({
-      "members.user": req.user.id,
+      $or: [
+        { owner: req.user.id },
+        { "members.user": req.user.id }
+      ]
     })
       .populate("members.user", "name email role createdAt")
       .sort({ createdAt: -1 });
@@ -67,6 +70,7 @@ router.post("/teams", async (req: AuthenticatedRequest, res) => {
     const team = new Team({
       name: parsed.data.name,
       organizationId: req.body.organizationId || null,
+      owner: req.user.id,
       members: [
         {
           user: req.user.id,

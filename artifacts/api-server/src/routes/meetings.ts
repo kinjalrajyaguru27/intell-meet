@@ -16,6 +16,7 @@ import {
   LeaveMeetingBody,
 } from "@workspace/api-zod";
 import { requireAuth, AuthenticatedRequest } from "../middlewares/auth";
+import { canAccessMeeting } from "../lib/authHelpers";
 
 const router = Router();
 
@@ -49,6 +50,13 @@ router.post("/rooms/:roomId/end", requireAuth, async (req: AuthenticatedRequest,
     const now = new Date();
 
     if (meeting) {
+      // Access check
+      const hasAccess = await canAccessMeeting(meeting._id, req.user!.id);
+      if (!hasAccess) {
+        res.status(403).json({ error: "Access denied: You are not authorized to access this meeting" });
+        return;
+      }
+
       meeting.endedAt = now;
       meeting.status = "ended";
       meeting.durationSeconds = durationSeconds;
@@ -75,6 +83,7 @@ router.post("/rooms/:roomId/end", requireAuth, async (req: AuthenticatedRequest,
         meetingId: roomId,
         status: "ended",
         startTime: now,
+        host: req.user!.id, // Set host to current user
       });
       await meeting.save();
       req.log.info({ meetingId: meeting._id.toString() }, "Meeting created + ended");
@@ -138,6 +147,13 @@ router.get("/rooms/:roomId/active-meeting", requireAuth, async (req: Authenticat
       return;
     }
 
+    // Access check
+    const hasAccess = await canAccessMeeting(meeting._id, req.user!.id);
+    if (!hasAccess) {
+      res.status(403).json({ error: "Access denied: You are not authorized to access this meeting" });
+      return;
+    }
+
     res.json({
       id: meeting._id.toString(),
       roomId: meeting.roomId,
@@ -171,7 +187,16 @@ router.get("/rooms/:roomId/active-meeting", requireAuth, async (req: Authenticat
 // ─── GET /meetings ───────────────────────────────────────────────────────────
 router.get("/meetings", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const meetings = await Meeting.find().sort({ startedAt: -1 });
+    const { Participant } = await import("@workspace/db");
+    const participantMeetings = await Participant.find({ user: req.user!.id }).select("meeting");
+    const meetingIds = participantMeetings.map((p) => p.meeting);
+
+    const meetings = await Meeting.find({
+      $or: [
+        { host: req.user!.id },
+        { _id: { $in: meetingIds } }
+      ]
+    }).sort({ startedAt: -1 });
 
     const results = meetings.map((m) => ({
       id: m._id.toString(),
@@ -211,6 +236,13 @@ router.get("/meetings/:meetingId", requireAuth, async (req: AuthenticatedRequest
     const meeting = await Meeting.findById(params.data.meetingId);
     if (!meeting) {
       res.status(404).json({ error: "Meeting not found" });
+      return;
+    }
+
+    // Access check
+    const hasAccess = await canAccessMeeting(meeting._id, req.user!.id);
+    if (!hasAccess) {
+      res.status(403).json({ error: "Access denied: You do not have access to this meeting" });
       return;
     }
 
@@ -264,6 +296,12 @@ router.put("/meetings/:meetingId/notes", requireAuth, async (req: AuthenticatedR
       return;
     }
 
+    const hasAccess = await canAccessMeeting(meeting._id, req.user!.id);
+    if (!hasAccess) {
+      res.status(403).json({ error: "Access denied: You do not have permission to modify notes for this meeting" });
+      return;
+    }
+
     meeting.notes = body.data.content;
     await meeting.save();
 
@@ -291,6 +329,12 @@ router.put("/meetings/:meetingId/notes", requireAuth, async (req: AuthenticatedR
 // ─── GET /meetings/:meetingId/notes/versions ──────────────────────────────────
 router.get("/meetings/:meetingId/notes/versions", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
+    const hasAccess = await canAccessMeeting(req.params.meetingId as string, req.user!.id);
+    if (!hasAccess) {
+      res.status(403).json({ error: "Access denied: You do not have permission to view notes for this meeting" });
+      return;
+    }
+
     const { MeetingNotesVersion } = await import("@workspace/db");
     const versions = await MeetingNotesVersion.find({ meetingId: req.params.meetingId })
       .populate("author", "name email")
@@ -311,6 +355,12 @@ router.post("/meetings/:meetingId/notes/restore", requireAuth, async (req: Authe
   }
 
   try {
+    const hasAccess = await canAccessMeeting(req.params.meetingId as string, req.user!.id);
+    if (!hasAccess) {
+      res.status(403).json({ error: "Access denied: You do not have permission to restore notes for this meeting" });
+      return;
+    }
+
     const { MeetingNotesVersion } = await import("@workspace/db");
     const version = await MeetingNotesVersion.findOne({ _id: versionId, meetingId: req.params.meetingId });
     if (!version) {
@@ -355,6 +405,12 @@ router.post("/meetings/:meetingId/action-items", requireAuth, async (req: Authen
     const meeting = await Meeting.findById(params.data.meetingId);
     if (!meeting) {
       res.status(404).json({ error: "Meeting not found" });
+      return;
+    }
+
+    const hasAccess = await canAccessMeeting(meeting._id, req.user!.id);
+    if (!hasAccess) {
+      res.status(403).json({ error: "Access denied: You do not have permission to add action items for this meeting" });
       return;
     }
 
@@ -406,6 +462,12 @@ router.patch("/action-items/:actionItemId", requireAuth, async (req: Authenticat
       return;
     }
 
+    const hasAccess = await canAccessMeeting(meeting._id, req.user!.id);
+    if (!hasAccess) {
+      res.status(403).json({ error: "Access denied: You do not have permission to modify action items for this meeting" });
+      return;
+    }
+
     const item = meeting.actionItems.id(params.data.actionItemId);
     if (!item) {
       res.status(404).json({ error: "Action item not found in meeting" });
@@ -449,6 +511,12 @@ router.delete("/action-items/:actionItemId", requireAuth, async (req: Authentica
       return;
     }
 
+    const hasAccess = await canAccessMeeting(meeting._id, req.user!.id);
+    if (!hasAccess) {
+      res.status(403).json({ error: "Access denied: You do not have permission to delete action items for this meeting" });
+      return;
+    }
+
     (meeting.actionItems as any).pull(params.data.actionItemId);
     await meeting.save();
 
@@ -462,7 +530,16 @@ router.delete("/action-items/:actionItemId", requireAuth, async (req: Authentica
 // ─── GET /dashboard/stats ─────────────────────────────────────────────────────
 router.get("/dashboard/stats", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
-    const meetings = await Meeting.find();
+    const { Participant } = await import("@workspace/db");
+    const participantMeetings = await Participant.find({ user: req.user!.id }).select("meeting");
+    const meetingIds = participantMeetings.map((p) => p.meeting);
+
+    const meetings = await Meeting.find({
+      $or: [
+        { host: req.user!.id },
+        { _id: { $in: meetingIds } }
+      ]
+    });
     const totalMeetings = meetings.length;
 
     let totalDurationSeconds = 0;
@@ -505,6 +582,12 @@ router.post("/meetings/:meetingId/ai-generate", requireAuth, async (req: Authent
     const meeting = await Meeting.findById(req.params.meetingId);
     if (!meeting) {
       res.status(404).json({ error: "Meeting not found" });
+      return;
+    }
+
+    const hasAccess = await canAccessMeeting(meeting._id, req.user!.id);
+    if (!hasAccess) {
+      res.status(403).json({ error: "Access denied: You do not have permission to run AI generation for this meeting" });
       return;
     }
 
@@ -872,6 +955,12 @@ router.delete("/meetings/:meetingId", requireAuth, async (req: AuthenticatedRequ
     const meeting = await Meeting.findById(meetingId);
     if (!meeting) {
       res.status(404).json({ error: "Meeting not found" });
+      return;
+    }
+
+    // Host check
+    if (!meeting.host || meeting.host.toString() !== req.user!.id) {
+      res.status(403).json({ error: "Access denied: Only the host can delete this meeting" });
       return;
     }
 

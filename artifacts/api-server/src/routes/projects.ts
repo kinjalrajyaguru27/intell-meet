@@ -2,6 +2,7 @@ import { Router } from "express";
 import { requireAuth, type AuthenticatedRequest } from "../middlewares/auth";
 import { Project, Task, Team } from "@workspace/db";
 import { logActivity } from "../lib/activity";
+import { canAccessProject } from "../lib/authHelpers";
 
 const router = Router();
 router.use(requireAuth);
@@ -11,10 +12,28 @@ router.get("/projects", async (req: AuthenticatedRequest, res) => {
   const { teamId, status, priority } = req.query;
 
   try {
-    const filter: any = {};
-    if (teamId) filter.teamId = teamId;
-    if (status) filter.status = status;
-    if (priority) filter.priority = priority;
+    const userTeams = await Team.find({
+      $or: [
+        { owner: req.user!.id },
+        { "members.user": req.user!.id }
+      ]
+    }).select("_id");
+    const teamIds = userTeams.map((t) => t._id);
+
+    const filter: any = {
+      $and: [
+        {
+          $or: [
+            { owner: req.user!.id },
+            { teamId: { $in: teamIds } }
+          ]
+        }
+      ]
+    };
+
+    if (teamId) filter.$and.push({ teamId });
+    if (status) filter.$and.push({ status });
+    if (priority) filter.$and.push({ priority });
 
     const projects = await Project.find(filter).sort({ createdAt: -1 });
 
@@ -46,6 +65,12 @@ router.get("/projects/:id", async (req: AuthenticatedRequest, res) => {
   const { id } = req.params;
 
   try {
+    const hasAccess = await canAccessProject(id as string, req.user!.id);
+    if (!hasAccess) {
+      res.status(403).json({ error: "Access denied: You do not have permission to access this project" });
+      return;
+    }
+
     const p = await Project.findById(id);
     if (!p) {
       res.status(404).json({ error: "Project not found" });
@@ -91,18 +116,24 @@ router.post("/projects", async (req: AuthenticatedRequest, res) => {
       return;
     }
 
+    const isMember = team.owner?.toString() === req.user!.id || team.members.some((m: any) => m.user && m.user.toString() === req.user!.id);
+    if (!isMember) {
+      res.status(403).json({ error: "Access denied: You are not a member of this team" });
+      return;
+    }
+
     const project = new Project({
       name,
       description: description || "",
       teamId,
-      owner: req.user.id,
+      owner: req.user!.id,
       dueDate: dueDate || null,
       status: status || "Planning",
       priority: priority || "Medium",
     });
 
     await project.save();
-    await logActivity(req.user.id, "project_created", project._id.toString(), "Project", `Created project "${name}"`);
+    await logActivity(req.user!.id, "project_created", project._id.toString(), "Project", `Created project "${name}"`);
     res.status(201).json({
       ...project.toObject(),
       id: project._id.toString(),
@@ -125,6 +156,12 @@ router.put("/projects/:id", async (req: AuthenticatedRequest, res) => {
   const { name, description, dueDate, status, priority } = req.body;
 
   try {
+    const hasAccess = await canAccessProject(id as string, req.user!.id);
+    if (!hasAccess) {
+      res.status(403).json({ error: "Access denied: You do not have permission to modify this project" });
+      return;
+    }
+
     const project = await Project.findById(id);
     if (!project) {
       res.status(404).json({ error: "Project not found" });
@@ -165,6 +202,12 @@ router.delete("/projects/:id", async (req: AuthenticatedRequest, res) => {
   const { id } = req.params;
 
   try {
+    const hasAccess = await canAccessProject(id as string, req.user!.id);
+    if (!hasAccess) {
+      res.status(403).json({ error: "Access denied: You do not have permission to delete this project" });
+      return;
+    }
+
     const project = await Project.findById(id);
     if (!project) {
       res.status(404).json({ error: "Project not found" });
@@ -176,7 +219,7 @@ router.delete("/projects/:id", async (req: AuthenticatedRequest, res) => {
 
     // Delete project
     await Project.findByIdAndDelete(id);
-    await logActivity(req.user.id, "project_deleted", id as string, "Project", `Deleted project "${project.name}"`);
+    await logActivity(req.user!.id, "project_deleted", id as string, "Project", `Deleted project "${project.name}"`);
 
     res.status(204).send();
   } catch (error) {

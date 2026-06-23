@@ -9,13 +9,30 @@ import {
   Decision,
   Meeting,
   User,
+  Participant,
 } from "@workspace/db";
 import { logger } from "../lib/logger";
+import { canAccessMeeting } from "../lib/authHelpers";
 
 const router = Router();
 
 // Apply auth to all AI routes
 router.use(requireAuth);
+
+// Helper to get allowed meeting IDs for a user
+async function getAllowedMeetingIds(userId: string): Promise<any[]> {
+  const participantMeetings = await Participant.find({ user: userId }).select("meeting");
+  const meetingIds = participantMeetings.map((p) => p.meeting);
+
+  const allowedMeetings = await Meeting.find({
+    $or: [
+      { host: userId },
+      { _id: { $in: meetingIds } }
+    ]
+  }).select("_id");
+
+  return allowedMeetings.map((m) => m._id);
+}
 
 // ─── POST /ai/transcribe ──────────────────────────────────────────────────────
 router.post("/ai/transcribe", async (req: AuthenticatedRequest, res) => {
@@ -26,6 +43,12 @@ router.post("/ai/transcribe", async (req: AuthenticatedRequest, res) => {
   }
 
   try {
+    const hasAccess = await canAccessMeeting(meetingId, req.user!.id);
+    if (!hasAccess) {
+      res.status(403).json({ error: "Access denied: You do not have permission to transcribe for this meeting" });
+      return;
+    }
+
     const transcript = new MeetingTranscript({
       meetingId,
       speaker,
@@ -56,6 +79,12 @@ router.post("/ai/summarize", async (req: AuthenticatedRequest, res) => {
   }
 
   try {
+    const hasAccess = await canAccessMeeting(meetingId, req.user!.id);
+    if (!hasAccess) {
+      res.status(403).json({ error: "Access denied: You do not have permission to summarize this meeting" });
+      return;
+    }
+
     const summary = await AIService.generateSummary(meetingId, summaryType);
     res.status(200).json({
       id: summary._id.toString(),
@@ -86,6 +115,12 @@ router.post("/ai/action-items", async (req: AuthenticatedRequest, res) => {
   }
 
   try {
+    const hasAccess = await canAccessMeeting(meetingId, req.user!.id);
+    if (!hasAccess) {
+      res.status(403).json({ error: "Access denied: You do not have permission to extract action items for this meeting" });
+      return;
+    }
+
     const items = await AIService.extractActionItems(meetingId);
     const formatted = items.map((item) => ({
       id: item._id.toString(),
@@ -115,6 +150,12 @@ router.post("/ai/insights", async (req: AuthenticatedRequest, res) => {
   }
 
   try {
+    const hasAccess = await canAccessMeeting(meetingId, req.user!.id);
+    if (!hasAccess) {
+      res.status(403).json({ error: "Access denied: You do not have permission to generate insights for this meeting" });
+      return;
+    }
+
     const insight = await AIService.generateInsights(meetingId);
     const speaks: Record<string, number> = {};
     if (insight.speakingTimeAnalytics) {
@@ -151,6 +192,12 @@ router.get("/ai/insights", async (req: AuthenticatedRequest, res) => {
   }
 
   try {
+    const hasAccess = await canAccessMeeting(meetingId as string, req.user!.id);
+    if (!hasAccess) {
+      res.status(403).json({ error: "Access denied: You do not have permission to view insights for this meeting" });
+      return;
+    }
+
     const insight = await MeetingInsight.findOne({ meetingId });
     if (!insight) {
       res.status(404).json({ error: "Insights not found for this meeting" });
@@ -192,6 +239,12 @@ router.get("/ai/summaries", async (req: AuthenticatedRequest, res) => {
   }
 
   try {
+    const hasAccess = await canAccessMeeting(meetingId as string, req.user!.id);
+    if (!hasAccess) {
+      res.status(403).json({ error: "Access denied: You do not have permission to view summaries for this meeting" });
+      return;
+    }
+
     const summaries = await MeetingSummary.find({ meetingId });
     const formatted = summaries.map((s) => ({
       id: s._id.toString(),
@@ -223,6 +276,12 @@ router.get("/ai/transcripts", async (req: AuthenticatedRequest, res) => {
   }
 
   try {
+    const hasAccess = await canAccessMeeting(meetingId as string, req.user!.id);
+    if (!hasAccess) {
+      res.status(403).json({ error: "Access denied: You do not have permission to view transcripts for this meeting" });
+      return;
+    }
+
     const transcripts = await MeetingTranscript.find({ meetingId }).sort({ timestamp: 1 });
     const formatted = transcripts.map((t) => ({
       id: t._id.toString(),
@@ -242,10 +301,23 @@ router.get("/ai/transcripts", async (req: AuthenticatedRequest, res) => {
 router.get("/ai/decisions", async (req: AuthenticatedRequest, res) => {
   const { meetingId, search } = req.query;
   const filter: any = {};
-  if (meetingId) filter.meetingId = meetingId;
-  if (search) filter.decision = new RegExp(search as string, "i");
 
   try {
+    const allowedMeetingIds = await getAllowedMeetingIds(req.user!.id);
+
+    if (meetingId) {
+      const hasAccess = await canAccessMeeting(meetingId as string, req.user!.id);
+      if (!hasAccess) {
+        res.status(403).json({ error: "Access denied: You do not have permission to view decisions for this meeting" });
+        return;
+      }
+      filter.meetingId = meetingId;
+    } else {
+      filter.meetingId = { $in: allowedMeetingIds };
+    }
+
+    if (search) filter.decision = new RegExp(search as string, "i");
+
     const decisions = await Decision.find(filter).sort({ timestamp: -1 });
     const formatted = decisions.map((d) => ({
       id: d._id.toString(),
@@ -267,9 +339,21 @@ router.get("/ai/decisions", async (req: AuthenticatedRequest, res) => {
 router.get("/ai/action-items", async (req: AuthenticatedRequest, res) => {
   const { meetingId } = req.query;
   const filter: any = {};
-  if (meetingId) filter.meetingId = meetingId;
 
   try {
+    const allowedMeetingIds = await getAllowedMeetingIds(req.user!.id);
+
+    if (meetingId) {
+      const hasAccess = await canAccessMeeting(meetingId as string, req.user!.id);
+      if (!hasAccess) {
+        res.status(403).json({ error: "Access denied: You do not have permission to view AI action items for this meeting" });
+        return;
+      }
+      filter.meetingId = meetingId;
+    } else {
+      filter.meetingId = { $in: allowedMeetingIds };
+    }
+
     const items = await ActionItem.find(filter).sort({ createdAt: -1 });
     const formatted = items.map((item) => ({
       id: item._id.toString(),
@@ -299,6 +383,12 @@ router.put("/ai/action-items/:id", async (req: AuthenticatedRequest, res) => {
     const item = await ActionItem.findById(id);
     if (!item) {
       res.status(404).json({ error: "Action item not found" });
+      return;
+    }
+
+    const hasAccess = await canAccessMeeting(item.meetingId, req.user!.id);
+    if (!hasAccess) {
+      res.status(403).json({ error: "Access denied: You do not have permission to modify action items for this meeting" });
       return;
     }
 
@@ -333,18 +423,46 @@ router.get("/ai/search", async (req: AuthenticatedRequest, res) => {
   const { query, date, teamId, meetingId, user } = req.query;
 
   try {
-    const filterMeeting: any = {};
-    const filterAction: any = {};
-    const filterDecision: any = {};
-    const filterSummary: any = {};
+    const allowedMeetingIds = await getAllowedMeetingIds(req.user!.id);
+
+    const filterMeeting: any = {
+      _id: { $in: allowedMeetingIds }
+    };
+    const filterAction: any = {
+      meetingId: { $in: allowedMeetingIds }
+    };
+    const filterDecision: any = {
+      meetingId: { $in: allowedMeetingIds }
+    };
+    const filterSummary: any = {
+      meetingId: { $in: allowedMeetingIds }
+    };
 
     // 1. Simple search query parameter
     if (query) {
       const regex = new RegExp(query as string, "i");
-      filterMeeting.$or = [{ title: regex }, { description: regex }, { notes: regex }, { participantNames: regex }];
-      filterAction.$or = [{ title: regex }, { description: regex }, { assigneeName: regex }];
-      filterDecision.decision = regex;
-      filterSummary.$or = [{ shortSummary: regex }, { detailedSummary: regex }, { executiveSummary: regex }];
+      filterMeeting.$and = [
+        { _id: { $in: allowedMeetingIds } },
+        {
+          $or: [{ title: regex }, { description: regex }, { notes: regex }, { participantNames: regex }]
+        }
+      ];
+      filterAction.$and = [
+        { meetingId: { $in: allowedMeetingIds } },
+        {
+          $or: [{ title: regex }, { description: regex }, { assigneeName: regex }]
+        }
+      ];
+      filterDecision.$and = [
+        { meetingId: { $in: allowedMeetingIds } },
+        { decision: regex }
+      ];
+      filterSummary.$and = [
+        { meetingId: { $in: allowedMeetingIds } },
+        {
+          $or: [{ shortSummary: regex }, { detailedSummary: regex }, { executiveSummary: regex }]
+        }
+      ];
     }
 
     // 2. Filter by date
@@ -352,10 +470,15 @@ router.get("/ai/search", async (req: AuthenticatedRequest, res) => {
       const d = new Date(date as string);
       const startOfDay = new Date(d.setHours(0, 0, 0, 0));
       const endOfDay = new Date(d.setHours(23, 59, 59, 999));
+      
       filterMeeting.startTime = { $gte: startOfDay, $lte: endOfDay };
-      // Decisions, summaries, action items are joined via meetings matching date
-      const matchingMeetings = await Meeting.find({ startTime: { $gte: startOfDay, $lte: endOfDay } });
+      
+      const matchingMeetings = await Meeting.find({
+        _id: { $in: allowedMeetingIds },
+        startTime: { $gte: startOfDay, $lte: endOfDay }
+      });
       const ids = matchingMeetings.map((m) => m._id);
+      
       filterAction.meetingId = { $in: ids };
       filterDecision.meetingId = { $in: ids };
       filterSummary.meetingId = { $in: ids };
@@ -363,6 +486,12 @@ router.get("/ai/search", async (req: AuthenticatedRequest, res) => {
 
     // 3. Filter by meetingId
     if (meetingId) {
+      const hasAccess = await canAccessMeeting(meetingId as string, req.user!.id);
+      if (!hasAccess) {
+        res.status(403).json({ error: "Access denied" });
+        return;
+      }
+      
       filterMeeting._id = meetingId;
       filterAction.meetingId = meetingId;
       filterDecision.meetingId = meetingId;
@@ -372,9 +501,24 @@ router.get("/ai/search", async (req: AuthenticatedRequest, res) => {
     // 4. Filter by user (assignee / owner / participant)
     if (user) {
       const regex = new RegExp(user as string, "i");
-      filterMeeting.participantNames = regex;
-      filterAction.assigneeName = regex;
-      filterDecision.owner = regex;
+      
+      if (filterMeeting.$and) {
+        filterMeeting.$and.push({ participantNames: regex });
+      } else {
+        filterMeeting.participantNames = regex;
+      }
+
+      if (filterAction.$and) {
+        filterAction.$and.push({ assigneeName: regex });
+      } else {
+        filterAction.assigneeName = regex;
+      }
+
+      if (filterDecision.$and) {
+        filterDecision.$and.push({ owner: regex });
+      } else {
+        filterDecision.owner = regex;
+      }
     }
 
     // Run queries

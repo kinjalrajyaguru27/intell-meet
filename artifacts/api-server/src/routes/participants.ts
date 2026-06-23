@@ -113,6 +113,12 @@ router.post("/participants/raise-hand", requireAuth, async (req: AuthenticatedRe
       return;
     }
 
+    // Verify requesting user is the participant themselves, or the host of the meeting
+    if (userId !== req.user?.id && meeting.host?.toString() !== req.user?.id) {
+      res.status(403).json({ error: "Forbidden: You cannot modify other participants' states" });
+      return;
+    }
+
     const participant = await Participant.findOneAndUpdate(
       { meeting: meeting._id, user: userId, status: "admitted" },
       { isRaisedHand },
