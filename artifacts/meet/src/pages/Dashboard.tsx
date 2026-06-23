@@ -75,7 +75,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (token && user) {
       // Fetch recent tasks assigned to me
-      fetch(`/api/tasks?assignee=${user.id}`, {
+      fetch("/api/tasks", {
         headers: { Authorization: `Bearer ${token}` },
       })
         .then((res) => (res.ok ? res.json() : []))
