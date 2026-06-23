@@ -5,6 +5,7 @@ import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { securityHeaders } from "./middlewares/security";
+import { initSignaling } from "./signaling";
 
 import { connectDB } from "@workspace/db";
 
@@ -51,6 +52,17 @@ app.use(async (req, res, next) => {
     logger.error({ err }, "Database connection error in request middleware");
     res.status(500).json({ error: "Database connection failed" });
   }
+});
+
+// Lazy-initialize Socket.IO server on-demand for Vercel Serverless Function context
+app.all("/api/socket.io", (req, res, next) => {
+  const server = (res.socket as any)?.server;
+  if (server && !server.io) {
+    logger.info("Initializing Socket.io server on-demand on Vercel HTTP server instance");
+    initSignaling(server);
+    (server as any).io = true; // Mark it so we don't initialize again on this server instance
+  }
+  next();
 });
 
 app.use("/api", router);
