@@ -286,30 +286,85 @@ export function useWebRTC(
 
     async function initMedia() {
       let stream: MediaStream | null = null;
+      let hasVideoDevice = false;
+      let hasAudioDevice = false;
+
       try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-            frameRate: { ideal: 30 },
-            facingMode: "user",
-          },
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-            sampleRate: { ideal: 48000 },
-            channelCount: { ideal: 1 },
-          },
-        });
-      } catch (mediaErr) {
-        console.warn("Could not capture camera/mic streams:", mediaErr);
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        hasVideoDevice = devices.some((d) => d.kind === "videoinput");
+        hasAudioDevice = devices.some((d) => d.kind === "audioinput");
+      } catch (e) {
+        // Fallback to assuming both are present if enumerateDevices fails
+        hasVideoDevice = true;
+        hasAudioDevice = true;
+      }
+
+      if (!hasVideoDevice && !hasAudioDevice) {
         if (mounted) {
           setIsCameraOff(true);
           isCameraOffRef.current = true;
           setIsMuted(true);
           isMutedRef.current = true;
-          setError("Camera/microphone blocked. Joining as a viewer.");
+          setError("No camera or microphone found. Joining as a viewer.");
+        }
+        blackTrackRef.current = createBlackVideoTrack();
+        return;
+      }
+
+      const videoConstraints = {
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+        frameRate: { ideal: 30 },
+        facingMode: "user",
+      };
+
+      const audioConstraints = {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        sampleRate: { ideal: 48000 },
+        channelCount: { ideal: 1 },
+      };
+
+      // Try capturing both first
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: hasVideoDevice ? videoConstraints : false,
+          audio: hasAudioDevice ? audioConstraints : false,
+        });
+      } catch (mediaErr) {
+        console.warn("Could not capture both camera/mic streams:", mediaErr);
+        
+        // Fallback: Try capturing audio only
+        if (hasAudioDevice) {
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              audio: audioConstraints,
+              video: false,
+            });
+            if (mounted) {
+              setIsCameraOff(true);
+              isCameraOffRef.current = true;
+            }
+          } catch (audioErr) {
+            console.warn("Could not capture audio only stream:", audioErr);
+          }
+        }
+
+        // Fallback: Try capturing video only (if audio failed or wasn't available)
+        if (!stream && hasVideoDevice) {
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: videoConstraints,
+              audio: false,
+            });
+            if (mounted) {
+              setIsMuted(true);
+              isMutedRef.current = true;
+            }
+          } catch (videoErr) {
+            console.warn("Could not capture video only stream:", videoErr);
+          }
         }
       }
 
@@ -331,11 +386,28 @@ export function useWebRTC(
         if (videoTrack) {
           const matched = currentDevices.find((d) => d.kind === "videoinput" && d.label === videoTrack.label);
           setSelectedCameraId(matched?.deviceId || videoTrack.getSettings().deviceId || "");
+          setIsCameraOff(false);
+          isCameraOffRef.current = false;
+        } else {
+          setIsCameraOff(true);
+          isCameraOffRef.current = true;
         }
+
         if (audioTrack) {
           const matched = currentDevices.find((d) => d.kind === "audioinput" && d.label === audioTrack.label);
           setSelectedMicId(matched?.deviceId || audioTrack.getSettings().deviceId || "");
+          setIsMuted(false);
+          isMutedRef.current = false;
+        } else {
+          setIsMuted(true);
+          isMutedRef.current = true;
         }
+      } else {
+        setIsCameraOff(true);
+        isCameraOffRef.current = true;
+        setIsMuted(true);
+        isMutedRef.current = true;
+        setError("Camera/microphone blocked or unavailable. Joining as a viewer.");
       }
 
       blackTrackRef.current = createBlackVideoTrack();
