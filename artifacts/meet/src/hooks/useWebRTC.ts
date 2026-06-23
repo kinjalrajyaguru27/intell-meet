@@ -350,7 +350,15 @@ export function useWebRTC(
             });
             realVideoTrack = videoStream.getVideoTracks()[0];
           } catch (videoErr) {
-            console.warn("Could not capture camera stream:", videoErr);
+            console.warn("Could not capture camera stream with constraints, trying video: true:", videoErr);
+            try {
+              const videoStream = await navigator.mediaDevices.getUserMedia({
+                video: true,
+              });
+              realVideoTrack = videoStream.getVideoTracks()[0];
+            } catch (fallbackErr) {
+              console.error("Failed completely to capture camera stream:", fallbackErr);
+            }
           }
         }
 
@@ -361,7 +369,15 @@ export function useWebRTC(
             });
             realAudioTrack = audioStream.getAudioTracks()[0];
           } catch (audioErr) {
-            console.warn("Could not capture microphone stream:", audioErr);
+            console.warn("Could not capture microphone stream with constraints, trying audio: true:", audioErr);
+            try {
+              const audioStream = await navigator.mediaDevices.getUserMedia({
+                audio: true,
+              });
+              realAudioTrack = audioStream.getAudioTracks()[0];
+            } catch (fallbackErr) {
+              console.error("Failed completely to capture microphone stream:", fallbackErr);
+            }
           }
         }
       }
@@ -902,15 +918,23 @@ export function useWebRTC(
         return;
       }
       try {
-        const tempStream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-            sampleRate: { ideal: 48000 },
-            channelCount: { ideal: 1 },
-          },
-        });
+        let tempStream: MediaStream;
+        try {
+          tempStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+              sampleRate: { ideal: 48000 },
+              channelCount: { ideal: 1 },
+            },
+          });
+        } catch (err) {
+          console.warn("Failed to capture audio with constraints, trying audio: true");
+          tempStream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+          });
+        }
         const realTrack = tempStream.getAudioTracks()[0];
         if (realTrack) {
           stream.removeTrack(audioTrack);
@@ -926,6 +950,8 @@ export function useWebRTC(
         }
       } catch (err) {
         console.warn("Could not capture real microphone track on toggle:", err);
+        setError("Could not access your microphone. Please check your permissions.");
+        return;
       }
     }
 
@@ -957,14 +983,22 @@ export function useWebRTC(
         return;
       }
       try {
-        const tempStream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-            frameRate: { ideal: 30 },
-            facingMode: "user",
-          },
-        });
+        let tempStream: MediaStream;
+        try {
+          tempStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+              frameRate: { ideal: 30 },
+              facingMode: "user",
+            },
+          });
+        } catch (err) {
+          console.warn("Failed to capture camera with constraints on toggle, trying video: true");
+          tempStream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+          });
+        }
         const realTrack = tempStream.getVideoTracks()[0];
         if (realTrack) {
           stream.removeTrack(videoTrack);
@@ -980,6 +1014,8 @@ export function useWebRTC(
         }
       } catch (err) {
         console.warn("Could not capture real camera track on toggle:", err);
+        setError("Could not access your camera. Please check your permissions.");
+        return;
       }
     }
 
@@ -1054,14 +1090,22 @@ export function useWebRTC(
       const oldTracks = localStreamRef.current.getVideoTracks();
       oldTracks.forEach((t) => t.stop());
 
-      const newStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          deviceId: { exact: deviceId },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          frameRate: { ideal: 30 },
-        },
-      });
+      let newStream: MediaStream;
+      try {
+        newStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            deviceId: { exact: deviceId },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            frameRate: { ideal: 30 },
+          },
+        });
+      } catch (err) {
+        console.warn("Failed to set camera with constraints, trying exact deviceId only");
+        newStream = await navigator.mediaDevices.getUserMedia({
+          video: { deviceId: { exact: deviceId } },
+        });
+      }
       const newTrack = newStream.getVideoTracks()[0];
       newTrack.enabled = !isCameraOffRef.current;
 
@@ -1096,16 +1140,24 @@ export function useWebRTC(
       const oldTracks = localStreamRef.current.getAudioTracks();
       oldTracks.forEach((t) => t.stop());
 
-      const newStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          deviceId: { exact: deviceId },
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          sampleRate: { ideal: 48000 },
-          channelCount: { ideal: 1 },
-        },
-      });
+      let newStream: MediaStream;
+      try {
+        newStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            deviceId: { exact: deviceId },
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            sampleRate: { ideal: 48000 },
+            channelCount: { ideal: 1 },
+          },
+        });
+      } catch (err) {
+        console.warn("Failed to set microphone with constraints, trying exact deviceId only");
+        newStream = await navigator.mediaDevices.getUserMedia({
+          audio: { deviceId: { exact: deviceId } },
+        });
+      }
       const newTrack = newStream.getAudioTracks()[0];
       newTrack.enabled = !isMutedRef.current;
 
