@@ -289,12 +289,16 @@ export function useWebRTC(
   useEffect(() => {
     let mounted = true;
 
+    const mediaAvailable = typeof navigator !== "undefined" && !!navigator.mediaDevices;
+
     const handleDeviceChange = async () => {
       try {
-        const currentDevices = await navigator.mediaDevices.enumerateDevices();
-        if (mounted) {
-          setCameras(currentDevices.filter((d) => d.kind === "videoinput"));
-          setMicrophones(currentDevices.filter((d) => d.kind === "audioinput"));
+        if (mediaAvailable) {
+          const currentDevices = await navigator.mediaDevices.enumerateDevices();
+          if (mounted) {
+            setCameras(currentDevices.filter((d) => d.kind === "videoinput"));
+            setMicrophones(currentDevices.filter((d) => d.kind === "audioinput"));
+          }
         }
       } catch (e) {
         console.error("enumerateDevices on devicechange error", e);
@@ -310,13 +314,15 @@ export function useWebRTC(
       let hasVideoDevice = false;
       let hasAudioDevice = false;
 
-      try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        hasVideoDevice = devices.some((d) => d.kind === "videoinput");
-        hasAudioDevice = devices.some((d) => d.kind === "audioinput");
-      } catch (e) {
-        hasVideoDevice = true;
-        hasAudioDevice = true;
+      if (mediaAvailable) {
+        try {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          hasVideoDevice = devices.some((d) => d.kind === "videoinput");
+          hasAudioDevice = devices.some((d) => d.kind === "audioinput");
+        } catch (e) {
+          hasVideoDevice = true;
+          hasAudioDevice = true;
+        }
       }
 
       const videoConstraints = {
@@ -335,7 +341,7 @@ export function useWebRTC(
       };
 
       // Try capturing real devices
-      if (hasVideoDevice || hasAudioDevice) {
+      if (mediaAvailable && (hasVideoDevice || hasAudioDevice)) {
         try {
           realStream = await navigator.mediaDevices.getUserMedia({
             video: hasVideoDevice ? videoConstraints : false,
@@ -382,7 +388,10 @@ export function useWebRTC(
       const realVideoTrack = realStream?.getVideoTracks()[0];
       const realAudioTrack = realStream?.getAudioTracks()[0];
 
-      const currentDevices = await navigator.mediaDevices.enumerateDevices().catch(() => [] as MediaDeviceInfo[]);
+      let currentDevices: MediaDeviceInfo[] = [];
+      if (mediaAvailable) {
+        currentDevices = await navigator.mediaDevices.enumerateDevices().catch(() => [] as MediaDeviceInfo[]);
+      }
       setCameras(currentDevices.filter((d) => d.kind === "videoinput"));
       setMicrophones(currentDevices.filter((d) => d.kind === "audioinput"));
 
@@ -415,14 +424,18 @@ export function useWebRTC(
       setLocalStream(localStreamObj);
       localStreamRef.current = localStreamObj;
 
-      navigator.mediaDevices.addEventListener("devicechange", handleDeviceChange);
+      if (mediaAvailable) {
+        navigator.mediaDevices.addEventListener("devicechange", handleDeviceChange);
+      }
     }
 
     initMedia();
 
     return () => {
       mounted = false;
-      navigator.mediaDevices.removeEventListener("devicechange", handleDeviceChange);
+      if (mediaAvailable) {
+        navigator.mediaDevices.removeEventListener("devicechange", handleDeviceChange);
+      }
       localStreamRef.current?.getTracks().forEach((t) => t.stop());
       screenStreamRef.current?.getTracks().forEach((t) => t.stop());
       blackTrackRef.current?.stop();
@@ -894,7 +907,11 @@ export function useWebRTC(
     const newMuted = !isMutedRef.current;
 
     // If unmuting, and current track is our dummy silent track, attempt real capture
-    if (!newMuted && audioTrack && (audioTrack as any).isSilentDummy) {
+    if (!newMuted && audioTrack === silentAudioTrackRef.current) {
+      if (typeof navigator === "undefined" || !navigator.mediaDevices) {
+        setError("Microphone access is not supported on this device/connection.");
+        return;
+      }
       try {
         const tempStream = await navigator.mediaDevices.getUserMedia({
           audio: {
@@ -946,6 +963,10 @@ export function useWebRTC(
 
     // If turning camera ON, and current track is our dummy black track, attempt real capture
     if (!newCameraOff && videoTrack === blackTrackRef.current) {
+      if (typeof navigator === "undefined" || !navigator.mediaDevices) {
+        setError("Camera access is not supported on this device/connection.");
+        return;
+      }
       try {
         const tempStream = await navigator.mediaDevices.getUserMedia({
           video: {
@@ -994,6 +1015,11 @@ export function useWebRTC(
       return;
     }
 
+    if (typeof navigator === "undefined" || !navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+      setError("Screen sharing is not supported on this device/connection.");
+      return;
+    }
+
     try {
       const stream = await navigator.mediaDevices.getDisplayMedia({
         video: {
@@ -1031,6 +1057,10 @@ export function useWebRTC(
 
   const setCameraDevice = useCallback(async (deviceId: string) => {
     if (!localStreamRef.current) return;
+    if (typeof navigator === "undefined" || !navigator.mediaDevices) {
+      setError("Camera switching is not supported on this device/connection.");
+      return;
+    }
     try {
       const oldTracks = localStreamRef.current.getVideoTracks();
       oldTracks.forEach((t) => t.stop());
@@ -1069,6 +1099,10 @@ export function useWebRTC(
 
   const setMicDevice = useCallback(async (deviceId: string) => {
     if (!localStreamRef.current) return;
+    if (typeof navigator === "undefined" || !navigator.mediaDevices) {
+      setError("Microphone switching is not supported on this device/connection.");
+      return;
+    }
     try {
       const oldTracks = localStreamRef.current.getAudioTracks();
       oldTracks.forEach((t) => t.stop());
