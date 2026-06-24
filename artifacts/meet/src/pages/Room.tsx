@@ -584,8 +584,11 @@ export default function Room() {
             ) : (
               <video
                 ref={(el) => {
-                  if (el && localStream && el.srcObject !== localStream) {
-                    el.srcObject = localStream;
+                  if (el) {
+                    el.muted = true;
+                    if (localStream && el.srcObject !== localStream) {
+                      el.srcObject = localStream;
+                    }
                   }
                 }}
                 autoPlay
@@ -829,9 +832,12 @@ export default function Room() {
                 <video
                   key={p.id}
                   ref={(el) => {
-                    if (el && el.srcObject !== stream) {
-                      el.srcObject = stream;
-                      el.play().catch(() => {});
+                    if (el) {
+                      el.muted = false;
+                      if (el.srcObject !== stream) {
+                        el.srcObject = stream;
+                        el.play().catch(() => {});
+                      }
                     }
                   }}
                   autoPlay

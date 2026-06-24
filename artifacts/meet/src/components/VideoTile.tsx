@@ -33,6 +33,8 @@ export function VideoTile({
     const video = videoRef.current;
     if (!video) return;
 
+    video.muted = isLocal;
+
     if (stream) {
       // Always reassign — even if it's the "same" stream object,
       // its tracks may have changed (e.g. screen share replaceTrack)
@@ -46,12 +48,13 @@ export function VideoTile({
     } else {
       video.srcObject = null;
     }
-  }, [stream]);
+  }, [stream, isLocal]);
 
   // When the video element remounts after isCameraOff toggle, re-attach stream
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !stream) return;
+    video.muted = isLocal;
     if (video.srcObject !== stream) {
       video.srcObject = stream;
       video.play().catch(() => {});
