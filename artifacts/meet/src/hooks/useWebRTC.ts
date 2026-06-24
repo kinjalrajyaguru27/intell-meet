@@ -153,6 +153,7 @@ export function useWebRTC(
   useEffect(() => {
     isPollingRef.current = isPolling;
   }, [isPolling]);
+  const pollTriggerRef = useRef<(() => void) | null>(null);
   const { toast } = useToast();
 
   const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
@@ -160,6 +161,10 @@ export function useWebRTC(
   const [selectedCameraId, setSelectedCameraId] = useState<string>("");
   const [selectedMicId, setSelectedMicId] = useState<string>("");
   const [connectionStatus, setConnectionStatus] = useState<"connecting" | "connected" | "disconnected">("disconnected");
+  const connectionStatusRef = useRef(connectionStatus);
+  useEffect(() => {
+    connectionStatusRef.current = connectionStatus;
+  }, [connectionStatus]);
 
   const [speakingUsers, setSpeakingUsers] = useState<Record<string, boolean>>({});
   const [isSimulating, setIsSimulating] = useState(false);
@@ -239,6 +244,19 @@ export function useWebRTC(
     []
   );
 
+  const updateConnectionStatusFromPeers = useCallback(() => {
+    const pcs = Object.values(peersRef.current);
+    if (pcs.length === 0) {
+      setConnectionStatus(isPollingRef.current ? "connected" : "disconnected");
+      return;
+    }
+    if (pcs.every(p => p.connectionState === "connected")) {
+      setConnectionStatus("connected");
+    } else if (pcs.some(p => p.connectionState === "connecting" || p.iceConnectionState === "checking")) {
+      setConnectionStatus("connecting");
+    }
+  }, []);
+
   const removePeer = useCallback((id: string) => {
     peersRef.current[id]?.close();
     delete peersRef.current[id];
@@ -255,7 +273,8 @@ export function useWebRTC(
       delete next[id];
       return next;
     });
-  }, []);
+    updateConnectionStatusFromPeers();
+  }, [updateConnectionStatusFromPeers]);
 
   const flushIceCandidates = useCallback(async (peerId: string, pc: RTCPeerConnection) => {
     remoteDescSet.current[peerId] = true;
@@ -297,7 +316,11 @@ export function useWebRTC(
                 type: "candidate",
                 payload: event.candidate.toJSON(),
               })
-            }).catch((e) => console.error("Error sending ICE candidate in polling:", e));
+            })
+            .then(() => {
+              pollTriggerRef.current?.();
+            })
+            .catch((e) => console.error("Error sending ICE candidate in polling:", e));
           } else if (socketRef.current) {
             socketRef.current.emit("ice-candidate", {
               to: targetUserId,
@@ -325,7 +348,12 @@ export function useWebRTC(
         }));
       };
 
+      pc.onconnectionstatechange = () => {
+        updateConnectionStatusFromPeers();
+      };
+
       pc.oniceconnectionstatechange = () => {
+        updateConnectionStatusFromPeers();
         if (pc.iceConnectionState === "failed") {
           pc.restartIce();
         }
@@ -381,7 +409,11 @@ export function useWebRTC(
                   type: "offer",
                   payload: pc.localDescription,
                 })
-              }).catch((e) => console.error("Error sending offer in polling:", e));
+              })
+              .then(() => {
+                pollTriggerRef.current?.();
+              })
+              .catch((e) => console.error("Error sending offer in polling:", e));
             } else {
               socketRef.current?.emit("offer", {
                 to: targetUserId,
@@ -394,7 +426,7 @@ export function useWebRTC(
 
       return pc;
     },
-    []
+    [roomId, userId, token, updateConnectionStatusFromPeers]
   );
 
   const stopScreenShareCleanup = useCallback(() => {
@@ -983,6 +1015,7 @@ export function useWebRTC(
     if (!isPolling || !hasJoined) return;
 
     let active = true;
+    let timeoutId: ReturnType<typeof setTimeout>;
     console.log("Activating HTTP Polling loop...");
 
     const poll = async () => {
@@ -1015,7 +1048,7 @@ export function useWebRTC(
         const returnedParticipants = data.participants || [];
         const returnedIds = new Set(returnedParticipants.map((p: any) => p.id));
 
-        // Remove peers that left
+        // Remove stale participants
         Object.keys(peersRef.current).forEach((pId) => {
           if (!returnedIds.has(pId)) {
             console.log("Polling: peer left", pId);
@@ -1085,7 +1118,11 @@ export function useWebRTC(
                 type: "answer",
                 payload: pc.localDescription,
               })
-            }).catch(e => console.error("Error sending answer in polling:", e));
+            })
+            .then(() => {
+              triggerPoll();
+            })
+            .catch(e => console.error("Error sending answer in polling:", e));
           } else if (s.type === "answer") {
             console.log("Polling: received answer from", from);
             if (pc.signalingState !== "stable") {
@@ -1154,15 +1191,29 @@ export function useWebRTC(
         }
       } catch (e) {
         console.error("Polling sync failed:", e);
+      } finally {
+        if (active) {
+          const pcs = Object.values(peersRef.current);
+          const isConnectingPeers = pcs.length > 0 && pcs.some(pc => pc.connectionState !== "connected");
+          const interval = isConnectingPeers ? 800 : pcs.length > 0 ? 3000 : 2000;
+          clearTimeout(timeoutId);
+          timeoutId = setTimeout(poll, interval);
+        }
       }
     };
 
+    const triggerPoll = () => {
+      clearTimeout(timeoutId);
+      poll();
+    };
+    pollTriggerRef.current = triggerPoll;
+
     poll();
-    const timer = setInterval(poll, 2000);
 
     return () => {
       active = false;
-      clearInterval(timer);
+      clearTimeout(timeoutId);
+      pollTriggerRef.current = null;
     };
   }, [isPolling, hasJoined, roomId, userId, displayName, token, createPeer, removePeer, flushIceCandidates, isSimulating]);
 
