@@ -81,10 +81,55 @@ function createSilentAudioTrack(): MediaStreamTrack {
 }
 
 function optimizeAudioSDP(sdp: string): string {
-  if (sdp.includes("useinbandfec=1")) {
-    return sdp.replace("useinbandfec=1", "useinbandfec=1;maxaveragebitrate=64000;usedtx=0");
+  const lines = sdp.split("\r\n");
+  let opusPayloadType = "";
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.startsWith("a=rtpmap:") && line.toLowerCase().includes("opus/48000")) {
+      const match = line.match(/a=rtpmap:(\d+)\s+opus\/48000/i);
+      if (match) {
+        opusPayloadType = match[1];
+        break;
+      }
+    }
   }
-  return sdp;
+
+  if (opusPayloadType) {
+    let fmtpFound = false;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.startsWith(`a=fmtp:${opusPayloadType}`)) {
+        fmtpFound = true;
+        const paramsIndex = line.indexOf(" ");
+        let params = paramsIndex !== -1 ? line.substring(paramsIndex + 1) : "";
+        const paramList = params.split(";").map((p) => p.trim()).filter((p) => {
+          const lower = p.toLowerCase();
+          return (
+            !lower.startsWith("maxaveragebitrate=") &&
+            !lower.startsWith("usedtx=") &&
+            !lower.startsWith("useinbandfec=")
+          );
+        });
+        paramList.push("maxaveragebitrate=64000");
+        paramList.push("usedtx=0");
+        paramList.push("useinbandfec=1");
+        lines[i] = `a=fmtp:${opusPayloadType} ${paramList.join(";")}`;
+        break;
+      }
+    }
+
+    if (!fmtpFound) {
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].startsWith(`a=rtpmap:${opusPayloadType}`)) {
+          lines.splice(i + 1, 0, `a=fmtp:${opusPayloadType} maxaveragebitrate=64000;usedtx=0;useinbandfec=1`);
+          break;
+        }
+      }
+    }
+  }
+
+  return lines.join("\r\n");
 }
 
 export function useWebRTC(
@@ -425,10 +470,16 @@ export function useWebRTC(
         facingMode: "user",
       };
 
-      const audioConstraints = {
+      const audioConstraints: any = {
         echoCancellation: true,
         noiseSuppression: true,
         autoGainControl: true,
+        googEchoCancellation: true,
+        googAutoGainControl: true,
+        googNoiseSuppression: true,
+        googHighpassFilter: true,
+        googTypingNoiseDetection: true,
+        googNoiseReduction: true,
       };
 
       // Request video and audio in a single combined call for maximum reliability and a single browser prompt
@@ -447,7 +498,7 @@ export function useWebRTC(
           try {
             const combinedStream = await navigator.mediaDevices.getUserMedia({
               video: true,
-              audio: true,
+              audio: audioConstraints,
             });
             realVideoTrack = combinedStream.getVideoTracks()[0];
             realAudioTrack = combinedStream.getAudioTracks()[0];
@@ -488,22 +539,43 @@ export function useWebRTC(
             realAudioTrack = audioStream.getAudioTracks()[0];
             audioTrackRef.current = realAudioTrack || null;
           } catch (audioErr) {
-            console.warn("Could not capture microphone stream with constraints, trying audio: true:", audioErr);
+            console.warn("Could not capture microphone stream with constraints, trying fallback constraints:", audioErr);
             try {
               const audioStream = await navigator.mediaDevices.getUserMedia({
-                audio: true,
+                audio: {
+                  echoCancellation: true,
+                  noiseSuppression: true,
+                  autoGainControl: true,
+                  googEchoCancellation: true,
+                  googAutoGainControl: true,
+                  googNoiseSuppression: true,
+                  googHighpassFilter: true,
+                  googTypingNoiseDetection: true,
+                  googNoiseReduction: true,
+                } as any,
               });
               realAudioTrack = audioStream.getAudioTracks()[0];
               audioTrackRef.current = realAudioTrack || null;
             } catch (fallbackErr) {
-              console.warn("Combined and default audio:true captures failed, trying individual audio inputs:", fallbackErr);
+              console.warn("Combined and default audio captures failed, trying individual audio inputs:", fallbackErr);
               try {
                 const devices = await navigator.mediaDevices.enumerateDevices();
                 const mics = devices.filter((d) => d.kind === "audioinput");
                 for (const mic of mics) {
                   try {
                     const audioStream = await navigator.mediaDevices.getUserMedia({
-                      audio: { deviceId: { exact: mic.deviceId } },
+                      audio: {
+                        deviceId: { exact: mic.deviceId },
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true,
+                        googEchoCancellation: true,
+                        googAutoGainControl: true,
+                        googNoiseSuppression: true,
+                        googHighpassFilter: true,
+                        googTypingNoiseDetection: true,
+                        googNoiseReduction: true,
+                      } as any,
                     });
                     realAudioTrack = audioStream.getAudioTracks()[0];
                     if (realAudioTrack) {
@@ -1364,10 +1436,16 @@ export function useWebRTC(
         try {
           let tempStream: MediaStream | null = null;
           try {
-            const constraints: MediaTrackConstraints = {
+            const constraints: any = {
               echoCancellation: true,
               noiseSuppression: true,
               autoGainControl: true,
+              googEchoCancellation: true,
+              googAutoGainControl: true,
+              googNoiseSuppression: true,
+              googHighpassFilter: true,
+              googTypingNoiseDetection: true,
+              googNoiseReduction: true,
             };
             if (selectedMicId) {
               constraints.deviceId = { exact: selectedMicId };
@@ -1376,26 +1454,45 @@ export function useWebRTC(
               audio: constraints,
             });
           } catch (err) {
-            console.warn("Failed to capture audio with constraints, trying fallback options");
+            console.warn("Failed to capture audio with constraints, trying fallback options with constraints");
             try {
+              const fallbackConstraints: any = {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+                googEchoCancellation: true,
+                googAutoGainControl: true,
+                googNoiseSuppression: true,
+                googHighpassFilter: true,
+                googTypingNoiseDetection: true,
+                googNoiseReduction: true,
+              };
               if (selectedMicId) {
-                tempStream = await navigator.mediaDevices.getUserMedia({
-                  audio: { deviceId: { exact: selectedMicId } },
-                });
-              } else {
-                tempStream = await navigator.mediaDevices.getUserMedia({
-                  audio: true,
-                });
+                fallbackConstraints.deviceId = { exact: selectedMicId };
               }
+              tempStream = await navigator.mediaDevices.getUserMedia({
+                audio: fallbackConstraints,
+              });
             } catch (fallbackErr) {
-              console.warn("Default and selectedMicId captures failed, looping through all audio inputs");
+              console.warn("Default and selectedMicId captures failed, looping through all audio inputs with constraints");
               const devices = await navigator.mediaDevices.enumerateDevices().catch(() => [] as MediaDeviceInfo[]);
               const mics = devices.filter((d) => d.kind === "audioinput");
               let success = false;
               for (const mic of mics) {
                 try {
                   tempStream = await navigator.mediaDevices.getUserMedia({
-                    audio: { deviceId: { exact: mic.deviceId } },
+                    audio: {
+                      deviceId: { exact: mic.deviceId },
+                      echoCancellation: true,
+                      noiseSuppression: true,
+                      autoGainControl: true,
+                      googEchoCancellation: true,
+                      googAutoGainControl: true,
+                      googNoiseSuppression: true,
+                      googHighpassFilter: true,
+                      googTypingNoiseDetection: true,
+                      googNoiseReduction: true,
+                    } as any,
                   });
                   success = true;
                   break;
@@ -1716,12 +1813,23 @@ export function useWebRTC(
             echoCancellation: true,
             noiseSuppression: true,
             autoGainControl: true,
-          },
+            googEchoCancellation: true,
+            googAutoGainControl: true,
+            googNoiseSuppression: true,
+            googHighpassFilter: true,
+            googTypingNoiseDetection: true,
+            googNoiseReduction: true,
+          } as any,
         });
       } catch (err) {
-        console.warn("Failed to set microphone with constraints, trying exact deviceId only");
+        console.warn("Failed to set microphone with constraints, trying exact deviceId only with basic AEC");
         newStream = await navigator.mediaDevices.getUserMedia({
-          audio: { deviceId: { exact: deviceId } },
+          audio: {
+            deviceId: { exact: deviceId },
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
         });
       }
       const newTrack = newStream.getAudioTracks()[0];
