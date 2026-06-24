@@ -505,6 +505,28 @@ export function useWebRTC(
       setLocalStream(localStreamObj);
       localStreamRef.current = localStreamObj;
 
+      // Refresh devices list after 500ms to guarantee browser permission cache has synced and labels are populated
+      setTimeout(async () => {
+        if (mounted && mediaAvailable) {
+          try {
+            const freshDevices = await navigator.mediaDevices.enumerateDevices();
+            setCameras(freshDevices.filter((d) => d.kind === "videoinput"));
+            setMicrophones(freshDevices.filter((d) => d.kind === "audioinput"));
+            
+            if (realAudioTrack) {
+              const matched = freshDevices.find((d) => d.kind === "audioinput" && d.label === realAudioTrack.label);
+              if (matched) setSelectedMicId(matched.deviceId);
+            }
+            if (realVideoTrack) {
+              const matched = freshDevices.find((d) => d.kind === "videoinput" && d.label === realVideoTrack.label);
+              if (matched) setSelectedCameraId(matched.deviceId);
+            }
+          } catch (e) {
+            console.warn("Delayed device enumeration refresh failed:", e);
+          }
+        }
+      }, 500);
+
       if (mediaAvailable) {
         navigator.mediaDevices.addEventListener("devicechange", handleDeviceChange);
       }
