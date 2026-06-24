@@ -80,6 +80,13 @@ function createSilentAudioTrack(): MediaStreamTrack {
   return track;
 }
 
+function optimizeAudioSDP(sdp: string): string {
+  if (sdp.includes("useinbandfec=1")) {
+    return sdp.replace("useinbandfec=1", "useinbandfec=1;maxaveragebitrate=64000;usedtx=0");
+  }
+  return sdp;
+}
+
 export function useWebRTC(
   roomId: string,
   userId: string,
@@ -310,7 +317,11 @@ export function useWebRTC(
 
       if (initiator) {
         pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true })
-          .then((offer) => pc.setLocalDescription(offer))
+          .then(async (offer) => {
+            const optSDP = optimizeAudioSDP(offer.sdp || "");
+            const optimizedOffer = new RTCSessionDescription({ type: offer.type, sdp: optSDP });
+            await pc.setLocalDescription(optimizedOffer);
+          })
           .then(() => {
             if (isPollingRef.current) {
               fetch(`/api/rooms/${roomId}/signal`, {
@@ -418,8 +429,6 @@ export function useWebRTC(
         echoCancellation: true,
         noiseSuppression: true,
         autoGainControl: true,
-        sampleRate: { ideal: 48000 },
-        channelCount: { ideal: 1 },
       };
 
       // Request video and audio in a single combined call for maximum reliability and a single browser prompt
@@ -827,7 +836,9 @@ export function useWebRTC(
       await pc.setRemoteDescription(new RTCSessionDescription(offer));
       await flushIceCandidates(from, pc);
       const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
+      const optSDP = optimizeAudioSDP(answer.sdp || "");
+      const optimizedAnswer = new RTCSessionDescription({ type: answer.type, sdp: optSDP });
+      await pc.setLocalDescription(optimizedAnswer);
       socket.emit("answer", { to: from, answer: pc.localDescription });
     });
 
@@ -987,7 +998,9 @@ export function useWebRTC(
             await pc.setRemoteDescription(new RTCSessionDescription(s.offer));
             await flushIceCandidates(from, pc);
             const answer = await pc.createAnswer();
-            await pc.setLocalDescription(answer);
+            const optSDP = optimizeAudioSDP(answer.sdp || "");
+            const optimizedAnswer = new RTCSessionDescription({ type: answer.type, sdp: optSDP });
+            await pc.setLocalDescription(optimizedAnswer);
             await fetch(`/api/rooms/${roomId}/signal`, {
               method: "POST",
               headers: {
@@ -1355,8 +1368,6 @@ export function useWebRTC(
               echoCancellation: true,
               noiseSuppression: true,
               autoGainControl: true,
-              sampleRate: { ideal: 48000 },
-              channelCount: { ideal: 1 },
             };
             if (selectedMicId) {
               constraints.deviceId = { exact: selectedMicId };
@@ -1705,8 +1716,6 @@ export function useWebRTC(
             echoCancellation: true,
             noiseSuppression: true,
             autoGainControl: true,
-            sampleRate: { ideal: 48000 },
-            channelCount: { ideal: 1 },
           },
         });
       } catch (err) {
