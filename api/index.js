@@ -6896,6 +6896,7 @@ var health_default = router;
 
 // src/routes/rooms.ts
 var import_express2 = require("express");
+var import_mongoose32 = __toESM(require("mongoose"), 1);
 init_signaling();
 init_logger();
 init_src();
@@ -7009,6 +7010,185 @@ router2.get("/rooms/:roomId", async (req, res) => {
   }
   res.status(404).json({ error: "Room not found" });
 });
+router2.post("/rooms/:roomId/sync", async (req, res) => {
+  const { roomId } = req.params;
+  const { userId, displayName, isMuted, isCameraOff, isScreenSharing, isRaisedHand } = req.body;
+  if (!userId) {
+    res.status(400).json({ error: "Missing userId" });
+    return;
+  }
+  const db = import_mongoose32.default.connection.db;
+  if (!db) {
+    res.status(500).json({ error: "Database not connected" });
+    return;
+  }
+  const lobbyParticipants = db.collection("lobby_participants");
+  const lobbySignals = db.collection("lobby_signals");
+  const lobbyChats = db.collection("lobby_chats");
+  const now = /* @__PURE__ */ new Date();
+  try {
+    await lobbyParticipants.updateOne(
+      { roomId, userId },
+      {
+        $set: {
+          roomId,
+          userId,
+          displayName,
+          isMuted,
+          isCameraOff,
+          isScreenSharing,
+          isRaisedHand,
+          lastSeen: now
+        }
+      },
+      { upsert: true }
+    );
+    const staleThreshold = new Date(now.getTime() - 6e3);
+    await lobbyParticipants.deleteMany({ roomId, lastSeen: { $lt: staleThreshold } });
+    const participantsCursor = lobbyParticipants.find({ roomId, userId: { $ne: userId } });
+    const activeParticipants = await participantsCursor.toArray();
+    const signalsCursor = lobbySignals.find({ roomId, to: userId });
+    const pendingSignals = await signalsCursor.toArray();
+    if (pendingSignals.length > 0) {
+      await lobbySignals.deleteMany({ roomId, to: userId });
+    }
+    const chatsCursor = lobbyChats.find({ roomId }).sort({ timestamp: 1 }).limit(50);
+    const chats = await chatsCursor.toArray();
+    let roomHostId = "";
+    let isRoomLocked = false;
+    const meeting = await Meeting.findOne({ roomId, endedAt: null }).sort({ startedAt: -1 });
+    if (meeting) {
+      roomHostId = meeting.host?.toString() || "";
+      isRoomLocked = meeting.isLocked || false;
+    }
+    const currentParticipant = await lobbyParticipants.findOne({ roomId, userId });
+    const hostActions = currentParticipant?.hostActions || [];
+    if (hostActions.length > 0) {
+      await lobbyParticipants.updateOne({ roomId, userId }, { $set: { hostActions: [] } });
+    }
+    res.json({
+      participants: activeParticipants.map((p) => ({
+        id: p.userId,
+        displayName: p.displayName,
+        isMuted: p.isMuted,
+        isCameraOff: p.isCameraOff,
+        isScreenSharing: p.isScreenSharing,
+        isRaisedHand: p.isRaisedHand
+      })),
+      signals: pendingSignals.map((s) => ({
+        from: s.from,
+        type: s.type,
+        candidate: s.type === "candidate" ? s.payload : void 0,
+        offer: s.type === "offer" ? s.payload : void 0,
+        answer: s.type === "answer" ? s.payload : void 0
+      })),
+      chatHistory: chats.map((c) => ({
+        id: c._id.toString(),
+        userId: c.userId,
+        displayName: c.displayName,
+        text: c.text,
+        timestamp: c.timestamp
+      })),
+      roomHostId,
+      isRoomLocked,
+      hostActions
+    });
+  } catch (err) {
+    logger.error({ err }, "Error in rooms/sync endpoint");
+    res.status(500).json({ error: err.message || "Failed to sync room" });
+  }
+});
+router2.post("/rooms/:roomId/signal", async (req, res) => {
+  const { roomId } = req.params;
+  const { from, to, type, payload } = req.body;
+  if (!from || !to || !type) {
+    res.status(400).json({ error: "Missing from/to/type signaling fields" });
+    return;
+  }
+  const db = import_mongoose32.default.connection.db;
+  if (!db) {
+    res.status(500).json({ error: "Database not connected" });
+    return;
+  }
+  try {
+    const lobbySignals = db.collection("lobby_signals");
+    await lobbySignals.insertOne({
+      roomId,
+      from,
+      to,
+      type,
+      payload,
+      createdAt: /* @__PURE__ */ new Date()
+    });
+    res.json({ success: true });
+  } catch (err) {
+    logger.error({ err }, "Error inserting signaling message");
+    res.status(500).json({ error: err.message || "Failed to route signal" });
+  }
+});
+router2.post("/rooms/:roomId/chat", async (req, res) => {
+  const { roomId } = req.params;
+  const { userId, displayName, text } = req.body;
+  if (!userId || !text) {
+    res.status(400).json({ error: "Missing userId or text chat fields" });
+    return;
+  }
+  const db = import_mongoose32.default.connection.db;
+  if (!db) {
+    res.status(500).json({ error: "Database not connected" });
+    return;
+  }
+  try {
+    const lobbyChats = db.collection("lobby_chats");
+    await lobbyChats.insertOne({
+      roomId,
+      userId,
+      displayName,
+      text,
+      timestamp: Date.now(),
+      createdAt: /* @__PURE__ */ new Date()
+    });
+    res.json({ success: true });
+  } catch (err) {
+    logger.error({ err }, "Error inserting chat message");
+    res.status(500).json({ error: err.message || "Failed to insert chat" });
+  }
+});
+router2.post("/rooms/:roomId/host-action", async (req, res) => {
+  const { roomId } = req.params;
+  const { action, targetUserId } = req.body;
+  if (!action) {
+    res.status(400).json({ error: "Missing host action field" });
+    return;
+  }
+  const db = import_mongoose32.default.connection.db;
+  if (!db) {
+    res.status(500).json({ error: "Database not connected" });
+    return;
+  }
+  try {
+    const lobbyParticipants = db.collection("lobby_participants");
+    if (action === "mute" && targetUserId) {
+      await lobbyParticipants.updateOne(
+        { roomId, userId: targetUserId },
+        { $addToSet: { hostActions: "force-mute" } }
+      );
+    } else if (action === "disable-video" && targetUserId) {
+      await lobbyParticipants.updateOne(
+        { roomId, userId: targetUserId },
+        { $addToSet: { hostActions: "force-disable-video" } }
+      );
+    } else if (action === "lock") {
+      await Meeting.updateOne({ roomId, endedAt: null }, { $set: { isLocked: true } });
+    } else if (action === "unlock") {
+      await Meeting.updateOne({ roomId, endedAt: null }, { $set: { isLocked: false } });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    logger.error({ err }, "Error executing host action");
+    res.status(500).json({ error: err.message || "Failed to execute host action" });
+  }
+});
 var rooms_default = router2;
 
 // src/routes/meetings.ts
@@ -7017,13 +7197,13 @@ init_src();
 
 // src/lib/authHelpers.ts
 init_src();
-var import_mongoose32 = __toESM(require("mongoose"), 1);
+var import_mongoose33 = __toESM(require("mongoose"), 1);
 async function canAccessMeeting(meetingId, userId) {
   try {
     const mId = meetingId.toString();
     const uId = userId.toString();
     let query = {};
-    if (import_mongoose32.default.Types.ObjectId.isValid(mId)) {
+    if (import_mongoose33.default.Types.ObjectId.isValid(mId)) {
       query._id = mId;
     } else {
       query.$or = [{ meetingId: mId }, { roomId: mId }];
@@ -7052,7 +7232,7 @@ async function canAccessProject(projectId, userId) {
   try {
     const pId = projectId.toString();
     const uId = userId.toString();
-    if (!import_mongoose32.default.Types.ObjectId.isValid(pId)) return false;
+    if (!import_mongoose33.default.Types.ObjectId.isValid(pId)) return false;
     const project = await Project.findById(pId);
     if (!project) return false;
     if (project.owner && project.owner.toString() === uId) {
@@ -7079,7 +7259,7 @@ async function canAccessTask(taskId, userId) {
   try {
     const tId = taskId.toString();
     const uId = userId.toString();
-    if (!import_mongoose32.default.Types.ObjectId.isValid(tId)) return false;
+    if (!import_mongoose33.default.Types.ObjectId.isValid(tId)) return false;
     const task = await Task.findById(tId);
     if (!task) return false;
     if (task.assignee && task.assignee.toString() === uId) {

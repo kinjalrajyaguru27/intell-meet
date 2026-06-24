@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
+import { useToast } from "./use-toast";
 
 export type ParticipantState = {
   id: string;
@@ -95,6 +96,12 @@ export function useWebRTC(
   const [isHandRaised, setIsHandRaised] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isPolling, setIsPolling] = useState(false);
+  const isPollingRef = useRef(false);
+  useEffect(() => {
+    isPollingRef.current = isPolling;
+  }, [isPolling]);
+  const { toast } = useToast();
 
   const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
   const [microphones, setMicrophones] = useState<MediaDeviceInfo[]>([]);
@@ -224,11 +231,27 @@ export function useWebRTC(
       peersRef.current[targetUserId] = pc;
 
       pc.onicecandidate = (event) => {
-        if (event.candidate && socketRef.current) {
-          socketRef.current.emit("ice-candidate", {
-            to: targetUserId,
-            candidate: event.candidate.toJSON(),
-          });
+        if (event.candidate) {
+          if (isPollingRef.current) {
+            fetch(`/api/rooms/${roomId}/signal`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                from: userId,
+                to: targetUserId,
+                type: "candidate",
+                payload: event.candidate.toJSON(),
+              })
+            }).catch((e) => console.error("Error sending ICE candidate in polling:", e));
+          } else if (socketRef.current) {
+            socketRef.current.emit("ice-candidate", {
+              to: targetUserId,
+              candidate: event.candidate.toJSON(),
+            });
+          }
         }
       };
 
@@ -289,10 +312,26 @@ export function useWebRTC(
         pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true })
           .then((offer) => pc.setLocalDescription(offer))
           .then(() => {
-            socketRef.current?.emit("offer", {
-              to: targetUserId,
-              offer: pc.localDescription,
-            });
+            if (isPollingRef.current) {
+              fetch(`/api/rooms/${roomId}/signal`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                  from: userId,
+                  to: targetUserId,
+                  type: "offer",
+                  payload: pc.localDescription,
+                })
+              }).catch((e) => console.error("Error sending offer in polling:", e));
+            } else {
+              socketRef.current?.emit("offer", {
+                to: targetUserId,
+                offer: pc.localDescription,
+              });
+            }
           })
           .catch((e) => console.error("createOffer error", e));
       }
@@ -619,6 +658,17 @@ export function useWebRTC(
     let mounted = true;
     setConnectionStatus("connecting");
 
+    const isVercelWithoutExternalWS = typeof window !== "undefined" && 
+      window.location.hostname.includes("vercel.app") && 
+      !import.meta.env.VITE_WS_URL;
+
+    if (isVercelWithoutExternalWS) {
+      console.log("Vercel environment without VITE_WS_URL detected. Activating HTTP polling fallback.");
+      setIsPolling(true);
+      setConnectionStatus("connected");
+      return;
+    }
+
     const socketUrl = import.meta.env.VITE_WS_URL || import.meta.env.VITE_API_URL || window.location.origin;
     const socket = io(socketUrl, {
       path: "/api/socket.io",
@@ -643,9 +693,9 @@ export function useWebRTC(
     });
 
     socket.on("connect_error", (err) => {
-      console.error("Socket connection error:", err);
-      setError(err.message || "Socket connection failed.");
-      setConnectionStatus("disconnected");
+      console.error("Socket connection error, falling back to HTTP polling:", err);
+      setIsPolling(true);
+      setConnectionStatus("connected");
     });
 
     // Handle Waiting Room status
@@ -844,6 +894,192 @@ export function useWebRTC(
       setParticipants({});
     };
   }, [hasJoined, roomId, userId, displayName, token, createPeer, removePeer, updateParticipant, flushIceCandidates]);
+
+  // Effect 2B: HTTP Polling Loop (Only runs when isPolling and hasJoined are true)
+  useEffect(() => {
+    if (!isPolling || !hasJoined) return;
+
+    let active = true;
+    console.log("Activating HTTP Polling loop...");
+
+    const poll = async () => {
+      if (!active) return;
+      try {
+        const res = await fetch(`/api/rooms/${roomId}/sync`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            userId,
+            displayName,
+            isMuted: isMutedRef.current,
+            isCameraOff: isCameraOffRef.current,
+            isScreenSharing: isScreenSharingRef.current,
+            isRaisedHand: isHandRaisedRef.current,
+          })
+        });
+
+        if (!res.ok) {
+          throw new Error(`Sync HTTP error: ${res.status}`);
+        }
+
+        const data = await res.json();
+        if (!active) return;
+
+        // 1. Process active participants
+        const returnedParticipants = data.participants || [];
+        const returnedIds = new Set(returnedParticipants.map((p: any) => p.id));
+
+        // Remove peers that left
+        Object.keys(peersRef.current).forEach((pId) => {
+          if (!returnedIds.has(pId)) {
+            console.log("Polling: peer left", pId);
+            removePeer(pId);
+          }
+        });
+
+        // Add/update new peers
+        setParticipants((prev) => {
+          const next = { ...prev };
+          // Keep local mock users if simulating
+          Object.keys(next).forEach((key) => {
+            if (key.startsWith("mock_") && !isSimulating) {
+              delete next[key];
+            }
+          });
+
+          returnedParticipants.forEach((p: any) => {
+            next[p.id] = {
+              id: p.id,
+              displayName: p.displayName,
+              isMuted: p.isMuted,
+              isCameraOff: p.isCameraOff,
+              isScreenSharing: p.isScreenSharing,
+              isRaisedHand: p.isRaisedHand,
+            };
+          });
+          return next;
+        });
+
+        returnedParticipants.forEach((p: any) => {
+          if (!peersRef.current[p.id]) {
+            const isInitiator = userId > p.id;
+            if (isInitiator) {
+              console.log("Polling: initiating WebRTC connection to peer", p.id);
+              createPeer(p.id, true);
+            } else {
+              console.log("Polling: waiting for peer", p.id, "to initiate connection");
+              createPeer(p.id, false);
+            }
+          }
+        });
+
+        // 2. Process incoming signals
+        const signals = data.signals || [];
+        for (const s of signals) {
+          const from = s.from;
+          const pc = peersRef.current[from] || createPeer(from, false);
+
+          if (s.type === "offer") {
+            console.log("Polling: received offer from", from);
+            await pc.setRemoteDescription(new RTCSessionDescription(s.offer));
+            await flushIceCandidates(from, pc);
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            await fetch(`/api/rooms/${roomId}/signal`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                from: userId,
+                to: from,
+                type: "answer",
+                payload: pc.localDescription,
+              })
+            }).catch(e => console.error("Error sending answer in polling:", e));
+          } else if (s.type === "answer") {
+            console.log("Polling: received answer from", from);
+            if (pc.signalingState !== "stable") {
+              await pc.setRemoteDescription(new RTCSessionDescription(s.answer));
+              await flushIceCandidates(from, pc);
+            }
+          } else if (s.type === "candidate") {
+            console.log("Polling: received ICE candidate from", from);
+            if (!iceCandidateQueues.current[from]) {
+              iceCandidateQueues.current[from] = [];
+            }
+            if (remoteDescSet.current[from]) {
+              try {
+                await pc.addIceCandidate(new RTCIceCandidate(s.candidate));
+              } catch (e) {}
+            } else {
+              iceCandidateQueues.current[from].push(s.candidate);
+            }
+          }
+        }
+
+        // 3. Process chat messages
+        if (data.chatHistory) {
+          setMessages(data.chatHistory);
+        }
+
+        // 4. Process meeting metadata
+        if (data.roomHostId) setRoomHostId(data.roomHostId);
+        if (data.isRoomLocked !== undefined) setIsRoomLocked(data.isRoomLocked);
+
+        // 5. Process pending host actions
+        if (data.hostActions && data.hostActions.length > 0) {
+          data.hostActions.forEach((action: string) => {
+            if (action === "force-mute") {
+              const stream = localStreamRef.current;
+              if (stream) {
+                const audioTrack = stream.getAudioTracks()[0];
+                if (audioTrack) audioTrack.enabled = false;
+              }
+              setIsMuted(true);
+              isMutedRef.current = true;
+              toast({
+                title: "Muted by Host",
+                description: "The host has muted your microphone.",
+                variant: "destructive",
+              });
+            } else if (action === "force-disable-video") {
+              const stream = localStreamRef.current;
+              if (stream) {
+                const videoTrack = stream.getVideoTracks()[0];
+                if (videoTrack) videoTrack.enabled = false;
+              }
+              Object.values(peersRef.current).forEach((pc) => {
+                const sender = pc.getSenders().find((s) => s.track?.kind === "video");
+                if (sender && blackTrackRef.current) sender.replaceTrack(blackTrackRef.current);
+              });
+              setIsCameraOff(true);
+              isCameraOffRef.current = true;
+              toast({
+                title: "Video Disabled by Host",
+                description: "The host has disabled your camera feed.",
+                variant: "destructive",
+              });
+            }
+          });
+        }
+      } catch (e) {
+        console.error("Polling sync failed:", e);
+      }
+    };
+
+    poll();
+    const timer = setInterval(poll, 2000);
+
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [isPolling, hasJoined, roomId, userId, displayName, token, createPeer, removePeer, flushIceCandidates, isSimulating]);
 
   // Audio monitoring effects
   const startMonitoringStream = useCallback((streamId: string, stream: MediaStream) => {
@@ -1525,43 +1761,139 @@ export function useWebRTC(
   }, []);
 
   const sendMessage = useCallback((text: string) => {
-    if (socketRef.current && text.trim()) {
-      socketRef.current.emit("chat-message", { text: text.trim() });
+    if (text.trim()) {
+      if (isPollingRef.current) {
+        fetch(`/api/rooms/${roomId}/chat`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            userId,
+            displayName,
+            text: text.trim()
+          })
+        }).catch((e) => console.error("Error sending chat message in polling:", e));
+      } else if (socketRef.current && text.trim()) {
+        socketRef.current.emit("chat-message", { text: text.trim() });
+      }
     }
-  }, []);
+  }, [roomId, userId, displayName, token]);
 
   // ─── WAITING ROOM ADMINISTRATIVE HOST COMMANDS ───────────────────────────
   const admitUser = useCallback((targetUserId: string) => {
-    socketRef.current?.emit("admit-user", { roomId, userId: targetUserId });
-  }, [roomId]);
+    if (isPollingRef.current) {
+      fetch(`/api/rooms/${roomId}/host-action`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ action: "admit", targetUserId })
+      }).catch((e) => console.error(e));
+    } else {
+      socketRef.current?.emit("admit-user", { roomId, userId: targetUserId });
+    }
+  }, [roomId, token]);
 
   const rejectUser = useCallback((targetUserId: string) => {
-    socketRef.current?.emit("reject-user", { roomId, userId: targetUserId });
-  }, [roomId]);
+    if (isPollingRef.current) {
+      fetch(`/api/rooms/${roomId}/host-action`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ action: "reject", targetUserId })
+      }).catch((e) => console.error(e));
+    } else {
+      socketRef.current?.emit("reject-user", { roomId, userId: targetUserId });
+    }
+  }, [roomId, token]);
 
   const muteUser = useCallback((targetUserId: string) => {
-    socketRef.current?.emit("mute-user", { roomId, targetUserId });
-  }, [roomId]);
+    if (isPollingRef.current) {
+      fetch(`/api/rooms/${roomId}/host-action`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ action: "mute", targetUserId })
+      }).catch((e) => console.error(e));
+    } else {
+      socketRef.current?.emit("mute-user", { roomId, targetUserId });
+    }
+  }, [roomId, token]);
 
   const disableVideoUser = useCallback((targetUserId: string) => {
-    socketRef.current?.emit("disable-video", { roomId, targetUserId });
-  }, [roomId]);
+    if (isPollingRef.current) {
+      fetch(`/api/rooms/${roomId}/host-action`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ action: "disable-video", targetUserId })
+      }).catch((e) => console.error(e));
+    } else {
+      socketRef.current?.emit("disable-video", { roomId, targetUserId });
+    }
+  }, [roomId, token]);
 
   const removeUser = useCallback((targetUserId: string) => {
-    socketRef.current?.emit("remove-user", { roomId, targetUserId });
-  }, [roomId]);
+    if (isPollingRef.current) {
+      fetch(`/api/rooms/${roomId}/host-action`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ action: "remove", targetUserId })
+      }).catch((e) => console.error(e));
+    } else {
+      socketRef.current?.emit("remove-user", { roomId, targetUserId });
+    }
+  }, [roomId, token]);
 
   const lockMeeting = useCallback((isLocked: boolean) => {
-    socketRef.current?.emit("lock-meeting", { roomId, isLocked });
-  }, [roomId]);
+    if (isPollingRef.current) {
+      fetch(`/api/rooms/${roomId}/host-action`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ action: isLocked ? "lock" : "unlock" })
+      }).catch((e) => console.error(e));
+    } else {
+      socketRef.current?.emit("lock-meeting", { roomId, isLocked });
+    }
+  }, [roomId, token]);
 
   const transferHost = useCallback((targetUserId: string) => {
-    socketRef.current?.emit("transfer-host", { roomId, targetUserId });
-  }, [roomId]);
+    if (isPollingRef.current) {
+      fetch(`/api/rooms/${roomId}/host-action`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ action: "transfer-host", targetUserId })
+      }).catch((e) => console.error(e));
+    } else {
+      socketRef.current?.emit("transfer-host", { roomId, targetUserId });
+    }
+  }, [roomId, token]);
 
   const raiseHand = useCallback((isRaised: boolean) => {
     setIsHandRaised(isRaised);
-    socketRef.current?.emit("raise-hand", { roomId, isRaisedHand: isRaised });
+    if (isPollingRef.current) {
+      // Will sync in next polling request automatically
+    } else {
+      socketRef.current?.emit("raise-hand", { roomId, isRaisedHand: isRaised });
+    }
   }, [roomId]);
 
   return {
