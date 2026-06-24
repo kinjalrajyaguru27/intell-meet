@@ -448,7 +448,28 @@ export function useWebRTC(
               realAudioTrack = audioStream.getAudioTracks()[0];
               audioTrackRef.current = realAudioTrack || null;
             } catch (fallbackErr) {
-              console.error("Failed completely to capture microphone stream:", fallbackErr);
+              console.warn("Combined and default audio:true captures failed, trying individual audio inputs:", fallbackErr);
+              try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const mics = devices.filter((d) => d.kind === "audioinput");
+                for (const mic of mics) {
+                  try {
+                    const audioStream = await navigator.mediaDevices.getUserMedia({
+                      audio: { deviceId: { exact: mic.deviceId } },
+                    });
+                    realAudioTrack = audioStream.getAudioTracks()[0];
+                    if (realAudioTrack) {
+                      audioTrackRef.current = realAudioTrack;
+                      console.log("Successfully captured microphone device explicitly:", mic.label || mic.deviceId);
+                      break;
+                    }
+                  } catch (micErr) {
+                    console.warn(`Failed to capture mic ${mic.label || mic.deviceId} explicitly:`, micErr);
+                  }
+                }
+              } catch (enumErr) {
+                console.error("Failed completely to enumerate devices for mic fallback:", enumErr);
+              }
             }
           }
         }
@@ -475,14 +496,25 @@ export function useWebRTC(
       // 1. Setup Video
       if (realVideoTrack) {
         localStreamObj.addTrack(realVideoTrack);
-        const matched = currentDevices.find((d) => d.kind === "videoinput" && d.label === realVideoTrack.label);
-        setSelectedCameraId(matched?.deviceId || realVideoTrack.getSettings().deviceId || "");
+        const cams = currentDevices.filter((d) => d.kind === "videoinput");
+        const matched = cams.find((d) => d.label === realVideoTrack.label);
+        const defaultCam = cams.find((d) => d.deviceId === "default" || d.label.toLowerCase().includes("default"));
+        setSelectedCameraId(
+          matched?.deviceId ||
+          realVideoTrack.getSettings().deviceId ||
+          defaultCam?.deviceId ||
+          cams[0]?.deviceId ||
+          ""
+        );
         setIsCameraOff(false);
         isCameraOffRef.current = false;
       } else {
         if (blackTrackRef.current) {
           localStreamObj.addTrack(blackTrackRef.current);
         }
+        const cams = currentDevices.filter((d) => d.kind === "videoinput");
+        const defaultCam = cams.find((d) => d.deviceId === "default" || d.label.toLowerCase().includes("default"));
+        setSelectedCameraId(defaultCam?.deviceId || cams[0]?.deviceId || "");
         setIsCameraOff(true);
         isCameraOffRef.current = true;
       }
@@ -490,14 +522,25 @@ export function useWebRTC(
       // 2. Setup Audio
       if (realAudioTrack) {
         localStreamObj.addTrack(realAudioTrack);
-        const matched = currentDevices.find((d) => d.kind === "audioinput" && d.label === realAudioTrack.label);
-        setSelectedMicId(matched?.deviceId || realAudioTrack.getSettings().deviceId || "");
+        const mics = currentDevices.filter((d) => d.kind === "audioinput");
+        const matched = mics.find((d) => d.label === realAudioTrack.label);
+        const defaultMic = mics.find((d) => d.deviceId === "default" || d.label.toLowerCase().includes("default"));
+        setSelectedMicId(
+          matched?.deviceId ||
+          realAudioTrack.getSettings().deviceId ||
+          defaultMic?.deviceId ||
+          mics[0]?.deviceId ||
+          ""
+        );
         setIsMuted(false);
         isMutedRef.current = false;
       } else {
         if (silentAudioTrackRef.current) {
           localStreamObj.addTrack(silentAudioTrackRef.current);
         }
+        const mics = currentDevices.filter((d) => d.kind === "audioinput");
+        const defaultMic = mics.find((d) => d.deviceId === "default" || d.label.toLowerCase().includes("default"));
+        setSelectedMicId(defaultMic?.deviceId || mics[0]?.deviceId || "");
         setIsMuted(true);
         isMutedRef.current = true;
       }
@@ -510,16 +553,39 @@ export function useWebRTC(
         if (mounted && mediaAvailable) {
           try {
             const freshDevices = await navigator.mediaDevices.enumerateDevices();
-            setCameras(freshDevices.filter((d) => d.kind === "videoinput"));
-            setMicrophones(freshDevices.filter((d) => d.kind === "audioinput"));
+            const freshCams = freshDevices.filter((d) => d.kind === "videoinput");
+            const freshMics = freshDevices.filter((d) => d.kind === "audioinput");
+            setCameras(freshCams);
+            setMicrophones(freshMics);
             
             if (realAudioTrack) {
-              const matched = freshDevices.find((d) => d.kind === "audioinput" && d.label === realAudioTrack.label);
-              if (matched) setSelectedMicId(matched.deviceId);
+              const matched = freshMics.find((d) => d.label === realAudioTrack.label);
+              const defaultMic = freshMics.find((d) => d.deviceId === "default" || d.label.toLowerCase().includes("default"));
+              setSelectedMicId(
+                matched?.deviceId ||
+                realAudioTrack.getSettings().deviceId ||
+                defaultMic?.deviceId ||
+                freshMics[0]?.deviceId ||
+                ""
+              );
+            } else {
+              const defaultMic = freshMics.find((d) => d.deviceId === "default" || d.label.toLowerCase().includes("default"));
+              setSelectedMicId(defaultMic?.deviceId || freshMics[0]?.deviceId || "");
             }
+
             if (realVideoTrack) {
-              const matched = freshDevices.find((d) => d.kind === "videoinput" && d.label === realVideoTrack.label);
-              if (matched) setSelectedCameraId(matched.deviceId);
+              const matched = freshCams.find((d) => d.label === realVideoTrack.label);
+              const defaultCam = freshCams.find((d) => d.deviceId === "default" || d.label.toLowerCase().includes("default"));
+              setSelectedCameraId(
+                matched?.deviceId ||
+                realVideoTrack.getSettings().deviceId ||
+                defaultCam?.deviceId ||
+                freshCams[0]?.deviceId ||
+                ""
+              );
+            } else {
+              const defaultCam = freshCams.find((d) => d.deviceId === "default" || d.label.toLowerCase().includes("default"));
+              setSelectedCameraId(defaultCam?.deviceId || freshCams[0]?.deviceId || "");
             }
           } catch (e) {
             console.warn("Delayed device enumeration refresh failed:", e);
@@ -1040,31 +1106,62 @@ export function useWebRTC(
       broadcastMediaState(true, isCameraOffRef.current, isScreenSharingRef.current);
     } else {
       // Unmuting: if current track is dummy or missing, request real track
-      const isDummy = !audioTrack || audioTrack === silentAudioTrackRef.current;
+      const isDummy = !audioTrack || audioTrack === silentAudioTrackRef.current || (audioTrack as any).isSilentDummy;
       if (isDummy) {
         if (typeof navigator === "undefined" || !navigator.mediaDevices) {
           setError("Microphone access is not supported on this device/connection.");
           return;
         }
         try {
-          let tempStream: MediaStream;
+          let tempStream: MediaStream | null = null;
           try {
+            const constraints: MediaTrackConstraints = {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+              sampleRate: { ideal: 48000 },
+              channelCount: { ideal: 1 },
+            };
+            if (selectedMicId) {
+              constraints.deviceId = { exact: selectedMicId };
+            }
             tempStream = await navigator.mediaDevices.getUserMedia({
-              audio: {
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: true,
-                sampleRate: { ideal: 48000 },
-                channelCount: { ideal: 1 },
-              },
+              audio: constraints,
             });
           } catch (err) {
-            console.warn("Failed to capture audio with constraints, trying audio: true");
-            tempStream = await navigator.mediaDevices.getUserMedia({
-              audio: true,
-            });
+            console.warn("Failed to capture audio with constraints, trying fallback options");
+            try {
+              if (selectedMicId) {
+                tempStream = await navigator.mediaDevices.getUserMedia({
+                  audio: { deviceId: { exact: selectedMicId } },
+                });
+              } else {
+                tempStream = await navigator.mediaDevices.getUserMedia({
+                  audio: true,
+                });
+              }
+            } catch (fallbackErr) {
+              console.warn("Default and selectedMicId captures failed, looping through all audio inputs");
+              const devices = await navigator.mediaDevices.enumerateDevices().catch(() => [] as MediaDeviceInfo[]);
+              const mics = devices.filter((d) => d.kind === "audioinput");
+              let success = false;
+              for (const mic of mics) {
+                try {
+                  tempStream = await navigator.mediaDevices.getUserMedia({
+                    audio: { deviceId: { exact: mic.deviceId } },
+                  });
+                  success = true;
+                  break;
+                } catch (micErr) {
+                  console.warn(`Failed to capture mic ${mic.label || mic.deviceId} explicitly:`, micErr);
+                }
+              }
+              if (!success) {
+                throw fallbackErr;
+              }
+            }
           }
-          const realTrack = tempStream.getAudioTracks()[0];
+          const realTrack = tempStream?.getAudioTracks()[0];
           if (realTrack) {
             if (audioTrack) {
               stream.removeTrack(audioTrack);
@@ -1080,11 +1177,14 @@ export function useWebRTC(
               if (sender) sender.replaceTrack(realTrack);
             });
 
-            // Update microphones list
+            // Update microphones and cameras list
             const currentDevices = await navigator.mediaDevices.enumerateDevices().catch(() => [] as MediaDeviceInfo[]);
-            setMicrophones(currentDevices.filter((d) => d.kind === "audioinput"));
-            const matched = currentDevices.find((d) => d.kind === "audioinput" && d.label === realTrack.label);
-            setSelectedMicId(matched?.deviceId || realTrack.getSettings().deviceId || "");
+            const freshMics = currentDevices.filter((d) => d.kind === "audioinput");
+            setMicrophones(freshMics);
+            setCameras(currentDevices.filter((d) => d.kind === "videoinput"));
+            const matched = freshMics.find((d) => d.label === realTrack.label);
+            const defaultMic = freshMics.find((d) => d.deviceId === "default" || d.label.toLowerCase().includes("default"));
+            setSelectedMicId(matched?.deviceId || realTrack.getSettings().deviceId || defaultMic?.deviceId || freshMics[0]?.deviceId || "");
           }
         } catch (err: any) {
           console.warn("Could not capture real microphone track on toggle:", err);
@@ -1094,7 +1194,13 @@ export function useWebRTC(
           } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
             msg = "Microphone is in use by another application. Close other apps and try again.";
           } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
-            msg = "No microphone device found on this system.";
+            const freshDevices = await navigator.mediaDevices.enumerateDevices().catch(() => [] as MediaDeviceInfo[]);
+            const mics = freshDevices.filter((d) => d.kind === "audioinput");
+            if (mics.length > 0) {
+              msg = "Could not access the selected microphone. Please select another microphone from the list.";
+            } else {
+              msg = "No microphone device found on this system.";
+            }
           } else if (err.message) {
             msg = `Microphone error: ${err.message}`;
           }
@@ -1186,11 +1292,14 @@ export function useWebRTC(
               if (sender) sender.replaceTrack(realTrack);
             });
 
-            // Update cameras list
+            // Update cameras and microphones lists since permission is granted
             const currentDevices = await navigator.mediaDevices.enumerateDevices().catch(() => [] as MediaDeviceInfo[]);
-            setCameras(currentDevices.filter((d) => d.kind === "videoinput"));
-            const matched = currentDevices.find((d) => d.kind === "videoinput" && d.label === realTrack.label);
-            setSelectedCameraId(matched?.deviceId || realTrack.getSettings().deviceId || "");
+            const freshCams = currentDevices.filter((d) => d.kind === "videoinput");
+            setCameras(freshCams);
+            setMicrophones(currentDevices.filter((d) => d.kind === "audioinput"));
+            const matched = freshCams.find((d) => d.label === realTrack.label);
+            const defaultCam = freshCams.find((d) => d.deviceId === "default" || d.label.toLowerCase().includes("default"));
+            setSelectedCameraId(matched?.deviceId || realTrack.getSettings().deviceId || defaultCam?.deviceId || freshCams[0]?.deviceId || "");
           }
         } catch (err: any) {
           console.warn("Could not capture real camera track on toggle:", err);

@@ -504,6 +504,19 @@ export default function Room() {
 
   // Join meeting action (triggers credentials check)
   const handleJoinMeeting = () => {
+    // Verify microphone works before joining meeting if devices are available
+    if (microphones.length > 0) {
+      const audioTrack = localStream?.getAudioTracks()[0];
+      const isDummy = !audioTrack || (audioTrack as any).isSilentDummy;
+      if (isDummy) {
+        toast({
+          title: "Microphone Warning",
+          description: "Your microphone is muted or inactive. Other participants may not hear you.",
+          variant: "default",
+        });
+      }
+    }
+
     joinMeetingMutation.mutate(
       { data: { meetingId: roomId, password: meetingPassword } },
       {
