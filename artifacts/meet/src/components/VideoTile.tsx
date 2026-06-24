@@ -12,6 +12,7 @@ interface VideoTileProps {
   isDominant?: boolean;
   isSpeaking?: boolean;
   isRaisedHand?: boolean;
+  isHost?: boolean;
 }
 
 export function VideoTile({
@@ -24,6 +25,7 @@ export function VideoTile({
   isDominant = false,
   isSpeaking = false,
   isRaisedHand = false,
+  isHost = false,
 }: VideoTileProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -110,6 +112,11 @@ export function VideoTile({
           <span className="truncate">{displayName}</span>
           {isLocal && (
             <span className="text-white/50 text-xs shrink-0">(You)</span>
+          )}
+          {isHost && (
+            <span className="text-amber-400 text-xs shrink-0 flex items-center gap-1 font-bold ml-1" title="Host">
+              👑 <span className="bg-amber-500/20 text-amber-300 px-1 py-0.5 rounded text-[10px]">Host</span>
+            </span>
           )}
           {isSpeaking && (
             <div className="flex items-center gap-[2.5px] h-3.5 shrink-0 ml-1.5" title="Speaking">

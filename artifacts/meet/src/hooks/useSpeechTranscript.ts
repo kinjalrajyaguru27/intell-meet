@@ -153,16 +153,18 @@ export function useSpeechTranscript({
       console.log("[useSpeechTranscript] SpeechRecognition ended");
       isListeningRef.current = false;
       
-      // Automatically restart if microphone is not muted and not paused
-      if (recognitionRef.current && !isMutedRef.current && !isTranscriptionPausedRef.current) {
-        try {
-          console.log("[useSpeechTranscript] Automatically restarting SpeechRecognition");
-          recognitionRef.current.start();
-          isListeningRef.current = true;
-        } catch (e) {
-          // ignore already started errors
+      // Automatically restart with a 400ms delay to prevent OS locking loops on mobile
+      setTimeout(() => {
+        if (recognitionRef.current && !isMutedRef.current && !isTranscriptionPausedRef.current && !isListeningRef.current) {
+          try {
+            console.log("[useSpeechTranscript] Automatically restarting SpeechRecognition");
+            recognitionRef.current.start();
+            isListeningRef.current = true;
+          } catch (e) {
+            // ignore already started errors
+          }
         }
-      }
+      }, 400);
     };
 
     recognitionRef.current = rec;

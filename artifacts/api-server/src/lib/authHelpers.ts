@@ -25,12 +25,17 @@ export async function canAccessMeeting(
     const meeting = await Meeting.findOne(query);
     if (!meeting) return false;
 
-    // Host checks
+    // If the meeting is active or scheduled (not ended yet), any authenticated user can access it to join
+    if (!meeting.endedAt || meeting.status === "active" || meeting.status === "scheduled") {
+      return true;
+    }
+
+    // Host checks (for ended meetings)
     if (meeting.host && meeting.host.toString() === uId) {
       return true;
     }
 
-    // Participant checks
+    // Participant checks (for ended meetings)
     const participant = await Participant.findOne({
       meeting: meeting._id,
       user: uId,

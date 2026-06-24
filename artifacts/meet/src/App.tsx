@@ -25,7 +25,11 @@ import Collaboration from "@/pages/Collaboration";
 import AIInsights from "@/pages/AIInsights";
 import PostMeeting from "@/pages/PostMeeting";
 import AppLayout from "@/components/AppLayout";
-import { setAuthTokenGetter } from "@workspace/api-client-react";
+import { setAuthTokenGetter, setBaseUrl } from "@workspace/api-client-react";
+
+if (import.meta.env.VITE_API_URL) {
+  setBaseUrl(import.meta.env.VITE_API_URL);
+}
 
 // Automatically supply authorization token on all requests
 setAuthTokenGetter(() => {

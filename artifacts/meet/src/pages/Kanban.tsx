@@ -87,7 +87,8 @@ export default function Kanban() {
   // Setup Socket Connection
   useEffect(() => {
     if (!token) return;
-    const s = io({
+    const socketUrl = import.meta.env.VITE_WS_URL || import.meta.env.VITE_API_URL || window.location.origin;
+    const s = io(socketUrl, {
       path: "/api/socket.io",
       auth: { token },
       transports: ["websocket", "polling"],

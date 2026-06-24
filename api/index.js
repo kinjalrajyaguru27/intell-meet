@@ -746,10 +746,7 @@ __export(src_exports, {
   mongoose: () => import_mongoose31.default
 });
 async function connectDB() {
-  const uri = process.env.MONGODB_URI;
-  if (!uri) {
-    throw new Error("Please define the MONGODB_URI environment variable inside your environment config");
-  }
+  const uri = process.env.MONGODB_URI || "mongodb://rajyagurukinjal27_db_user:kinjal276@ac-47exnzh-shard-00-00.ebbde1m.mongodb.net:27017,ac-47exnzh-shard-00-01.ebbde1m.mongodb.net:27017,ac-47exnzh-shard-00-02.ebbde1m.mongodb.net:27017/intell_meet?ssl=true&authSource=admin&retryWrites=true";
   if (cached.conn) {
     return cached.conn;
   }
@@ -7033,6 +7030,9 @@ async function canAccessMeeting(meetingId, userId) {
     }
     const meeting = await Meeting.findOne(query);
     if (!meeting) return false;
+    if (!meeting.endedAt || meeting.status === "active" || meeting.status === "scheduled") {
+      return true;
+    }
     if (meeting.host && meeting.host.toString() === uId) {
       return true;
     }
@@ -7118,6 +7118,11 @@ router3.post("/rooms/:roomId/end", requireAuth, async (req, res) => {
         res.status(403).json({ error: "Access denied: You are not authorized to access this meeting" });
         return;
       }
+      const isHost = meeting.host?.toString() === req.user.id;
+      if (!isHost) {
+        res.status(403).json({ error: "Forbidden: Only the host can end the meeting" });
+        return;
+      }
       meeting.endedAt = now;
       meeting.status = "ended";
       meeting.durationSeconds = durationSeconds;
@@ -7131,6 +7136,15 @@ router3.post("/rooms/:roomId/end", requireAuth, async (req, res) => {
       }
       await meeting.save();
       req.log.info({ meetingId: meeting._id.toString() }, "Meeting ended");
+      try {
+        const { ioInstance: ioInstance2 } = await Promise.resolve().then(() => (init_signaling(), signaling_exports));
+        if (ioInstance2) {
+          ioInstance2.to(roomId).emit("meeting-ended");
+          req.log.info({ roomId }, "Broadcasted meeting-ended event to room");
+        }
+      } catch (ioErr) {
+        req.log.error({ err: ioErr }, "Failed to broadcast meeting-ended event");
+      }
     } else {
       meeting = new Meeting({
         roomId,

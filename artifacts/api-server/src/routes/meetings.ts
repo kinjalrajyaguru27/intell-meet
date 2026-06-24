@@ -57,6 +57,13 @@ router.post("/rooms/:roomId/end", requireAuth, async (req: AuthenticatedRequest,
         return;
       }
 
+      // Enforce host-only termination
+      const isHost = meeting.host?.toString() === req.user!.id;
+      if (!isHost) {
+        res.status(403).json({ error: "Forbidden: Only the host can end the meeting" });
+        return;
+      }
+
       meeting.endedAt = now;
       meeting.status = "ended";
       meeting.durationSeconds = durationSeconds;
@@ -70,6 +77,17 @@ router.post("/rooms/:roomId/end", requireAuth, async (req: AuthenticatedRequest,
       }
       await meeting.save();
       req.log.info({ meetingId: meeting._id.toString() }, "Meeting ended");
+
+      // Broadcast meeting-ended to all sockets in the room
+      try {
+        const { ioInstance } = await import("../signaling");
+        if (ioInstance) {
+          ioInstance.to(roomId).emit("meeting-ended");
+          req.log.info({ roomId }, "Broadcasted meeting-ended event to room");
+        }
+      } catch (ioErr) {
+        req.log.error({ err: ioErr }, "Failed to broadcast meeting-ended event");
+      }
     } else {
       // No existing meeting — create one
       meeting = new Meeting({

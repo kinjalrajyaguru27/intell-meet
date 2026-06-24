@@ -185,7 +185,7 @@ export default function Room() {
 
   // Sidebar controls
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [sidebarTab, setSidebarTab] = useState<"chat" | "participants" | "notes" | "tasks">("chat");
+  const [sidebarTab, setSidebarTab] = useState<"chat" | "participants" | "notes" | "tasks" | "transcript">("chat");
   const [unreadCount, setUnreadCount] = useState(0);
 
   // Active meeting context for real-time collaboration
@@ -225,6 +225,24 @@ export default function Room() {
       socket.off("shared-notes-update", handleNotesUpdate);
     };
   }, [socket]);
+
+  // Listen for meeting-ended event
+  useEffect(() => {
+    if (!socket) return;
+    const handleMeetingEnded = () => {
+      toast({
+        title: "Meeting Ended",
+        description: "The host has ended this meeting.",
+        variant: "default",
+      });
+      hasEndedRef.current = true;
+      setLocation("/dashboard");
+    };
+    socket.on("meeting-ended", handleMeetingEnded);
+    return () => {
+      socket.off("meeting-ended", handleMeetingEnded);
+    };
+  }, [socket, setLocation, toast]);
 
   // Debounced auto-save notes to DB
   const debouncedSaveNotes = (newNotes: string) => {
@@ -298,6 +316,7 @@ export default function Room() {
 
   const [inputText, setInputText] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const transcriptEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const prevMessagesLen = useRef(0);
 
@@ -347,6 +366,13 @@ export default function Room() {
     }
   }, [messages, isSidebarOpen, sidebarTab]);
 
+  // Auto-scroll to bottom when transcript is open and new transcript lines arrive
+  useEffect(() => {
+    if (isSidebarOpen && sidebarTab === "transcript") {
+      transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [transcript, isSidebarOpen, sidebarTab]);
+
   const handleSend = useCallback(() => {
     if (!inputText.trim()) return;
     sendMessage(inputText);
@@ -377,6 +403,15 @@ export default function Room() {
 
   const participantList = useMemo(() => Object.values(participants), [participants]);
 
+  const offlineParticipantNames = useMemo(() => {
+    if (!activeMeeting?.participantNames) return [];
+    const activeNames = new Set([
+      displayName,
+      ...participantList.map((p) => p.displayName),
+    ]);
+    return activeMeeting.participantNames.filter((name: string) => !activeNames.has(name));
+  }, [activeMeeting?.participantNames, displayName, participantList]);
+
   // Priority grid selection
   const activeGridParticipants = useMemo(() => {
     const screenSharer = participantList.find((p) => p.isScreenSharing);
@@ -400,13 +435,18 @@ export default function Room() {
   const handleLeave = useCallback(() => {
     hasEndedRef.current = true;
     if (isRecording) stopRecording();
-    const durationSeconds = Math.round((Date.now() - joinedAt.current) / 1000);
-    const allNames = [displayName, ...participantList.map((p) => p.displayName)];
-    endMeetingMutation.mutate(
-      { roomId, data: { participantNames: allNames, durationSeconds, transcript: transcriptRef.current } },
-      { onSettled: () => setLocation("/dashboard") }
-    );
-  }, [isRecording, stopRecording, displayName, participantList, endMeetingMutation, roomId, setLocation, transcriptRef]);
+    
+    if (isHost) {
+      const durationSeconds = Math.round((Date.now() - joinedAt.current) / 1000);
+      const allNames = [displayName, ...participantList.map((p) => p.displayName)];
+      endMeetingMutation.mutate(
+        { roomId, data: { participantNames: allNames, durationSeconds, transcript: transcriptRef.current } },
+        { onSettled: () => setLocation("/dashboard") }
+      );
+    } else {
+      setLocation("/dashboard");
+    }
+  }, [isRecording, stopRecording, displayName, participantList, endMeetingMutation, roomId, setLocation, transcriptRef, isHost]);
 
   // Keep refs of values needed in the unmount effect to avoid stale closures
   const isRecordingRef = useRef(isRecording);
@@ -436,7 +476,7 @@ export default function Room() {
         const durationSeconds = Math.round((Date.now() - joinedAt.current) / 1000);
         const allNames = [displayNameRef.current, ...participantListRef.current.map((p) => p.displayName)];
         
-        if (tokenRef.current) {
+        if (isHost && tokenRef.current) {
           fetch(`/api/rooms/${roomId}/end`, {
             method: "POST",
             headers: {
@@ -453,7 +493,7 @@ export default function Room() {
         }
       }
     };
-  }, [roomId]);
+  }, [roomId, isHost]);
 
   const screenSharingParticipantId = useMemo(() => {
     const sharingPeer = participantList.find((p) => p.isScreenSharing);
@@ -745,21 +785,26 @@ export default function Room() {
               isDominant={screenSharingParticipantId === userId}
               isSpeaking={!!speakingUsers["__local__"]}
               isRaisedHand={isHandRaised}
+              isHost={isHost}
             />
-            {activeGridParticipants.map((p) => (
-              <VideoTile
-                key={p.id}
-                stream={remoteStreams[p.id] || null}
-                displayName={p.displayName}
-                isLocal={false}
-                isMuted={p.isMuted}
-                isCameraOff={p.isCameraOff}
-                isScreenSharing={p.isScreenSharing}
-                isDominant={screenSharingParticipantId === p.id}
-                isSpeaking={!!speakingUsers[p.id]}
-                isRaisedHand={p.isRaisedHand}
-              />
-            ))}
+            {activeGridParticipants.map((p) => {
+              const isParticipantHost = p.id === roomHostId || (roomInfo?.host === p.id && roomHostId === "");
+              return (
+                <VideoTile
+                  key={p.id}
+                  stream={remoteStreams[p.id] || null}
+                  displayName={p.displayName}
+                  isLocal={false}
+                  isMuted={p.isMuted}
+                  isCameraOff={p.isCameraOff}
+                  isScreenSharing={p.isScreenSharing}
+                  isDominant={screenSharingParticipantId === p.id}
+                  isSpeaking={!!speakingUsers[p.id]}
+                  isRaisedHand={p.isRaisedHand}
+                  isHost={isParticipantHost}
+                />
+              );
+            })}
           </div>
 
           {/* Hidden audio/video elements for participants not in the grid to ensure we still hear/process their streams */}
@@ -804,7 +849,7 @@ export default function Room() {
             <div className="h-14 shrink-0 flex border-b border-border bg-muted/20">
               <button
                 onClick={() => setSidebarTab("chat")}
-                className={`flex-1 flex items-center justify-center gap-1.5 border-b-2 font-medium text-[10px] sm:text-xs transition-all ${
+                className={`flex-1 flex items-center justify-center gap-1.5 border-b-2 font-medium text-[10px] sm:text-[11px] transition-all ${
                   sidebarTab === "chat"
                     ? "border-primary text-primary bg-card/40"
                     : "border-transparent text-muted-foreground hover:text-foreground"
@@ -815,7 +860,7 @@ export default function Room() {
               </button>
               <button
                 onClick={() => setSidebarTab("participants")}
-                className={`flex-1 flex items-center justify-center gap-1.5 border-b-2 font-medium text-[10px] sm:text-xs transition-all ${
+                className={`flex-1 flex items-center justify-center gap-1.5 border-b-2 font-medium text-[10px] sm:text-[11px] transition-all ${
                   sidebarTab === "participants"
                     ? "border-primary text-primary bg-card/40"
                     : "border-transparent text-muted-foreground hover:text-foreground"
@@ -826,7 +871,7 @@ export default function Room() {
               </button>
               <button
                 onClick={() => setSidebarTab("notes")}
-                className={`flex-1 flex items-center justify-center gap-1.5 border-b-2 font-medium text-[10px] sm:text-xs transition-all ${
+                className={`flex-1 flex items-center justify-center gap-1.5 border-b-2 font-medium text-[10px] sm:text-[11px] transition-all ${
                   sidebarTab === "notes"
                     ? "border-primary text-primary bg-card/40"
                     : "border-transparent text-muted-foreground hover:text-foreground"
@@ -837,7 +882,7 @@ export default function Room() {
               </button>
               <button
                 onClick={() => setSidebarTab("tasks")}
-                className={`flex-1 flex items-center justify-center gap-1.5 border-b-2 font-medium text-[10px] sm:text-xs transition-all ${
+                className={`flex-1 flex items-center justify-center gap-1.5 border-b-2 font-medium text-[10px] sm:text-[11px] transition-all ${
                   sidebarTab === "tasks"
                     ? "border-primary text-primary bg-card/40"
                     : "border-transparent text-muted-foreground hover:text-foreground"
@@ -845,6 +890,17 @@ export default function Room() {
               >
                 <CheckSquare className="w-3.5 h-3.5" />
                 Tasks
+              </button>
+              <button
+                onClick={() => setSidebarTab("transcript")}
+                className={`flex-1 flex items-center justify-center gap-1.5 border-b-2 font-medium text-[10px] sm:text-[11px] transition-all ${
+                  sidebarTab === "transcript"
+                    ? "border-primary text-primary bg-card/40"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Speech
               </button>
               <button
                 onClick={() => setIsSidebarOpen(false)}
@@ -1010,9 +1066,7 @@ export default function Room() {
                         speakingUsers["__local__"] ? "ring-2 ring-emerald-500 animate-pulse" : ""
                       }`}>
                         {displayName.charAt(0).toUpperCase()}
-                        {speakingUsers["__local__"] && (
-                          <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-background rounded-full" />
-                        )}
+                        <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-background rounded-full animate-pulse" title="Online" />
                       </div>
                       <div className="flex flex-col min-w-0">
                         <span className="font-semibold text-sm truncate">{displayName} (You)</span>
@@ -1050,9 +1104,7 @@ export default function Room() {
                               isSpk ? "ring-2 ring-emerald-500 animate-pulse" : ""
                             }`}>
                               {(p.displayName || "?").charAt(0).toUpperCase()}
-                              {isSpk && (
-                                <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-background rounded-full" />
-                              )}
+                              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-background rounded-full animate-pulse" title="Online" />
                             </div>
                             <div className="flex flex-col min-w-0">
                               <span className="font-medium text-sm truncate">{p.displayName}</span>
@@ -1118,6 +1170,29 @@ export default function Room() {
                       </div>
                     );
                   })}
+
+                  {/* Offline participants list */}
+                  {offlineParticipantNames.length > 0 && (
+                    <>
+                      <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider pt-4 pb-1">
+                        Offline ({offlineParticipantNames.length})
+                      </div>
+                      {offlineParticipantNames.map((name) => (
+                        <div key={name} className="flex items-center justify-between p-2 rounded-lg bg-muted/10 border border-transparent opacity-60">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-semibold text-muted-foreground shrink-0 relative">
+                              {name.charAt(0).toUpperCase()}
+                              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-gray-500 border-2 border-background rounded-full" title="Offline" />
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                              <span className="font-medium text-sm truncate">{name}</span>
+                              <span className="text-[10px] text-muted-foreground">Offline</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  )}
                 </div>
               </div>
             ) : sidebarTab === "notes" ? (
@@ -1136,7 +1211,7 @@ export default function Room() {
                   Auto-saves to database every 2 seconds.
                 </p>
               </div>
-            ) : (
+            ) : sidebarTab === "tasks" ? (
               <div className="flex-1 flex flex-col overflow-hidden">
                 {/* Task form */}
                 <div className="p-4 border-b border-border space-y-3 bg-muted/10">
@@ -1233,6 +1308,49 @@ export default function Room() {
                       </div>
                     ))
                   )}
+                </div>
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="p-4 border-b border-border space-y-1 bg-muted/10">
+                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-violet-400" />
+                    Live AI Transcript
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    Speech-to-text transcript generated in real-time.
+                  </p>
+                </div>
+
+                {/* Transcript list */}
+                <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
+                  {transcript.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground space-y-2 py-8">
+                      <Sparkles className="w-8 h-8 opacity-30 text-violet-400 animate-pulse" />
+                      <p className="text-sm">No transcript yet.</p>
+                      <p className="text-xs opacity-60">Speak to see speech transcription.</p>
+                    </div>
+                  ) : (
+                    transcript.map((line, idx) => (
+                      <div
+                        key={idx}
+                        className="flex flex-col space-y-1 bg-muted/20 border border-border/30 rounded-xl p-3"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-violet-400">
+                            {line.speaker}
+                          </span>
+                          <span className="text-[9px] text-muted-foreground font-mono">
+                            {formatTime(line.timestamp)}
+                          </span>
+                        </div>
+                        <p className="text-xs text-foreground leading-relaxed break-words">
+                          "{line.text}"
+                        </p>
+                      </div>
+                    ))
+                  )}
+                  <div ref={transcriptEndRef} />
                 </div>
               </div>
             )}
@@ -1475,6 +1593,25 @@ export default function Room() {
             title="Tasks"
           >
             <CheckSquare className="w-6 h-6" />
+          </Button>
+
+          {/* Transcript Toggle */}
+          <Button
+            data-testid="button-toggle-transcript"
+            variant={isSidebarOpen && sidebarTab === "transcript" ? "default" : "secondary"}
+            size="icon"
+            className="w-14 h-14 rounded-full"
+            onClick={() => {
+              if (isSidebarOpen && sidebarTab === "transcript") {
+                setIsSidebarOpen(false);
+              } else {
+                setIsSidebarOpen(true);
+                setSidebarTab("transcript");
+              }
+            }}
+            title="AI Transcript History"
+          >
+            <Sparkles className="w-6 h-6 text-violet-400" />
           </Button>
         </div>
       </footer>

@@ -27,7 +27,7 @@ export default function Settings() {
 
   // Theme states
   const [selectedTheme, setSelectedTheme] = useState<"dark" | "light" | "system">(() => {
-    return (localStorage.getItem("theme") as any) || "dark";
+    return (localStorage.getItem("theme") as any) || "light";
   });
 
   useEffect(() => {
