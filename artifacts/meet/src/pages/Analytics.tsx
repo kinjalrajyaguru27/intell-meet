@@ -353,18 +353,28 @@ export default function Analytics() {
                     <CardTitle className="text-base text-zinc-900 dark:text-white font-bold">Team Workspace Velocity Comparison</CardTitle>
                     <CardDescription className="text-xs">Task volume and sprint completion rates by team</CardDescription>
                   </CardHeader>
-                  <CardContent className="h-80 p-0">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={teamData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(120,120,120,0.15)" />
-                        <XAxis dataKey="name" stroke="#71717a" fontSize={11} />
-                        <YAxis stroke="#71717a" fontSize={11} />
-                        <Tooltip contentStyle={{ backgroundColor: "var(--card)", borderColor: "var(--border)", borderRadius: "8px" }} />
-                        <Legend />
-                        <Bar dataKey="tasksCount" name="Total Issues" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="completionRate" name="Completion Rate (%)" fill="#10b981" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                  <CardContent className="h-80 p-0 flex flex-col items-center justify-center text-center">
+                    {teamData.length === 0 ? (
+                      <div className="space-y-3 max-w-sm px-4">
+                        <BarChart3 className="w-10 h-10 text-primary mx-auto opacity-30 animate-pulse" />
+                        <h4 className="font-bold text-sm text-zinc-900 dark:text-white">No Team Workspaces Found</h4>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          Once you create teams and assign sprint tasks, your team velocity and completion rates will compile here in real-time.
+                        </p>
+                      </div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={teamData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(120,120,120,0.15)" />
+                          <XAxis dataKey="name" stroke="#71717a" fontSize={11} />
+                          <YAxis stroke="#71717a" fontSize={11} />
+                          <Tooltip contentStyle={{ backgroundColor: "var(--card)", borderColor: "var(--border)", borderRadius: "8px" }} />
+                          <Legend />
+                          <Bar dataKey="tasksCount" name="Total Issues" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="completionRate" name="Completion Rate (%)" fill="#10b981" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -404,15 +414,21 @@ export default function Analytics() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="p-0 space-y-3">
-                      {meetingsData.mostActiveParticipants?.map((p: any, idx: number) => (
-                        <div key={p.name} className="flex justify-between items-center p-3 bg-zinc-50 dark:bg-black/35 rounded-xl text-xs border border-zinc-200/50 dark:border-transparent">
-                          <span className="font-semibold text-zinc-800 dark:text-white">{idx + 1}. {p.name}</span>
-                          <span className="text-zinc-500 dark:text-muted-foreground font-bold">{p.count} dialogues</span>
+                      {!meetingsData.mostActiveParticipants || meetingsData.mostActiveParticipants.length === 0 ? (
+                        <div className="py-8 text-center text-xs text-muted-foreground">
+                          No speech data recorded yet.
                         </div>
-                      ))}
+                      ) : (
+                        meetingsData.mostActiveParticipants.map((p: any, idx: number) => (
+                          <div key={p.name} className="flex justify-between items-center p-3 bg-zinc-50 dark:bg-black/35 rounded-xl text-xs border border-zinc-200/50 dark:border-transparent">
+                            <span className="font-semibold text-zinc-800 dark:text-white">{idx + 1}. {p.name}</span>
+                            <span className="text-zinc-500 dark:text-muted-foreground font-bold">{p.count} dialogues</span>
+                          </div>
+                        ))
+                      )}
                     </CardContent>
                   </Card>
-
+ 
                   <Card className="bg-white dark:bg-card/25 border border-zinc-200 dark:border-white/5 p-5 shadow-sm">
                     <CardHeader className="p-0 pb-4">
                       <CardTitle className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
@@ -421,12 +437,18 @@ export default function Analytics() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="p-0 space-y-3">
-                      {meetingsData.leastActiveParticipants?.map((p: any, idx: number) => (
-                        <div key={p.name} className="flex justify-between items-center p-3 bg-zinc-50 dark:bg-black/35 rounded-xl text-xs border border-zinc-200/50 dark:border-transparent">
-                          <span className="font-semibold text-zinc-800 dark:text-white">{idx + 1}. {p.name}</span>
-                          <span className="text-zinc-500 dark:text-muted-foreground font-bold">{p.count} dialogues</span>
+                      {!meetingsData.leastActiveParticipants || meetingsData.leastActiveParticipants.length === 0 ? (
+                        <div className="py-8 text-center text-xs text-muted-foreground">
+                          No speech data recorded yet.
                         </div>
-                      ))}
+                      ) : (
+                        meetingsData.leastActiveParticipants.map((p: any, idx: number) => (
+                          <div key={p.name} className="flex justify-between items-center p-3 bg-zinc-50 dark:bg-black/35 rounded-xl text-xs border border-zinc-200/50 dark:border-transparent">
+                            <span className="font-semibold text-zinc-800 dark:text-white">{idx + 1}. {p.name}</span>
+                            <span className="text-zinc-500 dark:text-muted-foreground font-bold">{p.count} dialogues</span>
+                          </div>
+                        ))
+                      )}
                     </CardContent>
                   </Card>
                 </div>
@@ -477,59 +499,69 @@ export default function Analytics() {
                   </select>
                 </div>
 
-                {forecasts.map((fc, idx) => (
-                  <div key={idx} className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Risk KPI card */}
-                    <Card className="bg-white dark:bg-card/35 border border-zinc-200 dark:border-white/10 p-5 flex flex-col justify-between items-center text-center shadow-sm">
-                      <div>
-                        <Brain className="w-8 h-8 text-violet-500 dark:text-violet-400 animate-pulse mb-3" />
-                        <h4 className="font-bold text-xs uppercase tracking-wider text-muted-foreground">AI Delay Prediction Index</h4>
-                      </div>
-                      
-                      <div className="py-6">
-                        <div className={`w-28 h-28 rounded-full flex flex-col items-center justify-center border-8 ${
-                          fc.delayPrediction ? "border-red-500/80 bg-red-500/5 text-red-500 dark:text-red-400" : "border-emerald-500/80 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400"
+                {forecasts.length === 0 ? (
+                  <Card className="bg-white dark:bg-card/25 border border-zinc-200 dark:border-white/5 p-8 text-center shadow-sm">
+                    <Brain className="w-10 h-10 text-violet-500/40 dark:text-violet-400/40 mx-auto mb-3 animate-pulse" />
+                    <h3 className="font-semibold text-sm mb-1 text-zinc-900 dark:text-white">No Forecast Data Available</h3>
+                    <p className="text-xs text-muted-foreground max-w-sm mx-auto leading-relaxed">
+                      AI workload forecasting requires at least one active project with tasks. Select a project with active task workloads to compute delay predictions.
+                    </p>
+                  </Card>
+                ) : (
+                  forecasts.map((fc, idx) => (
+                    <div key={idx} className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {/* Risk KPI card */}
+                      <Card className="bg-white dark:bg-card/35 border border-zinc-200 dark:border-white/10 p-5 flex flex-col justify-between items-center text-center shadow-sm">
+                        <div>
+                          <Brain className="w-8 h-8 text-violet-500 dark:text-violet-400 animate-pulse mb-3" />
+                          <h4 className="font-bold text-xs uppercase tracking-wider text-muted-foreground">AI Delay Prediction Index</h4>
+                        </div>
+                        
+                        <div className="py-6">
+                          <div className={`w-28 h-28 rounded-full flex flex-col items-center justify-center border-8 ${
+                            fc.delayPrediction ? "border-red-500/80 bg-red-500/5 text-red-500 dark:text-red-400" : "border-emerald-500/80 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400"
+                          }`}>
+                            <span className="text-base font-extrabold">{fc.confidenceLevel}%</span>
+                            <span className="text-[9px] uppercase font-bold mt-0.5">Confidence</span>
+                          </div>
+                        </div>
+
+                        <Badge variant="outline" className={`text-xs uppercase font-extrabold px-3 py-1 ${
+                          fc.delayPrediction ? "bg-red-500/10 text-red-500 dark:text-red-400 border-red-500/20" : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
                         }`}>
-                          <span className="text-base font-extrabold">{fc.confidenceLevel}%</span>
-                          <span className="text-[9px] uppercase font-bold mt-0.5">Confidence</span>
-                        </div>
-                      </div>
+                          {fc.delayPrediction ? "At Risk of Delay" : "On Track"}
+                        </Badge>
+                      </Card>
 
-                      <Badge variant="outline" className={`text-xs uppercase font-extrabold px-3 py-1 ${
-                        fc.delayPrediction ? "bg-red-500/10 text-red-500 dark:text-red-400 border-red-500/20" : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                      }`}>
-                        {fc.delayPrediction ? "At Risk of Delay" : "On Track"}
-                      </Badge>
-                    </Card>
-
-                    {/* AI analysis text details */}
-                    <Card className="md:col-span-2 bg-white dark:bg-card/25 border border-zinc-200 dark:border-white/5 p-6 flex flex-col justify-between space-y-4 shadow-sm">
-                      <div>
-                        <CardTitle className="text-base text-zinc-900 dark:text-white font-bold mb-2">Predictive Project Audit Details</CardTitle>
-                        <CardDescription className="text-xs leading-normal">
-                          Machine learning workloads analysis assessing Sprint completion velocity parameters, milestones limits, and task allocations.
-                        </CardDescription>
-                      </div>
-                      
-                      <div className="bg-zinc-50 dark:bg-black/40 p-4 rounded-xl border border-zinc-200 dark:border-white/5 space-y-3.5 text-xs text-left">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground font-semibold">Predicted Productivity Forecast Index:</span>
-                          <span className="text-zinc-800 dark:text-white font-bold">{fc.productivityForecast}%</span>
+                      {/* AI analysis text details */}
+                      <Card className="md:col-span-2 bg-white dark:bg-card/25 border border-zinc-200 dark:border-white/5 p-6 flex flex-col justify-between space-y-4 shadow-sm">
+                        <div>
+                          <CardTitle className="text-base text-zinc-900 dark:text-white font-bold mb-2">Predictive Project Audit Details</CardTitle>
+                          <CardDescription className="text-xs leading-normal">
+                            Machine learning workloads analysis assessing Sprint completion velocity parameters, milestones limits, and task allocations.
+                          </CardDescription>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground font-semibold">Predicted Workload Index:</span>
-                          <span className="text-zinc-800 dark:text-white font-bold">{fc.workloadForecast}</span>
+                        
+                        <div className="bg-zinc-50 dark:bg-black/40 p-4 rounded-xl border border-zinc-200 dark:border-white/5 space-y-3.5 text-xs text-left">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground font-semibold">Predicted Productivity Forecast Index:</span>
+                            <span className="text-zinc-800 dark:text-white font-bold">{fc.productivityForecast}%</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground font-semibold">Predicted Workload Index:</span>
+                            <span className="text-zinc-800 dark:text-white font-bold">{fc.workloadForecast}</span>
+                          </div>
+                          <div className="border-t border-zinc-200 dark:border-white/5 pt-3">
+                            <span className="text-muted-foreground font-semibold block mb-1">AI Logic Logs:</span>
+                            <p className="text-zinc-800 dark:text-white/80 leading-relaxed font-sans italic">
+                              "{fc.details}"
+                            </p>
+                          </div>
                         </div>
-                        <div className="border-t border-zinc-200 dark:border-white/5 pt-3">
-                          <span className="text-muted-foreground font-semibold block mb-1">AI Logic Logs:</span>
-                          <p className="text-zinc-800 dark:text-white/80 leading-relaxed font-sans italic">
-                            "{fc.details}"
-                          </p>
-                        </div>
-                      </div>
-                    </Card>
-                  </div>
-                ))}
+                      </Card>
+                    </div>
+                  ))
+                )}
               </div>
             )}
 
