@@ -432,6 +432,99 @@ export default function Room() {
     return participantList.filter((p) => !activeIds.has(p.id));
   }, [participantList, activeGridParticipants]);
 
+  const screenSharingParticipantId = useMemo(() => {
+    const sharingPeer = participantList.find((p) => p.isScreenSharing);
+    if (sharingPeer) return sharingPeer.id;
+    if (isScreenSharing) return userId;
+    return null;
+  }, [participantList, isScreenSharing, userId]);
+
+  // Memoized dominant tile for screen sharing
+  const dominantTile = useMemo(() => {
+    if (!screenSharingParticipantId) return null;
+    if (screenSharingParticipantId === userId) {
+      return (
+        <VideoTile
+          stream={localStream}
+          displayName={`${displayName}`}
+          isLocal={true}
+          isMuted={isMuted}
+          isCameraOff={isCameraOff}
+          isScreenSharing={isScreenSharing}
+          isDominant={true}
+          isSpeaking={!!speakingUsers["__local__"]}
+          isRaisedHand={isHandRaised}
+          isHost={isHost}
+        />
+      );
+    }
+    const p = participants[screenSharingParticipantId];
+    if (!p) return null;
+    const isParticipantHost = p.id === roomHostId || (roomInfo?.host === p.id && roomHostId === "");
+    return (
+      <VideoTile
+        stream={remoteStreams[p.id] || null}
+        displayName={p.displayName}
+        isLocal={false}
+        isMuted={p.isMuted}
+        isCameraOff={p.isCameraOff}
+        isScreenSharing={p.isScreenSharing}
+        isDominant={true}
+        isSpeaking={!!speakingUsers[p.id]}
+        isRaisedHand={p.isRaisedHand}
+        isHost={isParticipantHost}
+      />
+    );
+  }, [screenSharingParticipantId, userId, localStream, displayName, isMuted, isCameraOff, isScreenSharing, speakingUsers, isHandRaised, isHost, participants, roomHostId, roomInfo, remoteStreams]);
+
+  // Memoized non-dominant tiles for screen sharing sidebar/strip
+  const nonDominantTiles = useMemo(() => {
+    const tiles = [];
+    
+    // Add local user if not dominant
+    if (screenSharingParticipantId !== userId) {
+      tiles.push(
+        <VideoTile
+          key="__local__"
+          stream={localStream}
+          displayName={`${displayName}`}
+          isLocal={true}
+          isMuted={isMuted}
+          isCameraOff={isCameraOff}
+          isScreenSharing={isScreenSharing}
+          isDominant={false}
+          isSpeaking={!!speakingUsers["__local__"]}
+          isRaisedHand={isHandRaised}
+          isHost={isHost}
+        />
+      );
+    }
+
+    // Add other participants if not dominant
+    activeGridParticipants.forEach((p) => {
+      if (p.id !== screenSharingParticipantId) {
+        const isParticipantHost = p.id === roomHostId || (roomInfo?.host === p.id && roomHostId === "");
+        tiles.push(
+          <VideoTile
+            key={p.id}
+            stream={remoteStreams[p.id] || null}
+            displayName={p.displayName}
+            isLocal={false}
+            isMuted={p.isMuted}
+            isCameraOff={p.isCameraOff}
+            isScreenSharing={p.isScreenSharing}
+            isDominant={false}
+            isSpeaking={!!speakingUsers[p.id]}
+            isRaisedHand={p.isRaisedHand}
+            isHost={isParticipantHost}
+          />
+        );
+      }
+    });
+
+    return tiles;
+  }, [screenSharingParticipantId, userId, localStream, displayName, isMuted, isCameraOff, isScreenSharing, speakingUsers, isHandRaised, isHost, activeGridParticipants, roomHostId, roomInfo, remoteStreams]);
+
   const handleLeave = useCallback(() => {
     hasEndedRef.current = true;
     if (isRecording) stopRecording();
@@ -494,13 +587,6 @@ export default function Room() {
       }
     };
   }, [roomId, isHost]);
-
-  const screenSharingParticipantId = useMemo(() => {
-    const sharingPeer = participantList.find((p) => p.isScreenSharing);
-    if (sharingPeer) return sharingPeer.id;
-    if (isScreenSharing) return userId;
-    return null;
-  }, [participantList, isScreenSharing, userId]);
 
   // Join meeting action (triggers credentials check)
   const handleJoinMeeting = () => {
@@ -730,15 +816,17 @@ export default function Room() {
   }
 
   // 3. IN-CALL VIEW GRID CALCULATION
-  const gridClass = screenSharingParticipantId
-    ? "grid-cols-2 md:grid-cols-4 lg:grid-cols-6"
-    : activeGridParticipants.length === 0
-      ? "grid-cols-1"
-      : activeGridParticipants.length === 1
-        ? "grid-cols-2"
+  const gridClass = activeGridParticipants.length === 0
+    ? "grid-cols-1 max-w-3xl mx-auto w-full"
+    : activeGridParticipants.length === 1
+      ? "grid-cols-1 sm:grid-cols-2 max-w-5xl mx-auto w-full"
+      : activeGridParticipants.length === 2
+        ? "grid-cols-1 sm:grid-cols-3 max-w-6xl mx-auto w-full"
         : activeGridParticipants.length <= 3
-          ? "grid-cols-2"
-          : "grid-cols-3 lg:grid-cols-4";
+          ? "grid-cols-2 max-w-5xl mx-auto w-full"
+          : activeGridParticipants.length <= 5
+            ? "grid-cols-2 sm:grid-cols-3 max-w-6xl mx-auto w-full"
+            : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 w-full";
 
   return (
     <div className="h-screen w-full flex flex-col bg-background text-foreground overflow-hidden">
@@ -789,39 +877,56 @@ export default function Room() {
       {/* Body: video grid + optional side panel */}
       <div className="flex flex-1 overflow-hidden">
         {/* Video Grid */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col relative min-w-0">
-          <div className={`grid gap-4 w-full h-full max-h-full content-center ${gridClass}`}>
-            <VideoTile
-              stream={localStream}
-              displayName={`${displayName}`}
-              isLocal={true}
-              isMuted={isMuted}
-              isCameraOff={isCameraOff}
-              isScreenSharing={isScreenSharing}
-              isDominant={screenSharingParticipantId === userId}
-              isSpeaking={!!speakingUsers["__local__"]}
-              isRaisedHand={isHandRaised}
-              isHost={isHost}
-            />
-            {activeGridParticipants.map((p) => {
-              const isParticipantHost = p.id === roomHostId || (roomInfo?.host === p.id && roomHostId === "");
-              return (
-                <VideoTile
-                  key={p.id}
-                  stream={remoteStreams[p.id] || null}
-                  displayName={p.displayName}
-                  isLocal={false}
-                  isMuted={p.isMuted}
-                  isCameraOff={p.isCameraOff}
-                  isScreenSharing={p.isScreenSharing}
-                  isDominant={screenSharingParticipantId === p.id}
-                  isSpeaking={!!speakingUsers[p.id]}
-                  isRaisedHand={p.isRaisedHand}
-                  isHost={isParticipantHost}
-                />
-              );
-            })}
-          </div>
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col justify-center relative min-w-0">
+          {screenSharingParticipantId ? (
+            <div className="flex flex-col lg:flex-row gap-4 w-full h-full min-h-0 overflow-hidden">
+              {/* Main screen share area */}
+              <div className="flex-1 lg:w-[80%] flex items-center justify-center bg-[#111115] rounded-xl border border-border p-2">
+                {dominantTile}
+              </div>
+              {/* Side / Bottom strip of other participants */}
+              <div className="w-full lg:w-[20%] flex lg:flex-col gap-3 overflow-x-auto lg:overflow-y-auto lg:overflow-x-hidden p-1 shrink-0 max-h-[160px] lg:max-h-full">
+                {nonDominantTiles.map((tile, idx) => (
+                  <div key={idx} className="w-[180px] lg:w-full shrink-0 aspect-video">
+                    {tile}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className={`grid gap-4 w-full h-full max-h-full content-center justify-center ${gridClass}`}>
+              <VideoTile
+                stream={localStream}
+                displayName={`${displayName}`}
+                isLocal={true}
+                isMuted={isMuted}
+                isCameraOff={isCameraOff}
+                isScreenSharing={isScreenSharing}
+                isDominant={false}
+                isSpeaking={!!speakingUsers["__local__"]}
+                isRaisedHand={isHandRaised}
+                isHost={isHost}
+              />
+              {activeGridParticipants.map((p) => {
+                const isParticipantHost = p.id === roomHostId || (roomInfo?.host === p.id && roomHostId === "");
+                return (
+                  <VideoTile
+                    key={p.id}
+                    stream={remoteStreams[p.id] || null}
+                    displayName={p.displayName}
+                    isLocal={false}
+                    isMuted={p.isMuted}
+                    isCameraOff={p.isCameraOff}
+                    isScreenSharing={p.isScreenSharing}
+                    isDominant={false}
+                    isSpeaking={!!speakingUsers[p.id]}
+                    isRaisedHand={p.isRaisedHand}
+                    isHost={isParticipantHost}
+                  />
+                );
+              })}
+            </div>
+          )}
 
           {/* Hidden audio/video elements for participants not in the grid to ensure we still hear/process their streams */}
           <div className="hidden" aria-hidden="true">

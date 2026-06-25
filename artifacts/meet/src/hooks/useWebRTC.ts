@@ -334,7 +334,6 @@ export function useWebRTC(
         let stream = remoteStreamsRef.current[targetUserId];
         if (!stream) {
           stream = new MediaStream();
-          remoteStreamsRef.current[targetUserId] = stream;
         }
 
         const track = event.track;
@@ -342,9 +341,13 @@ export function useWebRTC(
           stream.addTrack(track);
         }
 
+        // Create a new MediaStream instance to trigger a React reference/state update
+        const newStream = new MediaStream(stream.getTracks());
+        remoteStreamsRef.current[targetUserId] = newStream;
+
         setRemoteStreams((prev) => ({
           ...prev,
-          [targetUserId]: stream!,
+          [targetUserId]: newStream,
         }));
       };
 
@@ -803,6 +806,10 @@ export function useWebRTC(
 
     socket.on("disconnect", () => {
       setConnectionStatus("disconnected");
+    });
+
+    socket.on("reconnect_attempt", () => {
+      setConnectionStatus("connecting");
     });
 
     socket.on("connect_error", (err) => {

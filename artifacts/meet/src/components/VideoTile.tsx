@@ -36,30 +36,19 @@ export function VideoTile({
     video.muted = isLocal;
 
     if (stream) {
-      // Always reassign — even if it's the "same" stream object,
-      // its tracks may have changed (e.g. screen share replaceTrack)
       if (video.srcObject !== stream) {
         video.srcObject = stream;
       }
-      // Ensure playback is running (some browsers pause on srcObject change)
-      video.play().catch(() => {
-        // Autoplay may be blocked; will play on first user interaction
-      });
+      // Ensure playback is running when camera is on or screen share is active
+      if (!isCameraOff || isScreenSharing) {
+        video.play().catch((err) => {
+          console.warn("[VideoTile] video.play failed:", err);
+        });
+      }
     } else {
       video.srcObject = null;
     }
-  }, [stream, isLocal]);
-
-  // When the video element remounts after isCameraOff toggle, re-attach stream
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !stream) return;
-    video.muted = isLocal;
-    if (video.srcObject !== stream) {
-      video.srcObject = stream;
-      video.play().catch(() => {});
-    }
-  });
+  }, [stream, isLocal, isCameraOff, isScreenSharing]);
 
   const initials =
     displayName

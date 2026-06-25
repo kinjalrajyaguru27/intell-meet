@@ -95,6 +95,13 @@ export function useSpeechTranscript({
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
+    const isMobile = typeof navigator !== "undefined" && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    if (isMobile) {
+      console.log("[useSpeechTranscript] SpeechRecognition is disabled on mobile devices to prevent annoying beep sounds.");
+      return;
+    }
+
     if (!SpeechRecognition) {
       console.warn("[useSpeechTranscript] Web Speech API (SpeechRecognition) is not supported in this browser.");
       return;
