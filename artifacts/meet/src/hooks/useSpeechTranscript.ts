@@ -13,6 +13,7 @@ interface UseSpeechTranscriptOptions {
   socket: Socket | null;
   isMuted: boolean;
   isTranscriptionPaused?: boolean;
+  localStream: MediaStream | null;
 }
 
 export function useSpeechTranscript({
@@ -21,6 +22,7 @@ export function useSpeechTranscript({
   socket,
   isMuted,
   isTranscriptionPaused = false,
+  localStream,
 }: UseSpeechTranscriptOptions) {
   const [transcript, setTranscript] = useState<TranscriptLine[]>([]);
   const recognitionRef = useRef<any>(null);
@@ -33,50 +35,37 @@ export function useSpeechTranscript({
   const socketRef = useRef(socket);
   const isListeningRef = useRef(false);
 
+  const hasLocalAudio = !!(localStream && localStream.getAudioTracks().length > 0 && localStream.getAudioTracks()[0].enabled);
+  const hasLocalAudioRef = useRef(hasLocalAudio);
+
   // Sync refs with props
   useEffect(() => {
     isMutedRef.current = isMuted;
-    console.log("[useSpeechTranscript] isMuted updated to:", isMuted);
-    
-    if (isMuted && recognitionRef.current && isListeningRef.current) {
-      try {
-        console.log("[useSpeechTranscript] Stopping speech recognition due to mute");
-        recognitionRef.current.stop();
-      } catch (e) {
-        console.error("[useSpeechTranscript] Error stopping speech recognition on mute:", e);
-      }
-    } else if (!isMuted && !isTranscriptionPausedRef.current && recognitionRef.current && !isListeningRef.current) {
-      try {
-        console.log("[useSpeechTranscript] Starting speech recognition due to unmute");
-        recognitionRef.current.start();
-        isListeningRef.current = true;
-      } catch (e) {
-        console.error("[useSpeechTranscript] Error starting speech recognition on unmute:", e);
-      }
-    }
-  }, [isMuted]);
-
-  useEffect(() => {
     isTranscriptionPausedRef.current = isTranscriptionPaused;
-    console.log("[useSpeechTranscript] isTranscriptionPaused updated to:", isTranscriptionPaused);
+    hasLocalAudioRef.current = hasLocalAudio;
 
-    if (isTranscriptionPaused && recognitionRef.current && isListeningRef.current) {
-      try {
-        console.log("[useSpeechTranscript] Stopping speech recognition due to pause");
-        recognitionRef.current.stop();
-      } catch (e) {
-        console.error("[useSpeechTranscript] Error stopping speech recognition on pause:", e);
-      }
-    } else if (!isTranscriptionPaused && !isMutedRef.current && recognitionRef.current && !isListeningRef.current) {
-      try {
-        console.log("[useSpeechTranscript] Starting speech recognition due to resume");
-        recognitionRef.current.start();
-        isListeningRef.current = true;
-      } catch (e) {
-        console.error("[useSpeechTranscript] Error starting speech recognition on resume:", e);
+    const shouldListen = hasLocalAudio && !isMuted && !isTranscriptionPaused;
+
+    if (recognitionRef.current) {
+      if (shouldListen && !isListeningRef.current) {
+        try {
+          console.log("[useSpeechTranscript] Starting speech recognition (microphone active)");
+          recognitionRef.current.start();
+          isListeningRef.current = true;
+        } catch (e) {
+          console.error("[useSpeechTranscript] Error starting speech recognition:", e);
+        }
+      } else if (!shouldListen && isListeningRef.current) {
+        try {
+          console.log("[useSpeechTranscript] Stopping speech recognition (microphone inactive/muted)");
+          recognitionRef.current.stop();
+          isListeningRef.current = false;
+        } catch (e) {
+          console.error("[useSpeechTranscript] Error stopping speech recognition:", e);
+        }
       }
     }
-  }, [isTranscriptionPaused]);
+  }, [hasLocalAudio, isMuted, isTranscriptionPaused]);
 
   useEffect(() => {
     displayNameRef.current = displayName;
@@ -95,10 +84,14 @@ export function useSpeechTranscript({
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
-    const isMobile = typeof navigator !== "undefined" && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const isMobileOrTablet = typeof navigator !== "undefined" && (
+      /Mobi|Android|iPhone|iPad|iPod|Tablet/i.test(navigator.userAgent) ||
+      (navigator.maxTouchPoints && navigator.maxTouchPoints > 2) ||
+      (window.matchMedia && window.matchMedia("(any-pointer: coarse)").matches)
+    );
 
-    if (isMobile) {
-      console.log("[useSpeechTranscript] SpeechRecognition is disabled on mobile devices to prevent annoying beep sounds.");
+    if (isMobileOrTablet) {
+      console.log("[useSpeechTranscript] SpeechRecognition is disabled on mobile/tablet devices to prevent microphone access conflicts.");
       return;
     }
 
@@ -160,9 +153,10 @@ export function useSpeechTranscript({
       console.log("[useSpeechTranscript] SpeechRecognition ended");
       isListeningRef.current = false;
       
-      // Automatically restart with a 400ms delay to prevent OS locking loops on mobile
+      // Automatically restart with a 400ms delay to prevent OS locking loops
       setTimeout(() => {
-        if (recognitionRef.current && !isMutedRef.current && !isTranscriptionPausedRef.current && !isListeningRef.current) {
+        const shouldListen = hasLocalAudioRef.current && !isMutedRef.current && !isTranscriptionPausedRef.current;
+        if (recognitionRef.current && shouldListen && !isListeningRef.current) {
           try {
             console.log("[useSpeechTranscript] Automatically restarting SpeechRecognition");
             recognitionRef.current.start();
@@ -176,8 +170,9 @@ export function useSpeechTranscript({
 
     recognitionRef.current = rec;
 
-    // Start initially if not muted and not paused
-    if (!isMutedRef.current && !isTranscriptionPausedRef.current) {
+    // Start initially if microphone is active and not muted/paused
+    const shouldListenInitially = hasLocalAudioRef.current && !isMutedRef.current && !isTranscriptionPausedRef.current;
+    if (shouldListenInitially) {
       try {
         console.log("[useSpeechTranscript] Initial SpeechRecognition start");
         rec.start();

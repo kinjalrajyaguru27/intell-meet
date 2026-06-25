@@ -53,7 +53,7 @@ function formatTime(ts: number) {
 
 export default function Room() {
   const [, params] = useRoute("/room/:roomId");
-  const roomId = params?.roomId || "";
+  const roomId = (params?.roomId || "").trim().toLowerCase();
   const [, setLocation] = useLocation();
   const { isAuthenticated, token } = useAuth();
   const { toast } = useToast();
@@ -147,6 +147,7 @@ export default function Room() {
     socket,
     isMuted,
     isTranscriptionPaused,
+    localStream,
   });
 
   const {
@@ -1483,9 +1484,9 @@ export default function Room() {
       </div>
 
       {/* Control Bar */}
-      <footer className="h-24 shrink-0 bg-card border-t border-border flex items-center justify-between px-6 z-10">
+      <footer className="h-auto py-4 md:h-24 md:py-0 shrink-0 bg-card border-t border-border flex items-center justify-start md:justify-between px-6 z-10 overflow-x-auto scrollbar-none flex-nowrap gap-6">
         {/* Left side: record button */}
-        <div className="flex-1 flex justify-start">
+        <div className="flex-none md:flex-1 shrink-0 flex justify-start">
           <Button
             data-testid="button-toggle-recording"
             variant={isRecording ? "destructive" : "secondary"}
@@ -1508,7 +1509,7 @@ export default function Room() {
         </div>
 
         {/* Center controls */}
-        <div className="flex items-center space-x-4">
+        <div className="flex-none shrink-0 flex items-center space-x-4">
           <div className="relative flex items-center">
             <Button
               data-testid="button-toggle-mic"
@@ -1600,7 +1601,7 @@ export default function Room() {
             data-testid="button-toggle-screenshare"
             variant={isScreenSharing ? "default" : "secondary"}
             size="icon"
-            className="w-14 h-14 rounded-full hidden sm:flex"
+            className="w-14 h-14 rounded-full flex shrink-0"
             onClick={toggleScreenShare}
           >
             <MonitorUp className="w-6 h-6" />
@@ -1632,7 +1633,7 @@ export default function Room() {
         </div>
 
         {/* Right side: side panel toggles */}
-        <div className="flex-1 flex justify-end items-center gap-3">
+        <div className="flex-none md:flex-1 shrink-0 flex justify-end items-center gap-3">
           {/* Participants Toggle */}
           <Button
             variant={isSidebarOpen && sidebarTab === "participants" ? "default" : "secondary"}

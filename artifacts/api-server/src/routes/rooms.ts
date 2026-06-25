@@ -76,7 +76,7 @@ router.get("/rooms/:roomId", async (req: AuthenticatedRequest, res) => {
     res.status(400).json({ error: "Invalid room ID" });
     return;
   }
-  const { roomId } = parsed.data;
+  const roomId = parsed.data.roomId.trim().toLowerCase();
   const room = roomStore.get(roomId);
   
   if (room) {
@@ -111,7 +111,7 @@ router.get("/rooms/:roomId", async (req: AuthenticatedRequest, res) => {
 // ─── DATABASE-BACKED SIGNALING & CHAT HTTP POLING FALLBACK ENDPOINTS ─────
 
 router.post("/rooms/:roomId/sync", async (req: AuthenticatedRequest, res) => {
-  const { roomId } = req.params;
+  const roomId = ((req.params.roomId as string) || "").trim().toLowerCase();
   const { userId, displayName, isMuted, isCameraOff, isScreenSharing, isRaisedHand } = req.body;
 
   if (!userId) {
@@ -219,7 +219,7 @@ router.post("/rooms/:roomId/sync", async (req: AuthenticatedRequest, res) => {
 });
 
 router.post("/rooms/:roomId/signal", async (req: AuthenticatedRequest, res) => {
-  const { roomId } = req.params;
+  const roomId = ((req.params.roomId as string) || "").trim().toLowerCase();
   const { from, to, type, payload } = req.body;
 
   if (!from || !to || !type) {
@@ -251,7 +251,7 @@ router.post("/rooms/:roomId/signal", async (req: AuthenticatedRequest, res) => {
 });
 
 router.post("/rooms/:roomId/chat", async (req: AuthenticatedRequest, res) => {
-  const { roomId } = req.params;
+  const roomId = ((req.params.roomId as string) || "").trim().toLowerCase();
   const { userId, displayName, text } = req.body;
 
   if (!userId || !text) {
@@ -283,7 +283,7 @@ router.post("/rooms/:roomId/chat", async (req: AuthenticatedRequest, res) => {
 });
 
 router.post("/rooms/:roomId/host-action", async (req: AuthenticatedRequest, res) => {
-  const { roomId } = req.params;
+  const roomId = ((req.params.roomId as string) || "").trim().toLowerCase();
   const { action, targetUserId } = req.body;
 
   if (!action) {

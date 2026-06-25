@@ -922,12 +922,13 @@ function initSignaling(httpServer) {
     socket.on(
       "join-room",
       async ({
-        roomId,
+        roomId: rawRoomId,
         userId,
         displayName,
         isMuted,
         isCameraOff
       }) => {
+        const roomId = (rawRoomId || "").trim().toLowerCase();
         currentRoomId = roomId;
         currentUserId = userId;
         try {
@@ -1196,7 +1197,8 @@ function initSignaling(httpServer) {
         logger.error({ err }, "Error updating message read status");
       }
     });
-    socket.on("admit-user", async ({ roomId, userId: targetUserId }) => {
+    socket.on("admit-user", async ({ roomId: rawRoomId, userId: targetUserId }) => {
+      const roomId = (rawRoomId || "").trim().toLowerCase();
       try {
         const meeting = await Meeting.findOne({ roomId, status: { $ne: "ended" } });
         if (!meeting || meeting.host?.toString() !== user?.id) return;
@@ -1225,7 +1227,8 @@ function initSignaling(httpServer) {
         logger.error({ err }, "Error admitting user");
       }
     });
-    socket.on("reject-user", async ({ roomId, userId: targetUserId }) => {
+    socket.on("reject-user", async ({ roomId: rawRoomId, userId: targetUserId }) => {
+      const roomId = (rawRoomId || "").trim().toLowerCase();
       try {
         const meeting = await Meeting.findOne({ roomId, status: { $ne: "ended" } });
         if (!meeting || meeting.host?.toString() !== user?.id) return;
@@ -1255,7 +1258,8 @@ function initSignaling(httpServer) {
         logger.error({ err }, "Error rejecting user");
       }
     });
-    socket.on("mute-user", async ({ roomId, targetUserId }) => {
+    socket.on("mute-user", async ({ roomId: rawRoomId, targetUserId }) => {
+      const roomId = (rawRoomId || "").trim().toLowerCase();
       try {
         const meeting = await Meeting.findOne({ roomId, status: { $ne: "ended" } });
         if (!meeting || meeting.host?.toString() !== user?.id) return;
@@ -1268,7 +1272,8 @@ function initSignaling(httpServer) {
         logger.error({ err }, "Error muting user");
       }
     });
-    socket.on("disable-video", async ({ roomId, targetUserId }) => {
+    socket.on("disable-video", async ({ roomId: rawRoomId, targetUserId }) => {
+      const roomId = (rawRoomId || "").trim().toLowerCase();
       try {
         const meeting = await Meeting.findOne({ roomId, status: { $ne: "ended" } });
         if (!meeting || meeting.host?.toString() !== user?.id) return;
@@ -1281,7 +1286,8 @@ function initSignaling(httpServer) {
         logger.error({ err }, "Error disabling user video");
       }
     });
-    socket.on("remove-user", async ({ roomId, targetUserId }) => {
+    socket.on("remove-user", async ({ roomId: rawRoomId, targetUserId }) => {
+      const roomId = (rawRoomId || "").trim().toLowerCase();
       try {
         const meeting = await Meeting.findOne({ roomId, status: { $ne: "ended" } });
         if (!meeting || meeting.host?.toString() !== user?.id) return;
@@ -1294,7 +1300,8 @@ function initSignaling(httpServer) {
         logger.error({ err }, "Error removing user");
       }
     });
-    socket.on("lock-meeting", async ({ roomId, isLocked }) => {
+    socket.on("lock-meeting", async ({ roomId: rawRoomId, isLocked }) => {
+      const roomId = (rawRoomId || "").trim().toLowerCase();
       try {
         const meeting = await Meeting.findOne({ roomId, status: { $ne: "ended" } });
         if (!meeting || meeting.host?.toString() !== user?.id) return;
@@ -1305,7 +1312,8 @@ function initSignaling(httpServer) {
         logger.error({ err }, "Error locking meeting");
       }
     });
-    socket.on("transfer-host", async ({ roomId, targetUserId }) => {
+    socket.on("transfer-host", async ({ roomId: rawRoomId, targetUserId }) => {
+      const roomId = (rawRoomId || "").trim().toLowerCase();
       try {
         const meeting = await Meeting.findOne({ roomId, status: { $ne: "ended" } });
         if (!meeting || meeting.host?.toString() !== user?.id) return;
@@ -1317,7 +1325,8 @@ function initSignaling(httpServer) {
         logger.error({ err }, "Error transferring host");
       }
     });
-    socket.on("raise-hand", ({ roomId, isRaisedHand }) => {
+    socket.on("raise-hand", ({ roomId: rawRoomId, isRaisedHand }) => {
+      const roomId = (rawRoomId || "").trim().toLowerCase();
       if (!currentUserId) return;
       const room = rooms.get(roomId);
       const participant = room?.get(currentUserId);
@@ -1466,7 +1475,8 @@ function initSignaling(httpServer) {
     socket.on("milestone-alert", (data) => {
       socket.broadcast.emit("milestone-alert", data);
     });
-    socket.on("leave-room", ({ roomId, userId }) => {
+    socket.on("leave-room", ({ roomId: rawRoomId, userId }) => {
+      const roomId = (rawRoomId || "").trim().toLowerCase();
       handleLeave(roomId, userId);
     });
     socket.on("disconnect", () => {
@@ -1490,7 +1500,8 @@ function initSignaling(httpServer) {
       }
       logger.info({ socketId: socket.id }, "Secure socket disconnected");
     });
-    async function handleLeave(roomId, userId) {
+    async function handleLeave(rawRoomId, userId) {
+      const roomId = (rawRoomId || "").trim().toLowerCase();
       const room = rooms.get(roomId);
       if (!room) return;
       room.delete(userId);
@@ -1535,7 +1546,8 @@ function initSignaling(httpServer) {
   return io;
 }
 function getRoomParticipantCount(roomId) {
-  return rooms.get(roomId)?.size ?? 0;
+  const normalizedRoomId = (roomId || "").trim().toLowerCase();
+  return rooms.get(normalizedRoomId)?.size ?? 0;
 }
 var import_socket, import_jsonwebtoken, JWT_SECRET, rooms, chatHistory, waitingUsers, lockedMeetings, activeUsers, userPresence, MAX_CHAT_HISTORY, ioInstance;
 var init_signaling = __esm({
@@ -6983,7 +6995,7 @@ router2.get("/rooms/:roomId", async (req, res) => {
     res.status(400).json({ error: "Invalid room ID" });
     return;
   }
-  const { roomId } = parsed.data;
+  const roomId = parsed.data.roomId.trim().toLowerCase();
   const room = roomStore.get(roomId);
   if (room) {
     res.json({
@@ -7011,7 +7023,7 @@ router2.get("/rooms/:roomId", async (req, res) => {
   res.status(404).json({ error: "Room not found" });
 });
 router2.post("/rooms/:roomId/sync", async (req, res) => {
-  const { roomId } = req.params;
+  const roomId = (req.params.roomId || "").trim().toLowerCase();
   const { userId, displayName, isMuted, isCameraOff, isScreenSharing, isRaisedHand } = req.body;
   if (!userId) {
     res.status(400).json({ error: "Missing userId" });
@@ -7099,7 +7111,7 @@ router2.post("/rooms/:roomId/sync", async (req, res) => {
   }
 });
 router2.post("/rooms/:roomId/signal", async (req, res) => {
-  const { roomId } = req.params;
+  const roomId = (req.params.roomId || "").trim().toLowerCase();
   const { from, to, type, payload } = req.body;
   if (!from || !to || !type) {
     res.status(400).json({ error: "Missing from/to/type signaling fields" });
@@ -7127,7 +7139,7 @@ router2.post("/rooms/:roomId/signal", async (req, res) => {
   }
 });
 router2.post("/rooms/:roomId/chat", async (req, res) => {
-  const { roomId } = req.params;
+  const roomId = (req.params.roomId || "").trim().toLowerCase();
   const { userId, displayName, text } = req.body;
   if (!userId || !text) {
     res.status(400).json({ error: "Missing userId or text chat fields" });
@@ -7155,7 +7167,7 @@ router2.post("/rooms/:roomId/chat", async (req, res) => {
   }
 });
 router2.post("/rooms/:roomId/host-action", async (req, res) => {
-  const { roomId } = req.params;
+  const roomId = (req.params.roomId || "").trim().toLowerCase();
   const { action, targetUserId } = req.body;
   if (!action) {
     res.status(400).json({ error: "Missing host action field" });

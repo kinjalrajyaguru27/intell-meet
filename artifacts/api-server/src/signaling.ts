@@ -147,7 +147,7 @@ export function initSignaling(httpServer: HttpServer) {
     socket.on(
       "join-room",
       async ({
-        roomId,
+        roomId: rawRoomId,
         userId,
         displayName,
         isMuted,
@@ -159,6 +159,7 @@ export function initSignaling(httpServer: HttpServer) {
         isMuted?: boolean;
         isCameraOff?: boolean;
       }) => {
+        const roomId = (rawRoomId || "").trim().toLowerCase();
         currentRoomId = roomId;
         currentUserId = userId;
 
@@ -504,7 +505,8 @@ export function initSignaling(httpServer: HttpServer) {
     });
 
     // ─── WAITING ROOM ACTIONS (Host Controls) ───────────────────────────────
-    socket.on("admit-user", async ({ roomId, userId: targetUserId }: { roomId: string; userId: string }) => {
+    socket.on("admit-user", async ({ roomId: rawRoomId, userId: targetUserId }: { roomId: string; userId: string }) => {
+      const roomId = (rawRoomId || "").trim().toLowerCase();
       try {
         const meeting = await Meeting.findOne({ roomId, status: { $ne: "ended" } });
         if (!meeting || meeting.host?.toString() !== user?.id) return; // Only host can admit
@@ -543,7 +545,8 @@ export function initSignaling(httpServer: HttpServer) {
       }
     });
 
-    socket.on("reject-user", async ({ roomId, userId: targetUserId }: { roomId: string; userId: string }) => {
+    socket.on("reject-user", async ({ roomId: rawRoomId, userId: targetUserId }: { roomId: string; userId: string }) => {
+      const roomId = (rawRoomId || "").trim().toLowerCase();
       try {
         const meeting = await Meeting.findOne({ roomId, status: { $ne: "ended" } });
         if (!meeting || meeting.host?.toString() !== user?.id) return;
@@ -583,7 +586,8 @@ export function initSignaling(httpServer: HttpServer) {
     });
 
     // ─── HOST CONTROLS ──────────────────────────────────────────────────────
-    socket.on("mute-user", async ({ roomId, targetUserId }: { roomId: string; targetUserId: string }) => {
+    socket.on("mute-user", async ({ roomId: rawRoomId, targetUserId }: { roomId: string; targetUserId: string }) => {
+      const roomId = (rawRoomId || "").trim().toLowerCase();
       try {
         const meeting = await Meeting.findOne({ roomId, status: { $ne: "ended" } });
         if (!meeting || meeting.host?.toString() !== user?.id) return;
@@ -598,7 +602,8 @@ export function initSignaling(httpServer: HttpServer) {
       }
     });
 
-    socket.on("disable-video", async ({ roomId, targetUserId }: { roomId: string; targetUserId: string }) => {
+    socket.on("disable-video", async ({ roomId: rawRoomId, targetUserId }: { roomId: string; targetUserId: string }) => {
+      const roomId = (rawRoomId || "").trim().toLowerCase();
       try {
         const meeting = await Meeting.findOne({ roomId, status: { $ne: "ended" } });
         if (!meeting || meeting.host?.toString() !== user?.id) return;
@@ -613,7 +618,8 @@ export function initSignaling(httpServer: HttpServer) {
       }
     });
 
-    socket.on("remove-user", async ({ roomId, targetUserId }: { roomId: string; targetUserId: string }) => {
+    socket.on("remove-user", async ({ roomId: rawRoomId, targetUserId }: { roomId: string; targetUserId: string }) => {
+      const roomId = (rawRoomId || "").trim().toLowerCase();
       try {
         const meeting = await Meeting.findOne({ roomId, status: { $ne: "ended" } });
         if (!meeting || meeting.host?.toString() !== user?.id) return;
@@ -628,7 +634,8 @@ export function initSignaling(httpServer: HttpServer) {
       }
     });
 
-    socket.on("lock-meeting", async ({ roomId, isLocked }: { roomId: string; isLocked: boolean }) => {
+    socket.on("lock-meeting", async ({ roomId: rawRoomId, isLocked }: { roomId: string; isLocked: boolean }) => {
+      const roomId = (rawRoomId || "").trim().toLowerCase();
       try {
         const meeting = await Meeting.findOne({ roomId, status: { $ne: "ended" } });
         if (!meeting || meeting.host?.toString() !== user?.id) return;
@@ -641,7 +648,8 @@ export function initSignaling(httpServer: HttpServer) {
       }
     });
 
-    socket.on("transfer-host", async ({ roomId, targetUserId }: { roomId: string; targetUserId: string }) => {
+    socket.on("transfer-host", async ({ roomId: rawRoomId, targetUserId }: { roomId: string; targetUserId: string }) => {
+      const roomId = (rawRoomId || "").trim().toLowerCase();
       try {
         const meeting = await Meeting.findOne({ roomId, status: { $ne: "ended" } });
         if (!meeting || meeting.host?.toString() !== user?.id) return;
@@ -658,7 +666,8 @@ export function initSignaling(httpServer: HttpServer) {
     });
 
     // ─── PARTICIPANT ACTIONS ────────────────────────────────────────────────
-    socket.on("raise-hand", ({ roomId, isRaisedHand }: { roomId: string; isRaisedHand: boolean }) => {
+    socket.on("raise-hand", ({ roomId: rawRoomId, isRaisedHand }: { roomId: string; isRaisedHand: boolean }) => {
+      const roomId = (rawRoomId || "").trim().toLowerCase();
       if (!currentUserId) return;
       const room = rooms.get(roomId);
       const participant = room?.get(currentUserId);
@@ -834,7 +843,8 @@ export function initSignaling(httpServer: HttpServer) {
       socket.broadcast.emit("milestone-alert", data);
     });
 
-    socket.on("leave-room", ({ roomId, userId }: { roomId: string; userId: string }) => {
+    socket.on("leave-room", ({ roomId: rawRoomId, userId }: { roomId: string; userId: string }) => {
+      const roomId = (rawRoomId || "").trim().toLowerCase();
       handleLeave(roomId, userId);
     });
 
@@ -863,7 +873,8 @@ export function initSignaling(httpServer: HttpServer) {
       logger.info({ socketId: socket.id }, "Secure socket disconnected");
     });
 
-    async function handleLeave(roomId: string, userId: string) {
+    async function handleLeave(rawRoomId: string, userId: string) {
+      const roomId = (rawRoomId || "").trim().toLowerCase();
       const room = rooms.get(roomId);
       if (!room) return;
       room.delete(userId);
@@ -919,5 +930,6 @@ export function initSignaling(httpServer: HttpServer) {
 }
 
 export function getRoomParticipantCount(roomId: string): number {
-  return rooms.get(roomId)?.size ?? 0;
+  const normalizedRoomId = (roomId || "").trim().toLowerCase();
+  return rooms.get(normalizedRoomId)?.size ?? 0;
 }

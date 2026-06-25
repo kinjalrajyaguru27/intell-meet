@@ -197,8 +197,40 @@ export function useWebRTC(
   const iceCandidateQueues = useRef<Record<string, RTCIceCandidateInit[]>>({});
   const remoteDescSet = useRef<Record<string, boolean>>({});
 
+  const joinedAtRef = useRef(Date.now());
+  useEffect(() => {
+    if (hasJoined) {
+      joinedAtRef.current = Date.now();
+    }
+  }, [hasJoined]);
+
   useEffect(() => {
     localStreamRef.current = localStream;
+  }, [localStream]);
+
+  // Synchronize tracks with all active peer connections when localStream updates
+  useEffect(() => {
+    if (!localStream) return;
+    const videoTrack = localStream.getVideoTracks()[0];
+    const audioTrack = localStream.getAudioTracks()[0];
+
+    Object.values(peersRef.current).forEach((pc) => {
+      pc.getSenders().forEach((sender) => {
+        if (sender.track?.kind === "video" || (!sender.track && pc.getTransceivers().find(t => t.sender === sender)?.receiver.track.kind === "video")) {
+          if (videoTrack && sender.track !== videoTrack) {
+            sender.replaceTrack(videoTrack).catch((err) => {
+              console.warn("[useWebRTC] Failed to replace video track for peer:", err);
+            });
+          }
+        } else if (sender.track?.kind === "audio" || (!sender.track && pc.getTransceivers().find(t => t.sender === sender)?.receiver.track.kind === "audio")) {
+          if (audioTrack && sender.track !== audioTrack) {
+            sender.replaceTrack(audioTrack).catch((err) => {
+              console.warn("[useWebRTC] Failed to replace audio track for peer:", err);
+            });
+          }
+        }
+      });
+    });
   }, [localStream]);
 
   useEffect(() => { isMutedRef.current = isMuted; }, [isMuted]);
@@ -357,8 +389,10 @@ export function useWebRTC(
 
       pc.oniceconnectionstatechange = () => {
         updateConnectionStatusFromPeers();
-        if (pc.iceConnectionState === "failed") {
-          pc.restartIce();
+        if (pc.iceConnectionState === "failed" || pc.iceConnectionState === "disconnected") {
+          console.warn("ICE connection failed or disconnected, triggering reconnect for peer:", targetUserId);
+          const isInitiator = userId > targetUserId;
+          createPeer(targetUserId, isInitiator);
         }
       };
 
@@ -498,14 +532,23 @@ export function useWebRTC(
         }
       }
 
-      const videoConstraints = {
+      const isMobileOrTablet = typeof navigator !== "undefined" && (
+        /Mobi|Android|iPhone|iPad|iPod|Tablet/i.test(navigator.userAgent) ||
+        (navigator.maxTouchPoints && navigator.maxTouchPoints > 2) ||
+        (window.matchMedia && window.matchMedia("(any-pointer: coarse)").matches)
+      );
+
+      const videoConstraints = isMobileOrTablet ? true : {
         width: { ideal: 1280 },
         height: { ideal: 720 },
         frameRate: { ideal: 30 },
         facingMode: "user",
       };
 
-      const audioConstraints: any = {
+      const audioConstraints: any = isMobileOrTablet ? {
+        echoCancellation: true,
+        noiseSuppression: true,
+      } : {
         echoCancellation: true,
         noiseSuppression: true,
         autoGainControl: true,
@@ -1202,7 +1245,9 @@ export function useWebRTC(
         if (active) {
           const pcs = Object.values(peersRef.current);
           const isConnectingPeers = pcs.length > 0 && pcs.some(pc => pc.connectionState !== "connected");
-          const interval = isConnectingPeers ? 800 : pcs.length > 0 ? 3000 : 2000;
+          const timeSinceJoin = Date.now() - joinedAtRef.current;
+          const isInitialPhase = timeSinceJoin < 10000;
+          const interval = isInitialPhase ? 500 : isConnectingPeers ? 800 : pcs.length > 0 ? 3000 : 2000;
           clearTimeout(timeoutId);
           timeoutId = setTimeout(poll, interval);
         }
