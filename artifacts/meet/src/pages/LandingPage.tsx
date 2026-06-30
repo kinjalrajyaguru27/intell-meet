@@ -14,9 +14,7 @@ import {
   Moon,
   ArrowRight,
   CheckCircle2,
-  Users,
   Zap,
-  Globe,
   Sparkles
 } from "lucide-react";
 
@@ -356,34 +354,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Platform Statistics Section */}
-      <section className="relative z-10 bg-zinc-50/50 dark:bg-card/30 border-y border-border py-16 px-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {[
-              { label: "Meetings Conducted", val: "10,000+", icon: Video, color: "text-primary" },
-              { label: "Sync'd Minutes", val: "2.5M+", icon: Globe, color: "text-indigo-500" },
-              { label: "Tasks Completed", val: "15,000+", icon: CheckCircle2, color: "text-emerald-500" },
-              { label: "System Uptime", val: "99.9%", icon: Users, color: "text-cyan-500" }
-            ].map((stat, index) => {
-              const Icon = stat.icon;
-              return (
-                <div key={index} className="text-center space-y-2 flex flex-col items-center">
-                  <div className={`w-10 h-10 rounded-full bg-background border border-border flex items-center justify-center shadow-sm ${stat.color}`}>
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <p className="text-2xl sm:text-4xl font-extrabold tracking-tight text-zinc-950 dark:text-white">
-                    {stat.val}
-                  </p>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground uppercase font-bold tracking-wider">
-                    {stat.label}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
+
 
       {/* Footer */}
       <footer className="relative z-10 border-t border-border bg-white dark:bg-black/40 py-12 px-6 sm:px-8">
