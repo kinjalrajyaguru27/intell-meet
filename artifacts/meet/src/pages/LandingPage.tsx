@@ -198,41 +198,7 @@ export default function LandingPage() {
             </Button>
           </div>
 
-          {/* Simulated Application Preview Mockup */}
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="pt-16 max-w-5xl mx-auto relative group"
-          >
-            <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 to-indigo-500/10 rounded-2xl blur-3xl opacity-50 group-hover:opacity-75 transition-opacity" />
-            <div className="border border-border/80 dark:border-white/10 rounded-2xl p-2 bg-zinc-150/40 dark:bg-card/45 backdrop-blur-xl shadow-2xl overflow-hidden relative z-10">
-              <div className="flex items-center gap-1.5 px-3 py-2 border-b border-border dark:border-white/5 bg-zinc-100/55 dark:bg-black/20 rounded-t-xl shrink-0">
-                <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
-                <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
-                <div className="w-2.5 h-2.5 rounded-full bg-green-400" />
-                <span className="text-[10px] text-muted-foreground font-mono ml-4">https://app.intellmeet.com/dashboard</span>
-              </div>
-              <div className="bg-white dark:bg-black/60 aspect-[16/9] rounded-b-xl flex flex-col justify-center items-center p-8 relative overflow-hidden group">
-                {/* Decorative Elements Inside Preview */}
-                <div className="absolute top-1/4 left-1/3 w-32 h-32 bg-primary/20 rounded-full blur-2xl animate-pulse" />
-                <div className="absolute bottom-1/4 right-1/4 w-32 h-32 bg-indigo-500/20 rounded-full blur-2xl" />
-                
-                <div className="relative z-10 text-center max-w-md space-y-4">
-                  <div className="w-16 h-16 rounded-2xl bg-primary/15 border border-primary/20 flex items-center justify-center mx-auto shadow-inner">
-                    <Sparkles className="w-8 h-8 text-primary" />
-                  </div>
-                  <h3 className="text-lg sm:text-xl font-extrabold text-zinc-950 dark:text-white">Workspace Meetings & Analytics Dashboard</h3>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Access transcription timelines, review project task lists on the Kanban board, trigger video rooms instantly, and organize follow-up details dynamically.
-                  </p>
-                  <Button onClick={() => setLocation("/register")} className="rounded-full font-bold text-xs h-9 px-6 bg-zinc-900 dark:bg-white text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-100 border-0 shadow">
-                    Launch Platform Free
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </motion.div>
+
         </motion.div>
       </section>
 
@@ -352,6 +318,45 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
+      </section>
+
+      {/* Mockup Section shifted after Why Choose Us */}
+      <section className="relative z-10 max-w-5xl mx-auto px-6 pb-20 pt-10">
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="relative group"
+        >
+          <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 to-indigo-500/10 rounded-2xl blur-3xl opacity-50 group-hover:opacity-75 transition-opacity" />
+          <div className="border border-border/80 dark:border-white/10 rounded-2xl p-2 bg-zinc-150/40 dark:bg-card/45 backdrop-blur-xl shadow-2xl overflow-hidden relative z-10">
+            <div className="flex items-center gap-1.5 px-3 py-2 border-b border-border dark:border-white/5 bg-zinc-100/55 dark:bg-black/20 rounded-t-xl shrink-0">
+              <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
+              <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
+              <div className="w-2.5 h-2.5 rounded-full bg-green-400" />
+              <span className="text-[10px] text-muted-foreground font-mono ml-4">https://app.intellmeet.com/dashboard</span>
+            </div>
+            <div className="bg-white dark:bg-black/60 aspect-[16/9] rounded-b-xl flex flex-col justify-center items-center p-8 relative overflow-hidden group">
+              {/* Decorative Elements Inside Preview */}
+              <div className="absolute top-1/4 left-1/3 w-32 h-32 bg-primary/20 rounded-full blur-2xl animate-pulse" />
+              <div className="absolute bottom-1/4 right-1/4 w-32 h-32 bg-indigo-500/20 rounded-full blur-2xl" />
+              
+              <div className="relative z-10 text-center max-w-md space-y-4">
+                <div className="w-16 h-16 rounded-2xl bg-primary/15 border border-primary/20 flex items-center justify-center mx-auto shadow-inner">
+                  <Sparkles className="w-8 h-8 text-primary" />
+                </div>
+                <h3 className="text-lg sm:text-xl font-extrabold text-zinc-950 dark:text-white">Workspace Meetings & Analytics Dashboard</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Access transcription timelines, review project task lists on the Kanban board, trigger video rooms instantly, and organize follow-up details dynamically.
+                </p>
+                <Button onClick={() => setLocation("/register")} className="rounded-full font-bold text-xs h-9 px-6 bg-zinc-900 dark:bg-white text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-100 border-0 shadow">
+                  Launch Platform Free
+                </Button>
+              </div>
+            </div>
+          </div>
+        </motion.div>
       </section>
 
 
