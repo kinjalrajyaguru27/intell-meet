@@ -1,9 +1,11 @@
-import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
+import { useEffect } from "react";
+import { Switch, Route, Router as WouterRouter, Redirect, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
+import LandingPage from "@/pages/LandingPage";
 import Room from "@/pages/Room";
 import Dashboard from "@/pages/Dashboard";
 import MeetingDetail from "@/pages/MeetingDetail";
@@ -26,6 +28,7 @@ import AIInsights from "@/pages/AIInsights";
 import PostMeeting from "@/pages/PostMeeting";
 import AppLayout from "@/components/AppLayout";
 import { setAuthTokenGetter, setBaseUrl } from "@workspace/api-client-react";
+import { useAuth } from "@/hooks/useAuth";
 
 if (import.meta.env.VITE_API_URL) {
   setBaseUrl(import.meta.env.VITE_API_URL);
@@ -59,13 +62,40 @@ function AuthenticatedRoutes({ children }: { children: React.ReactNode }) {
   return <AppLayout>{children}</AppLayout>;
 }
 
+function HomeWrapper() {
+  const { isAuthenticated } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      const justLoggedIn = sessionStorage.getItem("intell_meet_just_logged_in");
+      if (justLoggedIn === "true") {
+        sessionStorage.removeItem("intell_meet_just_logged_in");
+        setLocation("/dashboard");
+      }
+    }
+  }, [isAuthenticated, setLocation]);
+
+  if (isAuthenticated) {
+    const justLoggedIn = sessionStorage.getItem("intell_meet_just_logged_in");
+    if (justLoggedIn === "true") {
+      return null;
+    }
+    return (
+      <AuthenticatedRoutes>
+        <Home />
+      </AuthenticatedRoutes>
+    );
+  }
+
+  return <LandingPage />;
+}
+
 function Router() {
   return (
     <Switch>
       <Route path="/">
-        <AuthenticatedRoutes>
-          <Home />
-        </AuthenticatedRoutes>
+        <HomeWrapper />
       </Route>
       <Route path="/auth">
         <Redirect to="/login" />

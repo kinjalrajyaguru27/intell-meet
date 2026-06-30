@@ -106,6 +106,7 @@ export const useAuth = create<AuthState>((set, get) => {
       localStorage.setItem("intell_meet_user", JSON.stringify(user));
       localStorage.setItem("intell_meet_uid", user.id);
       localStorage.setItem("intell_meet_name", user.name);
+      sessionStorage.setItem("intell_meet_just_logged_in", "true");
       set({ token, user, isAuthenticated: true });
       startRefreshTimer(token, triggerRefresh);
     },
