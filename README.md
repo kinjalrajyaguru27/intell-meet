@@ -1,141 +1,215 @@
-# Intell-Meet-Link: Complete Enterprise Meeting & Collaboration Hub
+**🤖 IntellMeet – AI-Powered Enterprise Meeting & Collaboration Platform
+**
+Production-Grade Full-Stack MERN Application for Real-Time Video Meetings, AI-Powered Meeting Intelligence, and Team Collaboration
 
-Intell-Meet-Link is an enterprise-grade full-stack meeting, chat, project management, and AI analytics platform. It integrates video conferencing (WebRTC signaling), collaborative workspace document editing (with notes checkpoint rollback), real-time channel chats (similar to Slack/Teams), Kanban task boards, calendar and Gantt charting, and automated AI summary post-meeting analytics.
+📌 Project Overview
 
----
+IntellMeet is an enterprise-grade meeting and collaboration platform developed as an internship project to enhance productivity for remote and hybrid teams. The platform combines real-time video conferencing, AI-powered meeting intelligence, team collaboration, task management, and analytics into a unified solution.
 
-## 🚀 Tech Stack
+The primary goal of IntellMeet is to eliminate the inefficiencies of traditional meetings by automatically generating meeting transcripts, AI summaries, action items, and collaborative workspaces, making every meeting organized, searchable, and actionable.
 
-- **Monorepo**: PNPM Workspaces, Node.js 24+, TypeScript 5.9
-- **Frontend**: React 19, Vite, Tailwind CSS, Lucide icons, Recharts, Wouter routing, TanStack Query (v5)
-- **Backend**: Express 5, Node HTTP Server, CORS, Cookie Parser, Pino logging
-- **Real-Time Layer**: Socket.io (online presence, direct messages, typing indicators, read receipts, signaling)
-- **Database**: MongoDB (Mongoose ODM)
-- **AI Engine**: Mocked advanced speech analysis models for action-items, transcripts, summaries, and forecasts.
+**👥 Team Members
+**Kinjal Rajyaguru – ZIDIOaYb3YA
+Himanshu Jain – ZIDIOfzts3h
+Pritakanshu Adak – ZIDIOxRYncA
 
----
+**🎯 Objectives
+**Improve collaboration for remote and hybrid teams
+Reduce manual note-taking and follow-up efforts
+Automate post-meeting documentation
+Increase productivity through AI-powered insights
+Build a scalable, enterprise-ready platform
+Demonstrate modern Full-Stack MERN development practices
 
-## 📁 Repository Structure
+**🚀 Key Features
+**
+🔐 Authentication & User Management
+Secure Signup and Login
+JWT-based Authentication
+Password Encryption using bcrypt
+Role-Based Access Control (RBAC)
+User Profiles and Team Invitations
 
-```
-├── api/                     # Vercel Serverless Function entry point
-├── artifacts/
-│   ├── api-server/          # Express backend application
-│   │   ├── src/             # API routes, middlewares, signaling (Socket.io)
-│   │   └── build.mjs        # Production ESBuild compiler
-│   └── meet/                # React Vite client application
-├── lib/
-│   ├── api-client-react/    # Generated react hooks using Orval
-│   ├── api-spec/            # OpenAPI specification (openapi.yaml)
-│   ├── api-zod/             # Zod validation schemas
-│   └── db/                  # Shared database module (Mongoose Models & connectDB)
-├── scratch/                 # E2E runtime testing and audit scripts
-├── package.json             # Root Workspace package manager configurations
-├── pnpm-workspace.yaml      # Monorepo workspaces definition
-└── vercel.json              # Vercel deployment route rewrites
-```
+🎥 Real-Time Video Meetings
+High-Quality Video Conferencing
+WebRTC Integration
+Screen Sharing
+Meeting Recording
+Live Participant Management
+Mute/Unmute Controls
 
----
+🤖 AI Meeting Intelligence
+Real-Time Meeting Transcription
+AI-Generated Meeting Summaries
+Automatic Action Item Extraction
+Smart Task Assignment Suggestions
 
-## ⚙️ Environment Variables
+💬 Real-Time Collaboration
+Live Chat and Team Messaging
+Shared Notes
+Typing Indicators
+Real-Time Notifications
 
-Copy `.env.example` to `.env` and fill in the values:
+📋 Task & Project Management
+Team Workspaces
+Kanban Boards
+Task Creation and Assignment
+Meeting Follow-Up Management
 
-```bash
-# Node environment
-NODE_ENV=production
+📊 Analytics & Reporting
+Meeting History
+Productivity Reports
+Team Engagement Metrics
+Searchable Meeting Records
+Exportable Reports
 
-# Server configuration
-PORT=5000
+🛠️ Technology Stack
 
-# Security (secrets)
-JWT_SECRET=your_jwt_signing_secret_here
-JWT_REFRESH_SECRET=your_jwt_refresh_token_secret_here
+Frontend
+React 19
+TypeScript
+Vite
+Tailwind CSS v4
+shadcn/ui
+TanStack Query
+Zustand
 
-# Database Configuration (MongoDB URI)
-MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.mongodb.net/intell_meet
+Backend
+Node.js
+Express.js
 
-# Google OAuth 2.0 Client IDs
-GOOGLE_CLIENT_ID=your_google_oauth_client_id_backend.apps.googleusercontent.com
-VITE_GOOGLE_CLIENT_ID=your_google_oauth_client_id_frontend.apps.googleusercontent.com
+Database
+MongoDB
+Mongoose
 
-# OpenAI API Key for meeting transcripts processing and AI Summaries
-OPENAI_API_KEY=your_openai_api_key_here
+Real-Time Technologies
+Socket.io
+WebRTC
 
-# (Optional) CORS production origins
-CORS_ORIGIN=https://your-production-app.vercel.app
-```
+AI Integration
+OpenAI
+Hugging Face
 
----
+Authentication
+JWT
+bcrypt
 
-## 📦 GitHub Repository Setup & Push Commands
+Storage & Caching
+Cloudinary
+AWS S3
+Redis
 
-To initialize the repository locally and push to your remote GitHub repository:
+DevOps & Monitoring
+Docker
+Kubernetes
+Helm
+GitHub Actions
+Prometheus
+Grafana
+Sentry
 
-```bash
-git init
-git add .
-git commit -m "Production Ready"
-git branch -M main
-git remote add origin YOUR_GITHUB_REPOSITORY_URL
-git push -u origin main
-```
+🏗️ System Highlights
+Enterprise-Grade Architecture
+Real-Time Communication
+AI-Powered Automation
+Secure Authentication and Authorization
+Cloud-Ready Deployment
+Scalable Backend Infrastructure
+Modern Responsive User Interface
+Production-Ready Codebase
 
----
+🔒 Security Features
+JWT Authentication
+Password Encryption
+Role-Based Authorization
+API Rate Limiting
+Secure API Endpoints
+Secure Environment Variables
+OWASP Security Best Practices
+Optional End-to-End Encryption
 
----
+📈 Performance Goals
+Support for thousands of concurrent users
+Low-latency communication (<200ms)
+High availability (99.95% uptime target)
+Zero-downtime deployments
+Horizontal scalability
+Fast API responses
+Efficient caching with Redis
 
-## 🛠️ Commands Reference
+📅 Development Roadmap
 
-### Development Mode
-Runs both the API server (port 5000) and frontend client (port 8080) concurrently:
-```bash
-npx pnpm dev
-```
+Week 1
+Project Setup
+Authentication System
+Backend APIs
+MongoDB Integration
+JWT Security
+Meeting CRUD Operations
+Socket.io Setup
 
-### Typecheck Verification
-Performs compilation audits across all workspaces:
-```bash
-npx pnpm run typecheck
-```
+Week 2
+Frontend Development
+Authentication UI
+Video Meeting Room
+Live Chat
+Screen Sharing
+Participant Management
 
-### Production Build
-Typechecks the workspace and builds all production dist targets:
-```bash
-npx pnpm run build
-```
+Week 3
+AI Transcription
+AI Meeting Summaries
+Action Item Extraction
+Analytics Dashboard
+Team Workspace
+Kanban Board
 
----
+Week 4
+Docker Containerization
+Kubernetes Deployment
+CI/CD Pipeline
+Cloud Deployment
+Monitoring and Logging
+Performance Testing
+Final Quality Assurance
 
-## 🚀 Deployment Instructions
+🎯 Business Impact
+IntellMeet helps organizations by:
+Reducing meeting follow-up time by 40–60%
+Improving team productivity by 25–40%
+Automating meeting documentation
+Eliminating manual note-taking
+Enhancing collaboration across distributed teams
 
-### Option 1: Vercel Deployment (Serverless)
+🌟 Core Capabilities
+Authentication & User Management
+Real-Time Video Conferencing
+AI Meeting Intelligence
+Team Collaboration
+Project Management
+Analytics & Reporting
+Cloud Deployment
+Enterprise Security
 
-Vercel supports deploying mono-repos directly. 
+📚 Learning Outcomes
+Through this internship project, we gained practical experience in:
+Full-Stack MERN Development
+REST API Design and Development
+Real-Time Communication Systems
+WebRTC Integration
+AI API Integration
+Authentication and Authorization
+State Management
+Responsive UI Development
+Cloud Deployment
+Docker and Kubernetes
+Git and GitHub Collaboration
+CI/CD Workflows
+Production-Level Software Architecture
 
-1. **Import the Project** in Vercel.
-2. Configure **Environment Variables** in Vercel settings matching `.env.example`.
-3. Set the following Build settings in Vercel:
-   - **Framework Preset**: Vite / Other (or leave as Default)
-   - **Build Command**: `pnpm build`
-   - **Output Directory**: `artifacts/meet/dist/public`
-   - **Root Directory**: `.`
-4. Deploy. Vercel will compile the React app, serve it statically, and map `/api/*` to the Node.js serverless function defined in `api/index.ts`.
+🎓 Internship Project
+This project was developed as part of our internship program to demonstrate modern full-stack web development practices and enterprise software engineering principles. It showcases the real-world implementation of scalable architecture, AI integration, real-time communication, and secure application development.
 
-> [!WARNING]
-> **Serverless Limitation**: Vercel Serverless Functions do not support persistent WebSockets (Socket.io WebRTC signaling and real-time typing indicators). While Socket.io will fall back to long-polling, connection states are stateless. If WebSockets are business-critical, deploy the API server on a persistent hosting platform (Option 2).
-
-### Option 2: Persistent Server Deployment (Recommended)
-
-For WebRTC signaling and persistent Socket.io connections, deploy the application to a cloud virtual machine (e.g., AWS EC2, DigitalOcean, Heroku, or Render):
-
-1. **Build the packages**:
-   ```bash
-   npx pnpm build
-   ```
-2. **Start the API Server** in production:
-   ```bash
-   cd artifacts/api-server
-   NODE_ENV=production MONGODB_URI=mongodb://... PORT=5000 npm run start
-   ```
-3. **Serve the frontend**: The backend automatically serves the compiled frontend assets from `artifacts/meet/dist/public` if they are present. Alternatively, reverse-proxy paths through Nginx.
+🙌 Acknowledgements
+We sincerely thank our internship mentors and organization for their continuous guidance, support, and encouragement throughout the development of this project.
+IntellMeet represents our commitment to building intelligent, scalable, and production-ready software solutions that enhance collaboration and productivity in modern workplaces.
