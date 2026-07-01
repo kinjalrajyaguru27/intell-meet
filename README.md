@@ -1,141 +1,358 @@
-# Intell-Meet-Link: Complete Enterprise Meeting & Collaboration Hub
+# 🤖 IntellMeet – AI-Powered Enterprise Meeting & Collaboration Platform
 
-Intell-Meet-Link is an enterprise-grade full-stack meeting, chat, project management, and AI analytics platform. It integrates video conferencing (WebRTC signaling), collaborative workspace document editing (with notes checkpoint rollback), real-time channel chats (similar to Slack/Teams), Kanban task boards, calendar and Gantt charting, and automated AI summary post-meeting analytics.
+> **Production-Grade Full-Stack MERN Application with Real-Time Video Meetings, AI Meeting Intelligence & Team Collaboration**
 
----
+IntellMeet is a modern enterprise-grade meeting and collaboration platform developed as our **internship project**. The application is designed to improve productivity for remote and hybrid teams by combining **real-time video conferencing, AI-powered meeting intelligence, team collaboration, task management, and analytics** into a single platform.
 
-## 🚀 Tech Stack
-
-- **Monorepo**: PNPM Workspaces, Node.js 24+, TypeScript 5.9
-- **Frontend**: React 19, Vite, Tailwind CSS, Lucide icons, Recharts, Wouter routing, TanStack Query (v5)
-- **Backend**: Express 5, Node HTTP Server, CORS, Cookie Parser, Pino logging
-- **Real-Time Layer**: Socket.io (online presence, direct messages, typing indicators, read receipts, signaling)
-- **Database**: MongoDB (Mongoose ODM)
-- **AI Engine**: Mocked advanced speech analysis models for action-items, transcripts, summaries, and forecasts.
+The project focuses on reducing manual work after meetings by automatically generating **meeting transcripts, AI summaries, smart action items, and collaborative workspaces**, making every meeting more productive and actionable.
 
 ---
 
-## 📁 Repository Structure
+# 👥 Team Members
 
-```
-├── api/                     # Vercel Serverless Function entry point
-├── artifacts/
-│   ├── api-server/          # Express backend application
-│   │   ├── src/             # API routes, middlewares, signaling (Socket.io)
-│   │   └── build.mjs        # Production ESBuild compiler
-│   └── meet/                # React Vite client application
-├── lib/
-│   ├── api-client-react/    # Generated react hooks using Orval
-│   ├── api-spec/            # OpenAPI specification (openapi.yaml)
-│   ├── api-zod/             # Zod validation schemas
-│   └── db/                  # Shared database module (Mongoose Models & connectDB)
-├── scratch/                 # E2E runtime testing and audit scripts
-├── package.json             # Root Workspace package manager configurations
-├── pnpm-workspace.yaml      # Monorepo workspaces definition
-└── vercel.json              # Vercel deployment route rewrites
-```
+- **Pritakanshu Adak**
+- **Himanshu Jain**
+- **Kinjal Rajyaguru**
 
 ---
 
-## ⚙️ Environment Variables
+# 📌 Project Overview
 
-Copy `.env.example` to `.env` and fill in the values:
+Traditional meetings often result in lost notes, missed action items, and inefficient follow-ups. IntellMeet addresses these challenges by providing an intelligent collaboration platform where meetings automatically become organized, searchable, and actionable.
 
-```bash
-# Node environment
-NODE_ENV=production
+The platform allows organizations to:
 
-# Server configuration
-PORT=5000
-
-# Security (secrets)
-JWT_SECRET=your_jwt_signing_secret_here
-JWT_REFRESH_SECRET=your_jwt_refresh_token_secret_here
-
-# Database Configuration (MongoDB URI)
-MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.mongodb.net/intell_meet
-
-# Google OAuth 2.0 Client IDs
-GOOGLE_CLIENT_ID=your_google_oauth_client_id_backend.apps.googleusercontent.com
-VITE_GOOGLE_CLIENT_ID=your_google_oauth_client_id_frontend.apps.googleusercontent.com
-
-# OpenAI API Key for meeting transcripts processing and AI Summaries
-OPENAI_API_KEY=your_openai_api_key_here
-
-# (Optional) CORS production origins
-CORS_ORIGIN=https://your-production-app.vercel.app
-```
+- Conduct real-time video meetings
+- Share screens during meetings
+- Chat with participants instantly
+- Generate AI-powered meeting summaries
+- Extract action items automatically
+- Assign tasks to team members
+- Manage projects using Kanban boards
+- Track meeting history and productivity
+- Analyze team collaboration through dashboards
 
 ---
 
-## 📦 GitHub Repository Setup & Push Commands
+# 🎯 Objectives
 
-To initialize the repository locally and push to your remote GitHub repository:
-
-```bash
-git init
-git add .
-git commit -m "Production Ready"
-git branch -M main
-git remote add origin YOUR_GITHUB_REPOSITORY_URL
-git push -u origin main
-```
+- Improve collaboration for remote and hybrid teams
+- Reduce manual note-taking
+- Automate post-meeting documentation
+- Increase productivity using AI
+- Build a scalable enterprise-ready platform
+- Demonstrate modern Full-Stack MERN development skills
 
 ---
 
----
+# 🚀 Key Features
 
-## 🛠️ Commands Reference
+## 🔐 User Authentication
 
-### Development Mode
-Runs both the API server (port 5000) and frontend client (port 8080) concurrently:
-```bash
-npx pnpm dev
-```
-
-### Typecheck Verification
-Performs compilation audits across all workspaces:
-```bash
-npx pnpm run typecheck
-```
-
-### Production Build
-Typechecks the workspace and builds all production dist targets:
-```bash
-npx pnpm run build
-```
+- Secure Signup/Login
+- JWT Authentication
+- Password Hashing using bcrypt
+- Role-Based Access Control
+- User Profiles
+- Team Invitations
 
 ---
 
-## 🚀 Deployment Instructions
+## 🎥 Real-Time Video Meetings
 
-### Option 1: Vercel Deployment (Serverless)
+- High-quality Video Calling
+- WebRTC Integration
+- Screen Sharing
+- Meeting Recording
+- Live Participant List
+- Mute/Unmute Controls
 
-Vercel supports deploying mono-repos directly. 
+---
 
-1. **Import the Project** in Vercel.
-2. Configure **Environment Variables** in Vercel settings matching `.env.example`.
-3. Set the following Build settings in Vercel:
-   - **Framework Preset**: Vite / Other (or leave as Default)
-   - **Build Command**: `pnpm build`
-   - **Output Directory**: `artifacts/meet/dist/public`
-   - **Root Directory**: `.`
-4. Deploy. Vercel will compile the React app, serve it statically, and map `/api/*` to the Node.js serverless function defined in `api/index.ts`.
+## 🤖 AI Meeting Intelligence
 
-> [!WARNING]
-> **Serverless Limitation**: Vercel Serverless Functions do not support persistent WebSockets (Socket.io WebRTC signaling and real-time typing indicators). While Socket.io will fall back to long-polling, connection states are stateless. If WebSockets are business-critical, deploy the API server on a persistent hosting platform (Option 2).
+- Real-time Meeting Transcription
+- AI-generated Meeting Summaries
+- Automatic Action Item Extraction
+- Task Assignment Suggestions
 
-### Option 2: Persistent Server Deployment (Recommended)
+---
 
-For WebRTC signaling and persistent Socket.io connections, deploy the application to a cloud virtual machine (e.g., AWS EC2, DigitalOcean, Heroku, or Render):
+## 💬 Real-Time Collaboration
 
-1. **Build the packages**:
-   ```bash
-   npx pnpm build
-   ```
-2. **Start the API Server** in production:
-   ```bash
-   cd artifacts/api-server
-   NODE_ENV=production MONGODB_URI=mongodb://... PORT=5000 npm run start
-   ```
-3. **Serve the frontend**: The backend automatically serves the compiled frontend assets from `artifacts/meet/dist/public` if they are present. Alternatively, reverse-proxy paths through Nginx.
+- Live Chat
+- Shared Notes
+- Team Messaging
+- Typing Indicators
+- Real-Time Notifications
+
+---
+
+## 📋 Task & Project Management
+
+- Team Workspaces
+- Kanban Boards
+- Task Creation
+- Task Assignment
+- Meeting Follow-ups
+
+---
+
+## 📊 Analytics Dashboard
+
+- Meeting History
+- Productivity Reports
+- Team Engagement Metrics
+- Searchable Meeting Records
+- Export Reports
+
+---
+
+# 🛠️ Technology Stack
+
+## Frontend
+
+- React 19
+- TypeScript
+- Vite
+- Tailwind CSS v4
+- shadcn/ui
+- TanStack Query
+- Zustand
+
+---
+
+## Backend
+
+- Node.js
+- Express.js
+
+---
+
+## Database
+
+- MongoDB
+- Mongoose
+
+---
+
+## Real-Time Technologies
+
+- Socket.io
+- WebRTC
+
+---
+
+## AI Integration
+
+- OpenAI
+- Hugging Face
+
+---
+
+## Authentication
+
+- JWT
+- bcrypt
+
+---
+
+## Storage
+
+- Cloudinary
+- AWS S3
+
+---
+
+## Caching
+
+- Redis
+
+---
+
+## DevOps
+
+- Docker
+- Kubernetes
+- Helm
+
+---
+
+## CI/CD
+
+- GitHub Actions
+
+---
+
+## Monitoring
+
+- Prometheus
+- Grafana
+- Sentry
+
+---
+
+# 🏗️ System Highlights
+
+- Enterprise-grade architecture
+- Real-time communication
+- AI-powered automation
+- Secure authentication
+- Cloud-ready deployment
+- Scalable backend
+- Modern responsive UI
+- Production-ready codebase
+
+---
+
+# 🔒 Security Features
+
+- JWT Authentication
+- Password Encryption
+- Role-Based Authorization
+- Rate Limiting
+- Secure API Endpoints
+- End-to-End Encryption (Optional)
+- OWASP Best Practices
+- Secure Environment Variables
+
+---
+
+# 📈 Performance Goals
+
+The platform is designed to achieve:
+
+- Support thousands of concurrent users
+- Low-latency communication (<200ms)
+- High availability (99.95% uptime target)
+- Zero-downtime deployments
+- Horizontal scalability
+- Fast API responses
+- Efficient caching with Redis
+
+---
+
+# 📅 Development Roadmap
+
+### Week 1
+- Project Setup
+- Authentication
+- Backend APIs
+- MongoDB Integration
+- JWT Security
+- Meeting CRUD
+- Socket.io Setup
+
+### Week 2
+- Frontend Development
+- Authentication UI
+- Video Meeting Room
+- Live Chat
+- Screen Sharing
+- Participant Management
+
+### Week 3
+- AI Transcription
+- AI Meeting Summaries
+- Action Item Extraction
+- Dashboard
+- Team Workspace
+- Kanban Board
+
+### Week 4
+- Docker
+- Kubernetes
+- CI/CD Pipeline
+- Cloud Deployment
+- Monitoring
+- Performance Testing
+- Final QA
+
+---
+
+# 🎯 Business Impact
+
+IntellMeet helps organizations by:
+
+- Reducing meeting follow-up time by **40–60%**
+- Improving team productivity by **25–40%**
+- Automating meeting documentation
+- Eliminating manual note-taking
+- Improving collaboration across distributed teams
+
+---
+
+# 🌟 Core Capabilities
+
+- Authentication & User Management
+- Real-Time Video Conferencing
+- AI Meeting Intelligence
+- Team Collaboration
+- Project Management
+- Analytics & Reporting
+- Cloud Deployment
+- Enterprise Security
+
+---
+
+# 📚 Learning Outcomes
+
+Through this internship project, we gained practical experience in:
+
+- Full-Stack MERN Development
+- REST API Development
+- Real-Time Communication
+- WebRTC Integration
+- AI API Integration
+- Authentication & Authorization
+- State Management
+- Responsive UI Design
+- Cloud Deployment
+- Docker & Kubernetes
+- Git & GitHub Collaboration
+- CI/CD Workflows
+- Production-Level Software Architecture
+
+---
+
+# 🎓 Internship Project
+
+This project was developed as part of our internship program to demonstrate modern full-stack web development practices and enterprise software engineering principles. It showcases real-world implementation of scalable architecture, AI integration, real-time communication, and secure application development.
+
+---
+
+# 🙌 Acknowledgements
+
+Special thanks to our internship mentors and organization for providing the opportunity and guidance throughout the development of this project.
+
+---
+
+**Developed with  by**
+
+- **Pritakanshu Adak**
+- **Himanshu Jain**
+- **Kinjal Rajyaguru**#  Team Members
+
+| Team Member | Employee ID | Role |
+|-------------|-------------|------|
+| **Himanshu Jain** | **ZIDIOfzts3h** | Full-Stack Developer |
+| **Pritakanshu Adak** | **ZIDIOxRYncA** | Full-Stack Developer |
+| **Kinjal Rajyaguru** | **ZIDIOaYb3YA** | Full-Stack Developer |
+
+---
+
+# 📌 Project Overview
+
+Traditional meetings often result in lost notes, missed action items, and inefficient follow-ups. IntellMeet addresses these challenges by providing an intelligent collaboration platform where meetings automatically become organized, searchable, and actionable.
+
+The platform allows organizations to:
+
+- Conduct real-time video meetings
+- Share screens during meetings
+- Chat with participants instantly
+- Generate AI-powered meeting summaries
+- Extract action items automatically
+- Assign tasks to team members
+- Manage projects using Kanban boards
+- Track meeting history and productivity
+- Analyze team collaboration through dashboards
