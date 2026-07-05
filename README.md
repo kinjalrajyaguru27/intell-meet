@@ -19,6 +19,7 @@ The primary goal of IntellMeet is to eliminate the inefficiencies of traditional
 | Kinjal Rajyaguru | ZIDIOaYb3YA |
 | Himanshu Jain | ZIDIOfzts3h |
 | Pritakanshu Adak | ZIDIOxRYncA |
+| Snehal Terdalkar | ZIDIOtBSe2a |
 
 ---
 
@@ -165,6 +166,19 @@ The primary goal of IntellMeet is to eliminate the inefficiencies of traditional
 ## ⚙️ Installation & Setup
 
 To run IntellMeet locally, clone the repository and install the required dependencies for both frontend and backend modules. Configure the necessary environment variables including database connection, authentication keys, and AI service credentials before starting the application. Once the setup is complete, run the frontend and backend servers to access the platform locally. This setup enables developers to test features, make improvements, and contribute efficiently to the project.
+
+---
+
+## 📂 Project Structure
+
+The project follows a modular full-stack architecture:
+
+- client/ - Contains the React frontend application
+- server/ - Contains backend APIs and business logic
+- models/ - Defines MongoDB database schemas
+- routes/ - Handles API endpoints
+- controllers/ - Manages request and response logic
+- config/ - Stores application configuration files
 
 ---
 
