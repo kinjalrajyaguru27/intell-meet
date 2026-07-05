@@ -162,6 +162,12 @@ The primary goal of IntellMeet is to eliminate the inefficiencies of traditional
 
 ---
 
+## ⚙️ Installation & Setup
+
+To run IntellMeet locally, clone the repository and install the required dependencies for both frontend and backend modules. Configure the necessary environment variables including database connection, authentication keys, and AI service credentials before starting the application. Once the setup is complete, run the frontend and backend servers to access the platform locally. This setup enables developers to test features, make improvements, and contribute efficiently to the project.
+
+---
+
 ## 📅 Development Roadmap
 
 ### Week 1
