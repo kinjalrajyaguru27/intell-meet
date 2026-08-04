@@ -1,5 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
+import dns from "node:dns";
+
+try {
+  dns.setDefaultResultOrder("ipv4first");
+} catch (e) {}
 
 // Load environment variables from .env file if it exists (checks multiple fallback locations)
 try {

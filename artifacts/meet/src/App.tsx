@@ -5,7 +5,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
-import LandingPage from "@/pages/LandingPage";
 import Room from "@/pages/Room";
 import Dashboard from "@/pages/Dashboard";
 import MeetingDetail from "@/pages/MeetingDetail";
@@ -88,7 +87,7 @@ function HomeWrapper() {
     );
   }
 
-  return <LandingPage />;
+  return <Redirect to="/login" />;
 }
 
 function Router() {

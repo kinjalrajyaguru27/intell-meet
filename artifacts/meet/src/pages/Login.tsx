@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Video, KeyRound, Mail, LogIn, Eye, EyeOff, Loader2 } from "lucide-react";
+import { GoogleLoginButton } from "@/components/GoogleLoginButton";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -157,6 +158,17 @@ export default function Login() {
               {loginMutation.isPending ? "Signing In..." : "Sign In"}
             </Button>
           </form>
+
+          <div className="relative my-5">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-zinc-200 dark:border-white/10" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-white dark:bg-[#121214] px-2 text-muted-foreground font-medium">Or continue with</span>
+            </div>
+          </div>
+
+          <GoogleLoginButton mode="login" />
         </CardContent>
 
         <CardFooter className="flex flex-col items-center justify-center pb-8 pt-2">

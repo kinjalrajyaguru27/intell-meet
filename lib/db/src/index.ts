@@ -1,4 +1,10 @@
 import mongoose from "mongoose";
+import dns from "node:dns";
+
+// Fix Windows Node DNS SRV lookup timeouts for MongoDB Atlas
+try {
+  dns.setDefaultResultOrder("ipv4first");
+} catch (e) {}
 
 // Cached connection for serverless environment
 let cached = (global as any).mongoose;
@@ -8,7 +14,8 @@ if (!cached) {
 }
 
 export async function connectDB() {
-  const uri = process.env.MONGODB_URI || "mongodb://rajyagurukinjal27_db_user:kinjal276@ac-47exnzh-shard-00-00.ebbde1m.mongodb.net:27017,ac-47exnzh-shard-00-01.ebbde1m.mongodb.net:27017,ac-47exnzh-shard-00-02.ebbde1m.mongodb.net:27017/intell_meet?ssl=true&authSource=admin&retryWrites=true";
+  const defaultUri = "mongodb://rajyagurukinjal27_db_user:kinjal276@ac-47exnzh-shard-00-00.ebbde1m.mongodb.net:27017,ac-47exnzh-shard-00-01.ebbde1m.mongodb.net:27017,ac-47exnzh-shard-00-02.ebbde1m.mongodb.net:27017/intell_meet?ssl=true&authSource=admin&retryWrites=true";
+  const uri = process.env.MONGODB_URI && !process.env.MONGODB_URI.includes("querySrv") ? process.env.MONGODB_URI : defaultUri;
 
   if (cached.conn) {
     return cached.conn;

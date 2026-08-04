@@ -15,6 +15,7 @@ import {
 } from "@workspace/api-zod";
 import { requireAuth, type AuthenticatedRequest } from "../middlewares/auth";
 import { rateLimiter } from "../middlewares/rateLimiter";
+import { sendOtpEmail } from "../lib/mailer";
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || "intell_meet_jwt_secret_key";
@@ -255,60 +256,61 @@ router.post("/logout", async (req, res) => {
   res.json({ message: "Logged out successfully" });
 });
 
-// POST /api/auth/forgot-password
-router.post("/forgot-password", rateLimiter(15 * 60 * 1000, 5), async (req, res) => {
-  const parsed = ForgotPasswordBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: "Invalid forgot password params" });
+// POST /api/auth/forgot-password - Send 6-Digit OTP to Email
+router.post("/forgot-password", rateLimiter(15 * 60 * 1000, 10), async (req, res) => {
+  const { email } = req.body;
+  if (!email || typeof email !== "string") {
+    res.status(400).json({ error: "Please enter a valid email address." });
     return;
   }
-
-  const { email } = parsed.data;
 
   try {
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
-      // Security measure: Do not disclose whether email exists or not
-      res.json({ message: "If that email address exists, a password reset link has been generated.", resetLink: "" });
+      res.status(404).json({ error: "No account found with this email address." });
       return;
     }
 
+    // Generate 6-digit numeric OTP valid for 10 minutes
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const resetToken = crypto.randomBytes(32).toString("hex");
+
+    user.resetPasswordOtp = otp;
+    user.resetPasswordOtpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
     user.resetPasswordToken = resetToken;
-    user.resetPasswordExpires = new Date(Date.now() + 3600000); // 1 hour
+    user.resetPasswordExpires = new Date(Date.now() + 3600000); // 1 hour fallback
     await user.save();
 
-    const resetLink = `${req.protocol}://${req.get("host")?.replace("5000", "5173")}/reset-password?token=${resetToken}`;
+    const resetLink = `${req.protocol}://${req.get("host")?.replace("5000", "5173")}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
 
-    // Mock Mail Transport logging to console
     console.log(`
-=========================================
-[SMTP MOCK TRANSPORT] Password Reset Mail
-To: ${user.email}
-Subject: Reset your Intell Meet password
-Reset Link: ${resetLink}
-=========================================
+=================================================
+🔑 GENERATED OTP FOR ${user.email}: ${otp}
+=================================================
     `);
 
+    // Dispatch email asynchronously so HTTP response is instant
+    sendOtpEmail({ to: user.email, otp }).catch((err) => {
+      console.error("[MAILER ERROR] Failed background mail dispatch:", err);
+    });
+
     res.json({
-      message: "If that email address exists, a password reset link has been generated.",
-      resetLink, // Expose in JSON response during dev/testing for easy automation
+      message: `OTP code successfully sent to ${email}.`,
     });
   } catch (error) {
-    req.log.error({ error }, "Error in forgot password request");
+    req.log.error({ error }, "Error in forgot password OTP request");
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// POST /api/auth/reset-password
-router.post("/reset-password", rateLimiter(15 * 60 * 1000, 5), async (req, res) => {
-  const parsed = ResetPasswordBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: "Invalid reset parameters" });
+// POST /api/auth/reset-password - Verify OTP and update password
+router.post("/reset-password", rateLimiter(15 * 60 * 1000, 10), async (req, res) => {
+  const { email, otp, token, password } = req.body;
+
+  if (!password) {
+    res.status(400).json({ error: "Password is required." });
     return;
   }
-
-  const { token, password } = parsed.data;
 
   const passwordError = validatePasswordStrength(password);
   if (passwordError) {
@@ -317,20 +319,42 @@ router.post("/reset-password", rateLimiter(15 * 60 * 1000, 5), async (req, res) 
   }
 
   try {
-    const user = await User.findOne({
-      resetPasswordToken: token,
-      resetPasswordExpires: { $gt: new Date() },
-    });
+    let user = null;
 
-    if (!user) {
-      res.status(400).json({ error: "Password reset token is invalid or has expired." });
+    if (otp && email) {
+      // Find user matching email & valid non-expired OTP
+      user = await User.findOne({
+        email: email.toLowerCase(),
+        resetPasswordOtp: otp,
+        resetPasswordOtpExpires: { $gt: new Date() },
+      });
+
+      if (!user) {
+        res.status(400).json({ error: "Invalid or expired OTP code. Please request a new OTP." });
+        return;
+      }
+    } else if (token) {
+      // Fallback: Find user matching token
+      user = await User.findOne({
+        resetPasswordToken: token,
+        resetPasswordExpires: { $gt: new Date() },
+      });
+
+      if (!user) {
+        res.status(400).json({ error: "Password reset token is invalid or has expired." });
+        return;
+      }
+    } else {
+      res.status(400).json({ error: "Please provide either OTP & Email or Reset Token." });
       return;
     }
 
     user.password = await bcrypt.hash(password, 10);
+    user.resetPasswordOtp = undefined;
+    user.resetPasswordOtpExpires = undefined;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
-    user.refreshToken = undefined; // Force logout other sessions
+    user.refreshToken = undefined; // Force logout other active sessions
     await user.save();
 
     res.json({ message: "Password has been reset successfully." });
@@ -466,7 +490,9 @@ router.post("/google", rateLimiter(15 * 60 * 1000, 30), async (req, res) => {
       sub: string;
     };
 
-    const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+    const GOOGLE_CLIENT_ID =
+      process.env.GOOGLE_CLIENT_ID ||
+      "9261913779-0o8efuvcm121sqc6d3psfkrcg17mggbh.apps.googleusercontent.com";
     if (!GOOGLE_CLIENT_ID) {
       req.log.error("GOOGLE_CLIENT_ID environment variable is missing");
       res.status(500).json({ error: "Google Authentication is not configured on this server" });

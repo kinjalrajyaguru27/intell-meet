@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Video, KeyRound, Mail, UserPlus, Eye, EyeOff, ShieldCheck, Check, X, Loader2 } from "lucide-react";
+import { GoogleLoginButton } from "@/components/GoogleLoginButton";
 
 export default function Register() {
   const [, setLocation] = useLocation();
@@ -287,6 +288,17 @@ export default function Register() {
               {registerMutation.isPending ? "Creating Account..." : "Create Account"}
             </Button>
           </form>
+
+          <div className="relative my-5">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-zinc-200 dark:border-white/10" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-white dark:bg-[#121214] px-2 text-muted-foreground font-medium">Or continue with</span>
+            </div>
+          </div>
+
+          <GoogleLoginButton mode="register" />
         </CardContent>
 
         <CardFooter className="flex flex-col items-center justify-center pb-8 pt-2">

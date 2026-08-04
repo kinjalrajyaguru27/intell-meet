@@ -21,6 +21,8 @@ export interface IUser extends Document {
   refreshToken?: string;
   resetPasswordToken?: string;
   resetPasswordExpires?: Date;
+  resetPasswordOtp?: string;
+  resetPasswordOtpExpires?: Date;
   authProvider: "local" | "google";
   googleId?: string;
   profilePicture?: string;
@@ -49,6 +51,8 @@ const UserSchema: Schema = new Schema({
   refreshToken: { type: String },
   resetPasswordToken: { type: String },
   resetPasswordExpires: { type: Date },
+  resetPasswordOtp: { type: String },
+  resetPasswordOtpExpires: { type: Date },
   authProvider: { type: String, enum: ["local", "google"], default: "local", required: true },
   googleId: { type: String, index: true },
   profilePicture: { type: String, default: "" },
