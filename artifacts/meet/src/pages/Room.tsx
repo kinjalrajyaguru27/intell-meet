@@ -26,6 +26,7 @@ import {
   Shield, ShieldAlert, Key, HelpCircle, Hand, Trash2, ShieldOff,
   Brain, Sparkles,
 } from "lucide-react";
+import CollaborativeNotesPanel from "@/components/CollaborativeNotesPanel";
 import { useToast } from "@/hooks/use-toast";
 import {
   DropdownMenu,
@@ -1321,21 +1322,21 @@ export default function Room() {
                 </div>
               </div>
             ) : sidebarTab === "notes" ? (
-              <div className="flex-1 flex flex-col p-4 space-y-3 overflow-hidden">
-                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                  <FileText className="w-4 h-4" />
-                  Collaborative Notes
-                </div>
-                <textarea
-                  value={sharedNotes}
-                  onChange={(e) => handleNotesChange(e.target.value)}
-                  placeholder="Collaborative notes go here... Edits are synced in real-time."
-                  className="flex-1 bg-muted/40 border border-border/60 rounded-xl p-3 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground text-foreground"
-                />
-                <p className="text-[10px] text-muted-foreground text-center animate-pulse">
-                  Auto-saves to database every 2 seconds.
-                </p>
-              </div>
+              <CollaborativeNotesPanel
+                notes={sharedNotes}
+                onChange={handleNotesChange}
+                onSaveNow={() => {
+                  if (activeMeetingId) {
+                    upsertNotesMutation.mutate({ meetingId: activeMeetingId, data: { content: sharedNotes } });
+                    toast({ title: "Notes Saved", description: "All meeting notes have been saved to the database." });
+                  }
+                }}
+                isSaving={upsertNotesMutation.isPending}
+                meetingTitle={activeMeeting?.title || activeMeeting?.name || "Meeting Notes"}
+                activeMeetingId={activeMeetingId}
+                socket={socket}
+                userRole={isHost ? "host" : "participant"}
+              />
             ) : sidebarTab === "tasks" ? (
               <div className="flex-1 flex flex-col overflow-hidden">
                 {/* Task form */}
