@@ -61,13 +61,7 @@ export default function Home() {
   const createMeetingMutation = useCreateMeeting();
   const { data: meetings, isLoading, refetch: refetchMeetings } = useListMeetings();
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      setLocation("/auth");
-    }
-  }, [isAuthenticated, setLocation]);
 
-  if (!isAuthenticated || !user) return null;
 
   const joinForm = useForm({
     defaultValues: {
@@ -76,6 +70,10 @@ export default function Home() {
   });
 
   const handleCreateRoom = () => {
+    if (!isAuthenticated) {
+      setLocation("/login");
+      return;
+    }
     createRoom.mutate(
       { data: { name: "Instant Meeting" } },
       {
@@ -88,6 +86,10 @@ export default function Home() {
   };
 
   const handleScheduleMeeting = async () => {
+    if (!isAuthenticated) {
+      setLocation("/login");
+      return;
+    }
     if (!scheduleTitle.trim() || !scheduleTime) {
       toast({ title: "Validation Error", description: "Please enter a meeting title and date/time.", variant: "destructive" });
       return;
