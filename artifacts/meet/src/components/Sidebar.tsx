@@ -99,68 +99,68 @@ export default function Sidebar({ isOpen, setIsOpen, isCollapsed }: SidebarProps
     badge?: number;
     isHeader?: boolean;
   }> = [
-    {
-      key: "dashboard",
-      title: "Dashboard",
-      icon: LayoutGrid,
-      path: "/dashboard",
-    },
-    {
-      key: "meetings",
-      title: "Meetings",
-      icon: Video,
-      path: "/",
-    },
-    {
-      key: "ai",
-      title: "AI Insights",
-      icon: Brain,
-      path: "/ai-insights",
-    },
-    {
-      key: "collaboration",
-      title: "Collaboration",
-      icon: MessageSquare,
-      path: "/collaboration",
-    },
-    {
-      key: "post-meeting",
-      title: "Post-Meeting Dashboard",
-      icon: FileText,
-      path: "/post-meeting",
-    },
-    {
-      key: "team",
-      title: "Team Management",
-      icon: Users,
-      path: "/team-management",
-    },
-    {
-      key: "kanban",
-      title: "Project Board",
-      icon: FolderKanban,
-      path: "/kanban",
-    },
-    {
-      key: "analytics",
-      title: "Analytics",
-      icon: BarChart3,
-      path: "/analytics",
-    },
-    {
-      key: "todo",
-      title: "Todo Manager",
-      icon: CheckSquare,
-      path: "/todo-manager",
-    },
-    {
-      key: "notifications",
-      title: "Notifications",
-      icon: Bell,
-      path: "/notifications",
-      badge: unreadNotifications,
-    },
-  ];
+      {
+        key: "dashboard",
+        title: "Dashboard",
+        icon: LayoutGrid,
+        path: "/dashboard",
+      },
+      {
+        key: "meetings",
+        title: "Meetings",
+        icon: Video,
+        path: "/",
+      },
+      {
+        key: "ai",
+        title: "AI Insights",
+        icon: Brain,
+        path: "/ai-insights",
+      },
+      {
+        key: "collaboration",
+        title: "Collaboration",
+        icon: MessageSquare,
+        path: "/collaboration",
+      },
+      {
+        key: "post-meeting",
+        title: "Post-Meeting Dashboard",
+        icon: FileText,
+        path: "/post-meeting",
+      },
+      {
+        key: "team",
+        title: "Team Management",
+        icon: Users,
+        path: "/team-management",
+      },
+      {
+        key: "kanban",
+        title: "Project Board",
+        icon: FolderKanban,
+        path: "/kanban",
+      },
+      {
+        key: "analytics",
+        title: "Analytics",
+        icon: BarChart3,
+        path: "/analytics",
+      },
+      {
+        key: "todo",
+        title: "Todo Manager",
+        icon: CheckSquare,
+        path: "/todo-manager",
+      },
+      {
+        key: "notifications",
+        title: "Notifications",
+        icon: Bell,
+        path: "/notifications",
+        badge: unreadNotifications,
+      },
+    ];
 
   const bottomItems = [
     {
@@ -225,8 +225,8 @@ export default function Sidebar({ isOpen, setIsOpen, isCollapsed }: SidebarProps
             if (item.isHeader) {
               if (isCollapsed) return null;
               return (
-                <div 
-                  key={item.key} 
+                <div
+                  key={item.key}
                   className="px-3 pt-3.5 pb-1 text-[10px] font-bold text-zinc-500 uppercase tracking-wider select-none text-left"
                 >
                   {item.title}
@@ -243,8 +243,8 @@ export default function Sidebar({ isOpen, setIsOpen, isCollapsed }: SidebarProps
                 onClick={() => handleNavigate(item.path!)}
                 className={`
                   w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-all duration-200 relative
-                  ${active 
-                    ? "bg-primary/10 text-primary font-bold" 
+                  ${active
+                    ? "bg-primary/10 text-primary font-bold"
                     : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-200/50 dark:hover:bg-white/5"}
                 `}
               >
@@ -280,8 +280,8 @@ export default function Sidebar({ isOpen, setIsOpen, isCollapsed }: SidebarProps
                 onClick={() => handleNavigate(item.path)}
                 className={`
                   w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-all duration-200 relative
-                  ${active 
-                    ? "bg-primary/10 text-primary font-bold" 
+                  ${active
+                    ? "bg-primary/10 text-primary font-bold"
                     : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-200/50 dark:hover:bg-white/5"}
                 `}
               >
@@ -317,9 +317,8 @@ export default function Sidebar({ isOpen, setIsOpen, isCollapsed }: SidebarProps
                 size="icon"
                 variant="ghost"
                 onClick={() => {
-                  sessionStorage.setItem("intell_meet_home_landing", "true");
                   logout();
-                  setLocation("/");
+                  setLocation("/login");
                 }}
                 className="w-7 h-7 hover:bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 rounded-lg shrink-0"
                 title="Logout"

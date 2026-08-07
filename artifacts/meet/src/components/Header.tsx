@@ -67,33 +67,30 @@ export default function Header() {
       <nav className="hidden md:flex items-center space-x-1">
         <button
           onClick={() => setLocation("/dashboard")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 ${
-            isActive("/dashboard")
+          className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 ${isActive("/dashboard")
               ? "bg-primary text-primary-foreground shadow-md shadow-primary/15"
               : "text-zinc-650 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
-          }`}
+            }`}
         >
           <LayoutGrid className="w-3.5 h-3.5" />
           Dashboard
         </button>
         <button
           onClick={() => setLocation("/kanban")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 ${
-            isActive("/kanban")
+          className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 ${isActive("/kanban")
               ? "bg-primary text-primary-foreground shadow-md shadow-primary/15"
               : "text-zinc-650 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
-          }`}
+            }`}
         >
           <Settings className="w-3.5 h-3.5" />
           Kanban Board
         </button>
         <button
           onClick={() => setLocation("/analytics")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 ${
-            isActive("/analytics")
+          className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 ${isActive("/analytics")
               ? "bg-primary text-primary-foreground shadow-md shadow-primary/15"
               : "text-zinc-650 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
-          }`}
+            }`}
         >
           <BarChart2 className="w-3.5 h-3.5" />
           Insights
@@ -128,13 +125,12 @@ export default function Header() {
                 </span>
                 <Badge
                   variant="outline"
-                  className={`text-[9px] px-1.5 py-0.5 rounded-full capitalize leading-none font-semibold ${
-                    user.role === "Admin"
+                  className={`text-[9px] px-1.5 py-0.5 rounded-full capitalize leading-none font-semibold ${user.role === "Admin"
                       ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
                       : user.role === "Manager"
-                      ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
-                      : "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20"
-                  }`}
+                        ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
+                        : "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20"
+                    }`}
                 >
                   {user.role === "Member" ? "Team Member" : user.role}
                 </Badge>
@@ -149,27 +145,24 @@ export default function Header() {
             <div className="md:hidden">
               <DropdownMenuItem
                 onClick={() => setLocation("/dashboard")}
-                className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-semibold ${
-                  isActive("/dashboard") ? "text-primary bg-primary/10" : "text-zinc-650 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
-                }`}
+                className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-semibold ${isActive("/dashboard") ? "text-primary bg-primary/10" : "text-zinc-650 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
+                  }`}
               >
                 <LayoutGrid className="w-4 h-4" />
                 Dashboard
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => setLocation("/kanban")}
-                className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-semibold ${
-                  isActive("/kanban") ? "text-primary bg-primary/10" : "text-zinc-650 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
-                }`}
+                className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-semibold ${isActive("/kanban") ? "text-primary bg-primary/10" : "text-zinc-650 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
+                  }`}
               >
                 <Settings className="w-4 h-4" />
                 Kanban Board
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => setLocation("/analytics")}
-                className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-semibold ${
-                  isActive("/analytics") ? "text-primary bg-primary/10" : "text-zinc-650 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
-                }`}
+                className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-semibold ${isActive("/analytics") ? "text-primary bg-primary/10" : "text-zinc-650 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
+                  }`}
               >
                 <BarChart2 className="w-4 h-4" />
                 Insights
@@ -218,9 +211,8 @@ export default function Header() {
 
             <DropdownMenuItem
               onClick={() => {
-                sessionStorage.setItem("intell_meet_home_landing", "true");
                 logout();
-                setLocation("/");
+                setLocation("/login");
               }}
               className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-450 hover:text-rose-700 dark:hover:text-rose-400 hover:bg-rose-500/10 cursor-pointer"
             >

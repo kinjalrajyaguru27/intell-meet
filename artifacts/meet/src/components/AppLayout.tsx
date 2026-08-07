@@ -17,7 +17,7 @@ interface AppLayoutProps {
 export default function AppLayout({ children }: AppLayoutProps) {
   const [location, setLocation] = useLocation();
   const { isAuthenticated, token, user, updateUser } = useAuth();
-  
+
   // Sidebar state settings
   const [isOpen, setIsOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -39,14 +39,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
     }
   }, [token, location]);
 
-  // Redirect if not authenticated (except on public Home page "/")
+  // Redirect if not authenticated
   useEffect(() => {
-    if (!isAuthenticated && location !== "/") {
+    if (!isAuthenticated) {
       setLocation("/login");
     }
-  }, [isAuthenticated, location, setLocation]);
+  }, [isAuthenticated, setLocation]);
 
-  if (!isAuthenticated && location !== "/") return null;
+  if (!isAuthenticated) return null;
 
   const getInitials = (name: string) => {
     if (!name) return "U";
@@ -60,7 +60,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const handleGlobalSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!globalSearch.trim()) return;
-    
+
+    // Command bar search redirects: E.g. search pages or search in dashboards
     if (globalSearch.toLowerCase().includes("kanban") || globalSearch.toLowerCase().includes("task")) {
       setLocation(`/kanban?tab=board&search=${encodeURIComponent(globalSearch)}`);
     } else if (globalSearch.toLowerCase().includes("analytic") || globalSearch.toLowerCase().includes("report")) {
@@ -74,110 +75,72 @@ export default function AppLayout({ children }: AppLayoutProps) {
   return (
     <div className="min-h-screen bg-background text-foreground flex">
       {/* Universal Responsive Sidebar Drawer */}
-      {isAuthenticated && (
-        <Sidebar
-          isOpen={isOpen}
-          setIsOpen={setIsOpen}
-          isCollapsed={isCollapsed}
-          setIsCollapsed={setIsCollapsed}
-        />
-      )}
+      <Sidebar
+        isOpen={isOpen}
+        setIsOpen={setIsOpen}
+        isCollapsed={isCollapsed}
+        setIsCollapsed={setIsCollapsed}
+      />
 
       {/* Primary Layout Viewport Content */}
       <div
-        className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${
-          isAuthenticated ? (isCollapsed ? "md:pl-16" : "md:pl-64") : "pl-0"
-        }`}
+        className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${isCollapsed ? "md:pl-16" : "md:pl-64"
+          }`}
       >
         {/* Top Command and Header Bar */}
         <header className="sticky top-0 z-40 w-full border-b border-border bg-background/85 backdrop-blur-md px-4 py-3 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            {isAuthenticated ? (
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => {
-                  if (window.innerWidth < 768) {
-                    setIsOpen(true);
-                  } else {
-                    setIsCollapsed(!isCollapsed);
-                  }
-                }}
-                className="w-9 h-9 hover:bg-accent text-muted-foreground hover:text-foreground rounded-lg"
-                title="Toggle Sidebar"
-              >
-                <Menu className="w-5 h-5" />
-              </Button>
-            ) : (
-              <div
-                className="flex items-center space-x-2.5 cursor-pointer"
-                onClick={() => setLocation("/")}
-              >
-                <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground shadow-sm">
-                  <Menu className="w-4 h-4" />
-                </div>
-                <span className="font-extrabold text-base tracking-tight text-foreground">
-                  Intell Meet
-                </span>
-              </div>
-            )}
+            {/* Sidebar Toggle (For both mobile drawer and desktop collapse) */}
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => {
+                if (window.innerWidth < 768) {
+                  setIsOpen(true);
+                } else {
+                  setIsCollapsed(!isCollapsed);
+                }
+              }}
+              className="w-9 h-9 hover:bg-accent text-muted-foreground hover:text-foreground rounded-lg"
+              title="Toggle Sidebar"
+            >
+              <Menu className="w-5 h-5" />
+            </Button>
 
             {/* Global Search Command Bar Form */}
-            {isAuthenticated && (
-              <form onSubmit={handleGlobalSearchSubmit} className="hidden sm:flex items-center relative w-64 md:w-80">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Global Search Tasks, Projects, Audits..."
-                  value={globalSearch}
-                  onChange={(e) => setGlobalSearch(e.target.value)}
-                  className="w-full pl-9 pr-8 py-1.5 text-xs bg-card border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all font-medium"
-                />
-                <div className="absolute right-2 top-2 px-1 py-0.5 rounded bg-muted border border-border text-[9px] text-muted-foreground font-bold flex items-center gap-0.5 pointer-events-none">
-                  <Command className="w-2.5 h-2.5" /> K
-                </div>
-              </form>
-            )}
+            <form onSubmit={handleGlobalSearchSubmit} className="hidden sm:flex items-center relative w-64 md:w-80">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Global Search Tasks, Projects, Audits..."
+                value={globalSearch}
+                onChange={(e) => setGlobalSearch(e.target.value)}
+                className="w-full pl-9 pr-8 py-1.5 text-xs bg-card border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all font-medium"
+              />
+              <div className="absolute right-2 top-2 px-1 py-0.5 rounded bg-muted border border-border text-[9px] text-muted-foreground font-bold flex items-center gap-0.5 pointer-events-none">
+                <Command className="w-2.5 h-2.5" /> K
+              </div>
+            </form>
           </div>
 
           {/* Quick Header Actions */}
           <div className="flex items-center gap-3">
-            {isAuthenticated ? (
-              <>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => setLocation("/notifications")}
-                  className="w-9 h-9 hover:bg-accent text-muted-foreground hover:text-foreground rounded-lg relative"
-                  title="Notifications"
-                >
-                  <Bell className="w-4.5 h-4.5" />
-                  <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-primary animate-pulse" />
-                </Button>
+            {/* Notification Bell */}
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => setLocation("/notifications")}
+              className="w-9 h-9 hover:bg-accent text-muted-foreground hover:text-foreground rounded-lg relative"
+              title="Notifications"
+            >
+              <Bell className="w-4.5 h-4.5" />
+              <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-primary animate-pulse" />
+            </Button>
 
-                <div onClick={() => setLocation("/profile")} className="cursor-pointer transition-transform active:scale-95" title="View Profile">
-                  <UserAvatar user={user} sizeClassName="w-8 h-8" roundedClassName="rounded-full" />
-                </div>
-              </>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setLocation("/login")}
-                  className="rounded-full px-4 text-xs font-semibold"
-                >
-                  Log In
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => setLocation("/register")}
-                  className="rounded-full px-4 text-xs font-semibold bg-primary text-primary-foreground"
-                >
-                  Register
-                </Button>
-              </div>
-            )}
+            {/* User Avatar */}
+            <div onClick={() => setLocation("/profile")} className="cursor-pointer transition-transform active:scale-95" title="View Profile">
+              <UserAvatar user={user} sizeClassName="w-8 h-8" roundedClassName="rounded-full" />
+            </div>
           </div>
         </header>
 

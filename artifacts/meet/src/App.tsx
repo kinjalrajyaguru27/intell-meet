@@ -62,11 +62,32 @@ function AuthenticatedRoutes({ children }: { children: React.ReactNode }) {
 }
 
 function HomeWrapper() {
-  return (
-    <AppLayout>
-      <Home />
-    </AppLayout>
-  );
+  const { isAuthenticated } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      const justLoggedIn = sessionStorage.getItem("intell_meet_just_logged_in");
+      if (justLoggedIn === "true") {
+        sessionStorage.removeItem("intell_meet_just_logged_in");
+        setLocation("/dashboard");
+      }
+    }
+  }, [isAuthenticated, setLocation]);
+
+  if (isAuthenticated) {
+    const justLoggedIn = sessionStorage.getItem("intell_meet_just_logged_in");
+    if (justLoggedIn === "true") {
+      return null;
+    }
+    return (
+      <AuthenticatedRoutes>
+        <Home />
+      </AuthenticatedRoutes>
+    );
+  }
+
+  return <Redirect to="/login" />;
 }
 
 function Router() {
@@ -84,7 +105,7 @@ function Router() {
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/team/invite" component={TeamInvitation} />
       <Route path="/room/:roomId" component={Room} />
-      
+
       {/* Authenticated routes wrapped in enterprise AppLayout framework */}
       <Route path="/profile">
         <AuthenticatedRoutes>

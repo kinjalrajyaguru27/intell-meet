@@ -16,7 +16,7 @@ export default function Register() {
   const [, setLocation] = useLocation();
   const { login: setAuthSession, isAuthenticated } = useAuth();
   const { toast } = useToast();
-  
+
   const [showPassword, setShowPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState({
     score: 0,
@@ -97,12 +97,11 @@ export default function Register() {
       { data: { name: data.name, email: data.email, password: data.password, role: data.role } },
       {
         onSuccess: (res) => {
-          sessionStorage.setItem("intell_meet_home_landing", "true");
           toast({
             title: "Registration successful",
-            description: "Your account has been created successfully. Welcome to Intell Meet!",
+            description: "Your account has been created successfully. Please log in to continue.",
           });
-          setLocation("/");
+          setLocation("/login");
         },
         onError: (err: any) => {
           toast({
@@ -147,7 +146,7 @@ export default function Register() {
 
       <Card className="w-full max-w-md bg-white dark:bg-card/65 border border-zinc-200 dark:border-white/10 shadow-2xl relative z-10 overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-primary to-indigo-500" />
-        
+
         <CardHeader className="space-y-2 pt-8 text-center">
           <div className="mx-auto w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-2">
             <Video className="w-6 h-6 text-primary" />
@@ -184,7 +183,7 @@ export default function Register() {
                   id="email"
                   type="email"
                   placeholder="name@example.com"
-                  {...register("email", { 
+                  {...register("email", {
                     required: "Email is required",
                     pattern: {
                       value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
@@ -223,15 +222,14 @@ export default function Register() {
                 <div className="space-y-2 mt-2 bg-zinc-50 dark:bg-black/25 p-3 rounded-lg border border-zinc-200 dark:border-white/5">
                   <div className="flex justify-between items-center text-[10px]">
                     <span className="text-zinc-450 dark:text-zinc-400 font-semibold uppercase tracking-wider">Password Strength</span>
-                    <span className={`font-bold uppercase ${
-                      passwordStrength.score >= 4 ? "text-emerald-500" : passwordStrength.score >= 2 ? "text-yellow-500" : "text-red-500"
-                    }`}>
+                    <span className={`font-bold uppercase ${passwordStrength.score >= 4 ? "text-emerald-500" : passwordStrength.score >= 2 ? "text-yellow-500" : "text-red-500"
+                      }`}>
                       {getStrengthLabel()}
                     </span>
                   </div>
-                  
+
                   <div className="h-1.5 w-full bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
-                    <div 
+                    <div
                       className={`h-full rounded-full transition-all duration-300 ${getStrengthColor()}`}
                       style={{ width: `${(passwordStrength.score / 5) * 100}%` }}
                     />
