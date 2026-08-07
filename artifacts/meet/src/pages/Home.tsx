@@ -206,117 +206,6 @@ export default function Home() {
 
   const filteredMeetings = getFilteredMeetings();
 
-  if (!isAuthenticated) {
-    return (
-      <div className="flex-1 flex flex-col min-h-[85vh] justify-center items-center text-center px-4 py-12 relative overflow-hidden">
-        {/* Decorative background glow radial circles */}
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-gradient-to-tr from-sky-400/20 via-indigo-500/20 to-purple-500/20 rounded-full blur-[120px] pointer-events-none -z-10" />
-
-        {/* Top Badge */}
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400 text-[11px] font-bold tracking-wide uppercase shadow-sm mb-6 animate-pulse">
-          <span>⚡ EMPOWERING MODERN TEAMS WITH AI</span>
-        </div>
-
-        {/* Main Hero Title */}
-        <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold text-zinc-900 dark:text-white tracking-tight max-w-4xl leading-[1.15] mb-6">
-          Intell Meet – Intelligent Meetings &{" "}
-          <span className="bg-clip-text text-transparent bg-gradient-to-r from-sky-500 via-indigo-500 to-purple-600">
-            Team Collaboration Platform
-          </span>
-        </h1>
-
-        {/* Hero Subtitle */}
-        <p className="text-sm sm:text-base md:text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl font-normal leading-relaxed mb-8">
-          Conduct meetings, collaborate with teams, manage projects, generate AI Insights, and track productivity in one platform.
-        </p>
-
-        {/* CTA Buttons */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12 w-full max-w-md">
-          <Button
-            onClick={() => setLocation("/register")}
-            className="w-full sm:w-auto h-12 px-8 rounded-full bg-gradient-to-r from-sky-500 via-indigo-600 to-purple-600 hover:from-sky-600 hover:to-purple-700 text-white font-bold text-sm shadow-lg hover:shadow-indigo-500/25 transition-all gap-2"
-          >
-            Get Started <ChevronRight className="w-4 h-4" />
-          </Button>
-
-          <Button
-            variant="outline"
-            onClick={() => setLocation("/login")}
-            className="w-full sm:w-auto h-12 px-8 rounded-full border border-zinc-300 dark:border-white/20 bg-white/80 dark:bg-white/5 hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-800 dark:text-white font-bold text-sm transition-all"
-          >
-            Login
-          </Button>
-        </div>
-
-        {/* Quick Meeting Code Join Box */}
-        <div className="w-full max-w-md bg-white dark:bg-card/80 border border-zinc-200 dark:border-white/10 p-4 rounded-2xl shadow-xl backdrop-blur-md mb-12">
-          <p className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-3 text-left">
-            Have a meeting code? Join directly:
-          </p>
-          <form onSubmit={joinForm.handleSubmit(onJoin)} className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <Keyboard className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-              <Input
-                {...joinForm.register("roomId")}
-                placeholder="Enter room code or link"
-                className="pl-10 h-10 bg-zinc-50 dark:bg-black/50 border-zinc-200 dark:border-white/10 rounded-xl text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus-visible:ring-primary"
-              />
-            </div>
-            <Button
-              type="submit"
-              className="h-10 px-5 rounded-xl text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              Join Call
-            </Button>
-          </form>
-        </div>
-
-        {/* Feature Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full max-w-5xl text-left">
-          <div className="bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 p-5 rounded-2xl shadow-sm">
-            <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-500 mb-3">
-              <Video className="w-5 h-5" />
-            </div>
-            <h3 className="font-bold text-sm text-zinc-900 dark:text-white mb-1">HD Video Calls</h3>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-              Crystal-clear WebRTC video meetings, screen sharing, and noise-canceling audio.
-            </p>
-          </div>
-
-          <div className="bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 p-5 rounded-2xl shadow-sm">
-            <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-500 mb-3">
-              <Activity className="w-5 h-5" />
-            </div>
-            <h3 className="font-bold text-sm text-zinc-900 dark:text-white mb-1">Kanban Projects</h3>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-              Track tasks seamlessly across To Do, In Progress, and Done statuses with auto due-dates.
-            </p>
-          </div>
-
-          <div className="bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 p-5 rounded-2xl shadow-sm">
-            <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-500 mb-3">
-              <Calendar className="w-5 h-5" />
-            </div>
-            <h3 className="font-bold text-sm text-zinc-900 dark:text-white mb-1">AI Executive Insights</h3>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-              Automatic transcripts, sentiment analysis, key takeaways, and action item detection.
-            </p>
-          </div>
-
-          <div className="bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 p-5 rounded-2xl shadow-sm">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 mb-3">
-              <Users className="w-5 h-5" />
-            </div>
-            <h3 className="font-bold text-sm text-zinc-900 dark:text-white mb-1">Team Collaboration</h3>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-              Organizations, project channels, instant messaging with mentions and notification alerts.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex-1 flex flex-col min-h-0 space-y-6">
       {/* Page Header */}
@@ -488,8 +377,8 @@ export default function Home() {
               key={tab.value}
               onClick={() => setMeetingFilter(tab.value)}
               className={`px-3 py-1.5 rounded-md transition-colors font-semibold ${meetingFilter === tab.value
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
                 }`}
             >
               {tab.label}
