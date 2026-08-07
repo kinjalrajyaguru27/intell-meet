@@ -62,33 +62,11 @@ function AuthenticatedRoutes({ children }: { children: React.ReactNode }) {
 }
 
 function HomeWrapper() {
-  const { isAuthenticated } = useAuth();
-  const [, setLocation] = useLocation();
-
-  useEffect(() => {
-    const isHomeLanding = sessionStorage.getItem("intell_meet_home_landing") === "true";
-    if (isAuthenticated) {
-      if (isHomeLanding) {
-        sessionStorage.removeItem("intell_meet_home_landing");
-      } else {
-        // If already logged in (returning session), open Dashboard directly
-        setLocation("/dashboard");
-      }
-    }
-  }, [isAuthenticated, setLocation]);
-
-  const isHomeLanding = sessionStorage.getItem("intell_meet_home_landing") === "true";
-
-  if (isAuthenticated || isHomeLanding) {
-    return (
-      <AuthenticatedRoutes>
-        <Home />
-      </AuthenticatedRoutes>
-    );
-  }
-
-  // Not logged in: directly open Login page
-  return <Redirect to="/login" />;
+  return (
+    <AppLayout>
+      <Home />
+    </AppLayout>
+  );
 }
 
 function Router() {
