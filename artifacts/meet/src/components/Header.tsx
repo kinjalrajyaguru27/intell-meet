@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import UserAvatar from "./UserAvatar";
 import { COLOR_MAP } from "@/pages/EditProfile";
 import {
   DropdownMenu,
@@ -113,18 +114,7 @@ export default function Header() {
         {/* User Profile Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger className="outline-none focus:outline-none">
-            <Avatar className="w-9 h-9 rounded-full border border-zinc-200 dark:border-white/10 hover:border-primary/50 transition-colors duration-200 cursor-pointer overflow-hidden flex items-center justify-center">
-              {user.avatar && (user.avatar.startsWith("http") || user.avatar.startsWith("/")) ? (
-                <img src={user.avatar} alt={user.name} className="w-full h-full object-cover rounded-full" />
-              ) : (
-                <div 
-                  className="w-full h-full text-white font-bold text-xs flex items-center justify-center"
-                  style={{ background: COLOR_MAP[user.profileColor || "purple"] || COLOR_MAP.purple }}
-                >
-                  {getInitials(user.name)}
-                </div>
-              )}
-            </Avatar>
+            <UserAvatar user={user} sizeClassName="w-9 h-9" roundedClassName="rounded-full" />
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="end"

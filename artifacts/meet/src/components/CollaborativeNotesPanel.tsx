@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -11,41 +11,71 @@ import {
   Globe,
   Lock,
   Users,
-  Link,
   Plus,
   Trash2,
-  ExternalLink,
-  File,
-  FileSpreadsheet,
-  FileCode,
-  Image as ImageIcon,
   Check,
   Loader2,
   Sparkles,
+  Shield,
+  X,
+  Edit3,
+  FileCheck,
 } from "lucide-react";
 
 export interface NoteAttachment {
   id: string;
   name: string;
-  url: string;
+  url: string; // Data URL or Web link
   size?: string;
-  type: "file" | "drive" | "link";
+  type?: string;
   addedAt: string;
 }
 
+export interface NoteItem {
+  id: string;
+  title?: string;
+  content: string;
+  authorId: string;
+  authorName: string;
+  createdAt: string;
+  updatedAt?: string;
+  visibility: "everyone" | "selected";
+  allowedViewers: string[]; // List of user IDs / display names
+  attachments: NoteAttachment[];
+}
+
+export interface NotesPermissions {
+  mode: "everyone" | "host_only" | "selected";
+  allowedEditors: string[];
+}
+
+export interface ParticipantInfo {
+  id: string;
+  displayName: string;
+  isHost?: boolean;
+}
+
 interface CollaborativeNotesPanelProps {
-  notes: string;
-  onChange: (newNotes: string) => void;
+  notes?: string;
+  onChange?: (newNotes: string) => void;
   onSaveNow?: () => void;
   isSaving?: boolean;
   meetingTitle?: string;
   activeMeetingId?: string;
   socket?: any;
   userRole?: string;
+  isHost?: boolean;
+  currentUserId?: string;
+  currentUserName?: string;
+  participants?: ParticipantInfo[];
+  notesPermissions?: NotesPermissions;
+  notesList?: NoteItem[];
+  onNotesListChange?: (newNotesList: NoteItem[], newPermissions?: NotesPermissions) => void;
+  onPermissionsChange?: (newPermissions: NotesPermissions) => void;
 }
 
 export default function CollaborativeNotesPanel({
-  notes,
+  notes = "",
   onChange,
   onSaveNow,
   isSaving = false,
@@ -53,143 +83,356 @@ export default function CollaborativeNotesPanel({
   activeMeetingId,
   socket,
   userRole = "participant",
+  isHost = false,
+  currentUserId = "",
+  currentUserName = "User",
+  participants = [],
+  notesPermissions: initialPermissions,
+  notesList: initialNotesList,
+  onNotesListChange,
+  onPermissionsChange,
 }: CollaborativeNotesPanelProps) {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Note settings
-  const [privacy, setPrivacy] = useState<"public" | "private" | "restricted">("public");
-  const [attachments, setAttachments] = useState<NoteAttachment[]>(() => {
-    try {
-      const saved = localStorage.getItem(`notes_attachments_${activeMeetingId}`);
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
+  // Host Notes Permissions State
+  const [permissions, setPermissions] = useState<NotesPermissions>(() => {
+    return (
+      initialPermissions || {
+        mode: "everyone",
+        allowedEditors: [],
+      }
+    );
   });
-  const [showLinkModal, setShowLinkModal] = useState(false);
-  const [driveUrl, setDriveUrl] = useState("");
-  const [driveName, setDriveName] = useState("");
-  const [copied, setCopied] = useState(false);
 
-  // Sync attachments to LocalStorage & parent
-  useEffect(() => {
-    if (activeMeetingId) {
-      localStorage.setItem(`notes_attachments_${activeMeetingId}`, JSON.stringify(attachments));
+  // Notes List State
+  const [notesList, setNotesList] = useState<NoteItem[]>(() => {
+    if (initialNotesList && initialNotesList.length > 0) return initialNotesList;
+    if (notes && notes.trim()) {
+      return [
+        {
+          id: "default_note_1",
+          title: "Collaborative Note",
+          content: notes,
+          authorId: "system",
+          authorName: "Meeting Assistant",
+          createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          visibility: "everyone",
+          allowedViewers: [],
+          attachments: [],
+        },
+      ];
     }
-  }, [attachments, activeMeetingId]);
+    return [];
+  });
 
-  // Listen for socket privacy or attachment updates
+  // Modals & Forms State
+  const [showHostPermissionsModal, setShowHostPermissionsModal] = useState(false);
+  const [showNoteModal, setShowNoteModal] = useState(false);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+
+  // Note Form State
+  const [formTitle, setFormTitle] = useState("");
+  const [formContent, setFormContent] = useState("");
+  const [formVisibility, setFormVisibility] = useState<"everyone" | "selected">("everyone");
+  const [formAllowedViewers, setFormAllowedViewers] = useState<string[]>([]);
+  const [formAttachments, setFormAttachments] = useState<NoteAttachment[]>([]);
+
+  // Host Permissions Form State
+  const [tempMode, setTempMode] = useState<"everyone" | "host_only" | "selected">(permissions.mode);
+  const [tempAllowedEditors, setTempAllowedEditors] = useState<string[]>(permissions.allowedEditors);
+
+  const [copiedNoteId, setCopiedNoteId] = useState<string | null>(null);
+
+  // Sync external permissions & notesList when props update
+  useEffect(() => {
+    if (initialPermissions) {
+      setPermissions(initialPermissions);
+    }
+  }, [initialPermissions]);
+
+  useEffect(() => {
+    if (initialNotesList && initialNotesList.length > 0) {
+      setNotesList(initialNotesList);
+    }
+  }, [initialNotesList]);
+
+  // Sync socket events for real-time permissions & notes updates
   useEffect(() => {
     if (!socket) return;
-    const handlePrivacyUpdate = (data: { privacy: "public" | "private" | "restricted" }) => {
-      setPrivacy(data.privacy);
-    };
-    const handleAttachmentUpdate = (data: { attachments: NoteAttachment[] }) => {
-      setAttachments(data.attachments);
+
+    const handlePermissionsUpdated = (data: { permissions: NotesPermissions }) => {
+      if (data?.permissions) {
+        setPermissions(data.permissions);
+        toast({
+          title: "Notes Permissions Changed",
+          description:
+            data.permissions.mode === "everyone"
+              ? "Host allowed everyone to edit notes."
+              : data.permissions.mode === "host_only"
+              ? "Host restricted editing to Host only."
+              : "Host restricted editing to selected participants.",
+        });
+      }
     };
 
-    socket.on("notes-privacy-updated", handlePrivacyUpdate);
-    socket.on("notes-attachments-updated", handleAttachmentUpdate);
+    const handleNotesListUpdated = (data: { notesList: NoteItem[]; permissions?: NotesPermissions }) => {
+      if (data?.notesList) {
+        setNotesList(data.notesList);
+        if (onChange) {
+          const combined = data.notesList.map((n) => n.content).join("\n\n");
+          onChange(combined);
+        }
+      }
+      if (data?.permissions) {
+        setPermissions(data.permissions);
+      }
+    };
+
+    socket.on("notes-permissions-updated", handlePermissionsUpdated);
+    socket.on("notes-list-updated", handleNotesListUpdated);
 
     return () => {
-      socket.off("notes-privacy-updated", handlePrivacyUpdate);
-      socket.off("notes-attachments-updated", handleAttachmentUpdate);
+      socket.off("notes-permissions-updated", handlePermissionsUpdated);
+      socket.off("notes-list-updated", handleNotesListUpdated);
     };
-  }, [socket]);
+  }, [socket, onChange, toast]);
 
-  // Handle Privacy Change
-  const handlePrivacyChange = (newPrivacy: "public" | "private" | "restricted") => {
-    setPrivacy(newPrivacy);
-    if (socket) {
-      socket.emit("notes-privacy-update", { privacy: newPrivacy });
+  // Evaluate Edit Permission for Current User
+  const canEdit = useMemo(() => {
+    if (isHost || userRole === "host") return true;
+    if (permissions.mode === "everyone") return true;
+    if (permissions.mode === "host_only") return false;
+    if (permissions.mode === "selected") {
+      const matchId = currentUserId && permissions.allowedEditors.includes(currentUserId);
+      const matchName = currentUserName && permissions.allowedEditors.includes(currentUserName);
+      return Boolean(matchId || matchName);
     }
+    return true;
+  }, [isHost, userRole, permissions, currentUserId, currentUserName]);
+
+  // Filter Visible Notes for Current User
+  const visibleNotes = useMemo(() => {
+    return notesList.filter((note) => {
+      if (note.visibility === "everyone" || !note.visibility) return true;
+      if (isHost || userRole === "host") return true;
+      if (note.authorId === currentUserId || note.authorName === currentUserName) return true;
+      if (
+        Array.isArray(note.allowedViewers) &&
+        (note.allowedViewers.includes(currentUserId) || note.allowedViewers.includes(currentUserName))
+      ) {
+        return true;
+      }
+      return false;
+    });
+  }, [notesList, isHost, userRole, currentUserId, currentUserName]);
+
+  // Handle Host Saving Permission Settings
+  const handleSaveHostPermissions = () => {
+    const updatedPermissions: NotesPermissions = {
+      mode: tempMode,
+      allowedEditors: tempAllowedEditors,
+    };
+    setPermissions(updatedPermissions);
+    setShowHostPermissionsModal(false);
+
+    if (socket && socket.connected) {
+      socket.emit("notes-permissions-update", { permissions: updatedPermissions });
+      socket.emit("notes-list-update", { notesList, permissions: updatedPermissions });
+    }
+
+    if (onPermissionsChange) {
+      onPermissionsChange(updatedPermissions);
+    }
+    if (onNotesListChange) {
+      onNotesListChange(notesList, updatedPermissions);
+    }
+
     toast({
-      title: "Notes Access Updated",
-      description:
-        newPrivacy === "public"
-          ? "Notes are now visible to all participants."
-          : newPrivacy === "private"
-          ? "Notes are now private to you."
-          : "Notes restricted to Host & Moderators.",
+      title: "Notes Settings Saved",
+      description: `Permission mode set to ${
+        tempMode === "everyone"
+          ? "Everyone"
+          : tempMode === "host_only"
+          ? "Only Host"
+          : `${tempAllowedEditors.length} Selected Participants`
+      }.`,
     });
   };
 
-  // Handle File Upload from device (Browse)
+  // Open Modal for New Note
+  const handleOpenNewNoteModal = () => {
+    if (!canEdit) {
+      toast({
+        title: "Permission Denied",
+        description: "The host has restricted note creation.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setEditingNoteId(null);
+    setFormTitle("");
+    setFormContent("");
+    setFormVisibility("everyone");
+    setFormAllowedViewers([]);
+    setFormAttachments([]);
+    setShowNoteModal(true);
+  };
+
+  // Open Modal to Edit Existing Note
+  const handleOpenEditNoteModal = (note: NoteItem) => {
+    if (!canEdit && note.authorId !== currentUserId) {
+      toast({
+        title: "Permission Denied",
+        description: "You do not have permission to edit this note.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setEditingNoteId(note.id);
+    setFormTitle(note.title || "");
+    setFormContent(note.content || "");
+    setFormVisibility(note.visibility || "everyone");
+    setFormAllowedViewers(note.allowedViewers || []);
+    setFormAttachments(note.attachments || []);
+    setShowNoteModal(true);
+  };
+
+  // File Upload Handler (Browse PDF & Document files)
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    const newAttachments: NoteAttachment[] = [];
     Array.from(files).forEach((file) => {
       const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
-      const fileUrl = URL.createObjectURL(file);
-      newAttachments.push({
-        id: Math.random().toString(36).substring(2, 9),
-        name: file.name,
-        url: fileUrl,
-        size: `${sizeMb} MB`,
-        type: "file",
-        addedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      });
-    });
+      const reader = new FileReader();
 
-    const updated = [...attachments, ...newAttachments];
-    setAttachments(updated);
-    if (socket) {
-      socket.emit("notes-attachments-update", { attachments: updated });
-    }
+      reader.onload = (event) => {
+        const fileUrl = event.target?.result as string;
+        const newAtt: NoteAttachment = {
+          id: Math.random().toString(36).substring(2, 9),
+          name: file.name,
+          url: fileUrl,
+          size: `${sizeMb} MB`,
+          type: file.type.includes("pdf") ? "pdf" : "file",
+          addedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        };
 
-    toast({
-      title: "File Attached",
-      description: `Added ${newAttachments.length} file(s) to meeting notes.`,
+        setFormAttachments((prev) => [...prev, newAtt]);
+        toast({
+          title: "File Attached",
+          description: `Attached ${file.name} to note.`,
+        });
+      };
+
+      reader.readAsDataURL(file);
     });
 
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // Handle Adding Google Drive or Web Link
-  const handleAddDriveLink = () => {
-    if (!driveUrl.trim()) return;
-    const name = driveName.trim() || (driveUrl.includes("drive.google.com") ? "Google Drive Attachment" : "External Link");
-    const newAtt: NoteAttachment = {
-      id: Math.random().toString(36).substring(2, 9),
-      name,
-      url: driveUrl.trim().startsWith("http") ? driveUrl.trim() : `https://${driveUrl.trim()}`,
-      type: driveUrl.includes("drive.google.com") ? "drive" : "link",
-      addedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    };
-
-    const updated = [...attachments, newAtt];
-    setAttachments(updated);
-    if (socket) {
-      socket.emit("notes-attachments-update", { attachments: updated });
+  // Save Note (New or Edit)
+  const handleSaveNoteForm = () => {
+    if (!formContent.trim()) {
+      toast({
+        title: "Content Required",
+        description: "Please write some note text before saving.",
+        variant: "destructive",
+      });
+      return;
     }
 
-    setDriveUrl("");
-    setDriveName("");
-    setShowLinkModal(false);
+    let updatedList: NoteItem[];
+
+    if (editingNoteId) {
+      updatedList = notesList.map((n) =>
+        n.id === editingNoteId
+          ? {
+              ...n,
+              title: formTitle.trim() || "Untitled Note",
+              content: formContent.trim(),
+              visibility: formVisibility,
+              allowedViewers: formVisibility === "selected" ? formAllowedViewers : [],
+              attachments: formAttachments,
+              updatedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            }
+          : n
+      );
+    } else {
+      const newNote: NoteItem = {
+        id: "note_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7),
+        title: formTitle.trim() || `Note ${notesList.length + 1}`,
+        content: formContent.trim(),
+        authorId: currentUserId || "user_" + Date.now(),
+        authorName: currentUserName || "Participant",
+        createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        visibility: formVisibility,
+        allowedViewers: formVisibility === "selected" ? formAllowedViewers : [],
+        attachments: formAttachments,
+      };
+      updatedList = [newNote, ...notesList];
+    }
+
+    setNotesList(updatedList);
+    setShowNoteModal(false);
+
+    // Broadcast update
+    if (socket && socket.connected) {
+      socket.emit("notes-list-update", { notesList: updatedList, permissions });
+    }
+
+    const combinedNotesText = updatedList.map((n) => n.content).join("\n\n");
+    if (onChange) onChange(combinedNotesText);
+    if (onNotesListChange) onNotesListChange(updatedList, permissions);
 
     toast({
-      title: "Link Attached",
-      description: `Added link "${name}" to meeting notes.`,
+      title: editingNoteId ? "Note Updated" : "Note Created",
+      description: `Saved note with ${formVisibility === "everyone" ? "Everyone" : "Selected People"} visibility.`,
     });
   };
 
-  // Remove Attachment
-  const handleRemoveAttachment = (id: string) => {
-    const updated = attachments.filter((item) => item.id !== id);
-    setAttachments(updated);
-    if (socket) {
-      socket.emit("notes-attachments-update", { attachments: updated });
+  // Delete Note
+  const handleDeleteNote = (noteId: string) => {
+    const updatedList = notesList.filter((n) => n.id !== noteId);
+    setNotesList(updatedList);
+
+    if (socket && socket.connected) {
+      socket.emit("notes-list-update", { notesList: updatedList, permissions });
     }
+
+    const combinedNotesText = updatedList.map((n) => n.content).join("\n\n");
+    if (onChange) onChange(combinedNotesText);
+    if (onNotesListChange) onNotesListChange(updatedList, permissions);
+
+    toast({
+      title: "Note Deleted",
+      description: "Removed note from meeting.",
+    });
   };
 
-  // Export as TXT / Markdown File
-  const handleDownloadTxt = () => {
-    const header = `# ${meetingTitle}\nDate: ${new Date().toLocaleDateString()}\nAccess: ${privacy.toUpperCase()}\n\n`;
-    const content = header + notes + "\n\n--- ATTACHMENTS ---\n" + attachments.map((a) => `- ${a.name} (${a.url})`).join("\n");
-    
+  // Copy Single Note Content
+  const handleCopyNoteContent = (note: NoteItem) => {
+    navigator.clipboard.writeText(`${note.title ? note.title + "\n" : ""}${note.content}`);
+    setCopiedNoteId(note.id);
+    setTimeout(() => setCopiedNoteId(null), 2000);
+    toast({
+      title: "Copied to Clipboard",
+      description: "Note copied successfully.",
+    });
+  };
+
+  // Export All Visible Notes as TXT
+  const handleDownloadAllTxt = () => {
+    let content = `# ${meetingTitle}\nExported on: ${new Date().toLocaleString()}\n\n`;
+    visibleNotes.forEach((n, idx) => {
+      content += `--- Note ${idx + 1}: ${n.title || "Untitled"} ---\n`;
+      content += `Author: ${n.authorName} | Time: ${n.createdAt} | Access: ${n.visibility.toUpperCase()}\n\n`;
+      content += n.content + "\n\n";
+      if (n.attachments && n.attachments.length > 0) {
+        content += "Attachments:\n" + n.attachments.map((a) => `- ${a.name} (${a.size || ""})`).join("\n") + "\n\n";
+      }
+    });
+
     const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -197,67 +440,7 @@ export default function CollaborativeNotesPanel({
     link.download = `${meetingTitle.replace(/\s+/g, "_")}_Notes.txt`;
     link.click();
     URL.revokeObjectURL(url);
-
-    toast({
-      title: "Notes Downloaded",
-      description: "Saved TXT file to your device.",
-    });
   };
-
-  // Export as PDF (Print dialog formatted)
-  const handleExportPdf = () => {
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
-
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>${meetingTitle} - Notes</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 40px; color: #1e293b; line-height: 1.6; }
-          h1 { color: #0284c7; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
-          .meta { font-size: 12px; color: #64748b; margin-bottom: 20px; }
-          .content { font-size: 14px; white-space: pre-wrap; background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; }
-          .attachments { margin-top: 30px; font-size: 13px; }
-          .attachments ul { padding-left: 20px; }
-        </style>
-      </head>
-      <body>
-        <h1>${meetingTitle}</h1>
-        <div class="meta">Exported on ${new Date().toLocaleString()} | Privacy: ${privacy.toUpperCase()}</div>
-        <div class="content">${notes || "No notes content."}</div>
-        ${
-          attachments.length > 0
-            ? `<div class="attachments"><h3>Attachments</h3><ul>${attachments
-                .map((a) => `<li>${a.name} - ${a.url}</li>`)
-                .join("")}</ul></div>`
-            : ""
-        }
-      </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-    }, 250);
-  };
-
-  // Copy to Clipboard
-  const handleCopyNotes = () => {
-    navigator.clipboard.writeText(notes);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    toast({
-      title: "Copied to Clipboard",
-      description: "Meeting notes copied successfully.",
-    });
-  };
-
-  // Word count & Line count
-  const wordCount = notes.trim() ? notes.trim().split(/\s+/).length : 0;
-  const lineCount = notes.split("\n").length;
 
   return (
     <div className="flex-1 flex flex-col p-4 space-y-3 overflow-hidden bg-background text-foreground h-full">
@@ -268,10 +451,10 @@ export default function CollaborativeNotesPanel({
         onChange={handleFileUpload}
         className="hidden"
         multiple
-        accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.zip"
+        accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.zip,.xlsx,.pptx"
       />
 
-      {/* Header & Controls Bar */}
+      {/* Header & Controls Toolbar */}
       <div className="flex flex-col space-y-2 border-b border-border pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -283,24 +466,23 @@ export default function CollaborativeNotesPanel({
                 Collaborative Notes
               </h3>
               <p className="text-[11px] text-muted-foreground mt-0.5">
-                Real-time sync & persistent storage
+                {visibleNotes.length} note(s) • Real-time sync & DB persistent
               </p>
             </div>
           </div>
 
-          {/* Save Now Button & Saving Status */}
           <div className="flex items-center gap-1.5">
             {isSaving ? (
-              <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 gap-1 px-2 py-0.5 font-medium">
-                <Loader2 className="w-3 h-3 animate-spin" /> Saving...
+              <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-600 border-amber-500/20 gap-1 px-2 py-0.5">
+                <Loader2 className="w-3 h-3 animate-spin" /> Saving
               </Badge>
             ) : (
-              <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 gap-1 px-2 py-0.5 font-medium">
-                <Check className="w-3 h-3 text-emerald-500" /> Saved to DB
+              <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-600 border-emerald-500/20 gap-1 px-2 py-0.5">
+                <Check className="w-3 h-3 text-emerald-500" /> Saved
               </Badge>
             )}
 
-            {onSaveNow && (
+            {onSaveNow && canEdit && (
               <Button
                 size="sm"
                 variant="outline"
@@ -313,215 +495,572 @@ export default function CollaborativeNotesPanel({
           </div>
         </div>
 
-        {/* Privacy Selector Toolbar & Actions */}
+        {/* Action Row: Permissions & Add Note */}
         <div className="flex items-center justify-between pt-1 gap-2 flex-wrap">
-          {/* Privacy Dropdown Buttons */}
-          <div className="flex items-center gap-1 bg-muted/50 p-0.5 rounded-lg border border-border/60">
-            <button
-              type="button"
-              onClick={() => handlePrivacyChange("public")}
-              className={`px-2 py-1 rounded text-[11px] font-semibold flex items-center gap-1 transition-all ${
-                privacy === "public"
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-              title="Visible to all meeting participants"
-            >
-              <Globe className="w-3 h-3" /> Public
-            </button>
-            <button
-              type="button"
-              onClick={() => handlePrivacyChange("private")}
-              className={`px-2 py-1 rounded text-[11px] font-semibold flex items-center gap-1 transition-all ${
-                privacy === "private"
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-              title="Private to you only"
-            >
-              <Lock className="w-3 h-3" /> Private
-            </button>
-            <button
-              type="button"
-              onClick={() => handlePrivacyChange("restricted")}
-              className={`px-2 py-1 rounded text-[11px] font-semibold flex items-center gap-1 transition-all ${
-                privacy === "restricted"
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-              title="Restricted to Host & Selected Team"
-            >
-              <Users className="w-3 h-3" /> Team
-            </button>
+          {/* Host Notes Permissions Indicator / Settings Trigger */}
+          <div className="flex items-center gap-1.5">
+            {(isHost || userRole === "host") ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setTempMode(permissions.mode);
+                  setTempAllowedEditors(permissions.allowedEditors || []);
+                  setShowHostPermissionsModal(true);
+                }}
+                className="h-7 text-[11px] px-2.5 gap-1.5 font-semibold border-border hover:bg-muted"
+                title="Configure Notes Permissions (Host Control)"
+              >
+                <Shield className="w-3.5 h-3.5 text-primary" />
+                <span>Permissions:</span>
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 capitalize font-medium">
+                  {permissions.mode === "everyone"
+                    ? "Everyone"
+                    : permissions.mode === "host_only"
+                    ? "Host Only"
+                    : "Selected Users"}
+                </Badge>
+              </Button>
+            ) : (
+              <Badge variant="outline" className="text-[10px] px-2 py-1 gap-1 border-border text-muted-foreground font-medium">
+                <Lock className="w-3 h-3" />
+                Edit Access:{" "}
+                <span className="font-semibold text-foreground capitalize">
+                  {permissions.mode === "everyone"
+                    ? "Everyone"
+                    : permissions.mode === "host_only"
+                    ? "Host Only"
+                    : permissions.allowedEditors.includes(currentUserId) || permissions.allowedEditors.includes(currentUserName)
+                    ? "Granted"
+                    : "Restricted"}
+                </span>
+              </Badge>
+            )}
           </div>
 
-          {/* Action Buttons: Export, Copy, Attachment */}
           <div className="flex items-center gap-1">
             <Button
-              size="icon"
+              size="sm"
               variant="ghost"
-              onClick={handleCopyNotes}
-              className="h-7 w-7 text-muted-foreground hover:text-foreground"
-              title="Copy Notes to Clipboard"
-            >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={handleDownloadTxt}
-              className="h-7 w-7 text-muted-foreground hover:text-foreground"
-              title="Download as TXT file"
+              onClick={handleDownloadAllTxt}
+              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground font-medium"
+              title="Download Notes TXT"
             >
               <Download className="w-3.5 h-3.5" />
             </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={handleExportPdf}
-              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground font-medium"
-              title="Export formatted PDF"
-            >
-              PDF
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Text Area Input */}
-      <div className="flex-1 flex flex-col min-h-[180px] relative">
-        <textarea
-          value={notes}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={
-            privacy === "private"
-              ? "Write private meeting notes here... (Only visible to you)"
-              : privacy === "restricted"
-              ? "Write restricted meeting notes here... (Host & Team only)"
-              : "Collaborative meeting notes... Edits sync in real-time with all participants."
-          }
-          className="w-full flex-1 bg-muted/30 border border-border/60 rounded-xl p-3 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/60 text-foreground font-sans leading-relaxed"
-        />
-        
-        {/* Word Count Footer */}
-        <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1.5 px-1">
-          <span>
-            {wordCount} words | {lineCount} lines
-          </span>
-          <span className="flex items-center gap-1">
-            <Sparkles className="w-3 h-3 text-primary" /> Auto-saved to meeting history
-          </span>
-        </div>
-      </div>
-
-      {/* Attachments Section */}
-      <div className="border-t border-border/60 pt-2.5 space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
-            <Paperclip className="w-3.5 h-3.5" /> Attachments ({attachments.length})
-          </span>
-          <div className="flex items-center gap-1">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-              className="h-6 text-[11px] px-2 gap-1 font-medium border-border"
-            >
-              <Plus className="w-3 h-3" /> Add PDF / File
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setShowLinkModal(true)}
-              className="h-6 text-[11px] px-2 gap-1 font-medium border-border"
-            >
-              <Link className="w-3 h-3" /> Drive Link
-            </Button>
-          </div>
-        </div>
-
-        {/* Attachment List */}
-        {attachments.length > 0 ? (
-          <div className="max-h-28 overflow-y-auto space-y-1 pr-1">
-            {attachments.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between bg-muted/40 hover:bg-muted/70 p-1.5 rounded-lg border border-border/40 text-xs transition-colors group"
+            {canEdit && (
+              <Button
+                size="sm"
+                onClick={handleOpenNewNoteModal}
+                className="h-7 px-2.5 text-xs gap-1 font-semibold bg-primary text-primary-foreground hover:bg-primary/90"
               >
-                <div className="flex items-center gap-2 overflow-hidden mr-2">
-                  {item.type === "drive" ? (
-                    <ExternalLink className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
-                  ) : item.name.endsWith(".pdf") ? (
-                    <FileText className="w-3.5 h-3.5 text-rose-500 flex-shrink-0" />
-                  ) : (
-                    <File className="w-3.5 h-3.5 text-primary flex-shrink-0" />
-                  )}
-                  <a
-                    href={item.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="truncate font-medium text-foreground hover:underline hover:text-primary"
-                  >
-                    {item.name}
-                  </a>
-                  {item.size && <span className="text-[10px] text-muted-foreground flex-shrink-0">({item.size})</span>}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveAttachment(item.id)}
-                  className="text-muted-foreground hover:text-destructive p-0.5 rounded opacity-60 group-hover:opacity-100 transition-opacity"
-                  title="Remove attachment"
-                >
-                  <Trash2 className="w-3 h-3" />
-                </button>
-              </div>
-            ))}
+                <Plus className="w-3.5 h-3.5" /> Add Note
+              </Button>
+            )}
           </div>
+        </div>
+      </div>
+
+      {/* Non-Permitted Banner */}
+      {!canEdit && (
+        <div className="bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 p-2.5 rounded-xl text-xs flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Lock className="w-4 h-4 text-amber-500 shrink-0" />
+            <span>Host has restricted note editing to <strong>{permissions.mode === "host_only" ? "Host Only" : "Selected Participants"}</strong>. You can view permitted notes.</span>
+          </div>
+        </div>
+      )}
+
+      {/* Notes Cards List */}
+      <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+        {visibleNotes.length > 0 ? (
+          visibleNotes.map((note) => (
+            <div
+              key={note.id}
+              className="bg-card border border-border/80 hover:border-border rounded-xl p-3.5 space-y-2.5 shadow-sm transition-all group"
+            >
+              {/* Note Header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold">
+                    {(note.authorName || "U").charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-foreground leading-tight">
+                      {note.title || "Untitled Note"}
+                    </h4>
+                    <span className="text-[10px] text-muted-foreground">
+                      {note.authorName} • {note.createdAt}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Visibility Badge & Card Actions */}
+                <div className="flex items-center gap-1">
+                  {note.visibility === "selected" ? (
+                    <Badge
+                      variant="outline"
+                      className="text-[9px] bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20 gap-1 px-1.5 py-0 font-semibold"
+                      title={`Shared with selected people (${note.allowedViewers?.length || 0})`}
+                    >
+                      <Users className="w-2.5 h-2.5" /> Selected People
+                    </Badge>
+                  ) : (
+                    <Badge
+                      variant="outline"
+                      className="text-[9px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 gap-1 px-1.5 py-0 font-semibold"
+                    >
+                      <Globe className="w-2.5 h-2.5" /> Everyone
+                    </Badge>
+                  )}
+
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => handleCopyNoteContent(note)}
+                    className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                    title="Copy Note Text"
+                  >
+                    {copiedNoteId === note.id ? (
+                      <Check className="w-3 h-3 text-emerald-500" />
+                    ) : (
+                      <Copy className="w-3 h-3" />
+                    )}
+                  </Button>
+
+                  {(canEdit || note.authorId === currentUserId || isHost) && (
+                    <>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleOpenEditNoteModal(note)}
+                        className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                        title="Edit Note"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleDeleteNote(note.id)}
+                        className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                        title="Delete Note"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Note Content Text */}
+              <div className="text-xs text-foreground/90 whitespace-pre-wrap leading-relaxed bg-muted/20 p-2.5 rounded-lg border border-border/40 font-sans">
+                {note.content}
+              </div>
+
+              {/* Attached Files inside Note */}
+              {note.attachments && note.attachments.length > 0 && (
+                <div className="space-y-1 pt-1 border-t border-border/40">
+                  <span className="text-[10px] font-semibold text-muted-foreground flex items-center gap-1">
+                    <Paperclip className="w-3 h-3" /> Attached Files ({note.attachments.length})
+                  </span>
+                  <div className="grid grid-cols-1 gap-1">
+                    {note.attachments.map((att) => (
+                      <div
+                        key={att.id}
+                        className="flex items-center justify-between bg-muted/40 hover:bg-muted/70 px-2 py-1.5 rounded-lg border border-border/40 text-xs transition-colors"
+                      >
+                        <div className="flex items-center gap-2 overflow-hidden mr-2">
+                          <FileCheck className="w-3.5 h-3.5 text-primary shrink-0" />
+                          <span className="truncate font-medium text-foreground text-[11px]">
+                            {att.name}
+                          </span>
+                          {att.size && (
+                            <span className="text-[9px] text-muted-foreground shrink-0">
+                              ({att.size})
+                            </span>
+                          )}
+                        </div>
+                        <a
+                          href={att.url}
+                          download={att.name}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] font-semibold text-primary hover:underline flex items-center gap-0.5 shrink-0"
+                        >
+                          <Download className="w-3 h-3" /> Download
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))
         ) : (
-          <p className="text-[11px] text-muted-foreground/60 italic text-center py-1">
-            No files or Google Drive links attached yet.
-          </p>
+          <div className="flex flex-col items-center justify-center py-12 text-center border border-dashed border-border/80 rounded-xl bg-card/25 p-4 space-y-2">
+            <FileText className="w-8 h-8 text-muted-foreground/40" />
+            <p className="text-xs font-semibold text-muted-foreground">No notes available</p>
+            <p className="text-[11px] text-muted-foreground/60 max-w-xs">
+              {canEdit
+                ? "Click 'Add Note' to create a note with visibility options and attached files."
+                : "No notes have been shared with you in this meeting yet."}
+            </p>
+            {canEdit && (
+              <Button
+                size="sm"
+                onClick={handleOpenNewNoteModal}
+                className="h-7 px-3 text-xs font-semibold bg-primary text-primary-foreground mt-2"
+              >
+                <Plus className="w-3.5 h-3.5 mr-1" /> Create First Note
+              </Button>
+            )}
+          </div>
         )}
       </div>
 
-      {/* Drive Link Modal / Input Dialog */}
-      {showLinkModal && (
+      {/* Footer Info */}
+      <div className="flex items-center justify-between text-[10px] text-muted-foreground border-t border-border/60 pt-2 px-1">
+        <span className="flex items-center gap-1">
+          <Sparkles className="w-3 h-3 text-primary" /> Auto-saved to Database History
+        </span>
+        <span>{visibleNotes.length} total visible</span>
+      </div>
+
+      {/* --- MODAL 1: Create / Edit Note Dialog --- */}
+      {showNoteModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-background border border-border rounded-xl p-4 w-full max-w-sm space-y-3 shadow-xl animate-in fade-in zoom-in-95 duration-200">
-            <h4 className="text-sm font-bold flex items-center gap-2 text-foreground">
-              <Link className="w-4 h-4 text-primary" /> Add File or Drive Link
-            </h4>
-            <div className="space-y-2">
-              <input
-                type="text"
-                placeholder="Link Title (e.g. Project Proposal PDF)"
-                value={driveName}
-                onChange={(e) => setDriveName(e.target.value)}
-                className="w-full bg-muted/50 border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-              <input
-                type="url"
-                placeholder="Paste Google Drive URL or File Link (https://...)"
-                value={driveUrl}
-                onChange={(e) => setDriveUrl(e.target.value)}
-                className="w-full bg-muted/50 border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              />
+          <div className="bg-background border border-border rounded-xl p-5 w-full max-w-md space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-border pb-2.5">
+              <h3 className="text-sm font-bold flex items-center gap-2 text-foreground">
+                <FileText className="w-4 h-4 text-primary" />
+                {editingNoteId ? "Edit Note" : "Create New Note"}
+              </h3>
+              <button
+                onClick={() => setShowNoteModal(false)}
+                className="text-muted-foreground hover:text-foreground rounded p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
-            <div className="flex justify-end gap-2 pt-1">
+
+            <div className="space-y-3">
+              {/* Note Title Input */}
+              <div>
+                <label className="text-[11px] font-semibold text-muted-foreground block mb-1">
+                  Note Title (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Project Action Items / Meeting Summary"
+                  value={formTitle}
+                  onChange={(e) => setFormTitle(e.target.value)}
+                  className="w-full bg-muted/40 border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+
+              {/* Note Content Textarea */}
+              <div>
+                <label className="text-[11px] font-semibold text-muted-foreground block mb-1">
+                  Note Content <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  rows={4}
+                  placeholder="Write your note content here..."
+                  value={formContent}
+                  onChange={(e) => setFormContent(e.target.value)}
+                  className="w-full bg-muted/40 border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-y"
+                />
+              </div>
+
+              {/* Note Visibility Settings */}
+              <div className="space-y-2 border-t border-border/60 pt-2.5">
+                <label className="text-[11px] font-bold text-foreground block">
+                  Note Visibility
+                </label>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFormVisibility("everyone")}
+                    className={`p-2 rounded-lg border text-left flex items-center gap-2 transition-all ${
+                      formVisibility === "everyone"
+                        ? "bg-primary/10 border-primary text-primary font-semibold"
+                        : "bg-muted/30 border-border text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <Globe className="w-4 h-4 shrink-0" />
+                    <div className="text-[11px]">
+                      <div className="font-bold leading-tight">Everyone ✅</div>
+                      <div className="text-[9px] opacity-75 font-normal">All meeting participants</div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFormVisibility("selected")}
+                    className={`p-2 rounded-lg border text-left flex items-center gap-2 transition-all ${
+                      formVisibility === "selected"
+                        ? "bg-purple-500/10 border-purple-500 text-purple-600 dark:text-purple-400 font-semibold"
+                        : "bg-muted/30 border-border text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <Users className="w-4 h-4 shrink-0" />
+                    <div className="text-[11px]">
+                      <div className="font-bold leading-tight">Selected People</div>
+                      <div className="text-[9px] opacity-75 font-normal">Pick specific participants</div>
+                    </div>
+                  </button>
+                </div>
+
+                {/* Selected People Checkboxes List */}
+                {formVisibility === "selected" && (
+                  <div className="bg-muted/30 border border-border rounded-lg p-2.5 space-y-1.5 max-h-36 overflow-y-auto">
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                      Select Participants allowed to view:
+                    </label>
+                    {participants.length > 0 ? (
+                      participants.map((p) => {
+                        const isChecked = formAllowedViewers.includes(p.id) || formAllowedViewers.includes(p.displayName);
+                        return (
+                          <label
+                            key={p.id}
+                            className="flex items-center gap-2 text-xs text-foreground cursor-pointer hover:bg-muted/50 p-1 rounded transition-colors"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setFormAllowedViewers([...formAllowedViewers, p.id]);
+                                } else {
+                                  setFormAllowedViewers(
+                                    formAllowedViewers.filter((id) => id !== p.id && id !== p.displayName)
+                                  );
+                                }
+                              }}
+                              className="rounded border-border text-primary focus:ring-primary"
+                            />
+                            <span>{p.displayName} {p.isHost ? "(Host)" : ""}</span>
+                          </label>
+                        );
+                      })
+                    ) : (
+                      <p className="text-[10px] text-muted-foreground italic">No other online participants in room.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* File Attachment Section */}
+              <div className="border-t border-border/60 pt-2.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-foreground flex items-center gap-1">
+                    <Paperclip className="w-3.5 h-3.5" /> Attach Files (PDF / Documents)
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="h-6 text-[10px] px-2 gap-1 font-semibold"
+                  >
+                    <Plus className="w-3 h-3" /> Browse File
+                  </Button>
+                </div>
+
+                {formAttachments.length > 0 && (
+                  <div className="space-y-1 max-h-24 overflow-y-auto">
+                    {formAttachments.map((att) => (
+                      <div
+                        key={att.id}
+                        className="flex items-center justify-between bg-muted/40 px-2 py-1 rounded text-xs border border-border/40"
+                      >
+                        <span className="truncate max-w-[200px] font-medium text-[11px]">{att.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => setFormAttachments(formAttachments.filter((a) => a.id !== att.id))}
+                          className="text-muted-foreground hover:text-destructive p-0.5"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex justify-end gap-2 pt-2 border-t border-border">
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => setShowLinkModal(false)}
+                onClick={() => setShowNoteModal(false)}
                 className="h-8 text-xs"
               >
                 Cancel
               </Button>
               <Button
                 size="sm"
-                onClick={handleAddDriveLink}
+                onClick={handleSaveNoteForm}
                 className="h-8 text-xs font-semibold bg-primary text-primary-foreground"
               >
-                Attach Link
+                Save Note
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL 2: Host Settings / Permissions Modal --- */}
+      {showHostPermissionsModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-background border border-border rounded-xl p-5 w-full max-w-md space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-border pb-2.5">
+              <h3 className="text-sm font-bold flex items-center gap-2 text-foreground">
+                <Shield className="w-4 h-4 text-primary" />
+                Notes Permission Settings (Host Controls)
+              </h3>
+              <button
+                onClick={() => setShowHostPermissionsModal(false)}
+                className="text-muted-foreground hover:text-foreground rounded p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Control who is allowed to create and edit notes during this meeting:
+              </p>
+
+              {/* Permission Mode Radios */}
+              <div className="space-y-2">
+                <label
+                  onClick={() => setTempMode("everyone")}
+                  className={`flex items-start gap-3 p-2.5 rounded-xl border cursor-pointer transition-all ${
+                    tempMode === "everyone"
+                      ? "bg-primary/10 border-primary text-foreground font-semibold"
+                      : "bg-muted/20 border-border text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="perm_mode"
+                    checked={tempMode === "everyone"}
+                    onChange={() => setTempMode("everyone")}
+                    className="mt-0.5 text-primary"
+                  />
+                  <div className="text-xs">
+                    <div className="font-bold text-foreground">Everyone can create and edit notes (Default)</div>
+                    <div className="text-[11px] text-muted-foreground font-normal mt-0.5">
+                      All participants in the meeting have full write and edit access.
+                    </div>
+                  </div>
+                </label>
+
+                <label
+                  onClick={() => setTempMode("host_only")}
+                  className={`flex items-start gap-3 p-2.5 rounded-xl border cursor-pointer transition-all ${
+                    tempMode === "host_only"
+                      ? "bg-primary/10 border-primary text-foreground font-semibold"
+                      : "bg-muted/20 border-border text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="perm_mode"
+                    checked={tempMode === "host_only"}
+                    onChange={() => setTempMode("host_only")}
+                    className="mt-0.5 text-primary"
+                  />
+                  <div className="text-xs">
+                    <div className="font-bold text-foreground">Only Host can create and edit notes</div>
+                    <div className="text-[11px] text-muted-foreground font-normal mt-0.5">
+                      Participants can view notes, but cannot write or edit them.
+                    </div>
+                  </div>
+                </label>
+
+                <label
+                  onClick={() => setTempMode("selected")}
+                  className={`flex items-start gap-3 p-2.5 rounded-xl border cursor-pointer transition-all ${
+                    tempMode === "selected"
+                      ? "bg-primary/10 border-primary text-foreground font-semibold"
+                      : "bg-muted/20 border-border text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="perm_mode"
+                    checked={tempMode === "selected"}
+                    onChange={() => setTempMode("selected")}
+                    className="mt-0.5 text-primary"
+                  />
+                  <div className="text-xs">
+                    <div className="font-bold text-foreground">Only Selected Participants can create and edit notes</div>
+                    <div className="text-[11px] text-muted-foreground font-normal mt-0.5">
+                      Choose specific users who are granted permission to write and edit notes.
+                    </div>
+                  </div>
+                </label>
+              </div>
+
+              {/* Selected Participants Checkboxes for Edit Access */}
+              {tempMode === "selected" && (
+                <div className="bg-muted/30 border border-border rounded-xl p-3 space-y-2 max-h-40 overflow-y-auto">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                    Select Participants with Edit Permission:
+                  </label>
+                  {participants.length > 0 ? (
+                    participants.map((p) => {
+                      const isChecked = tempAllowedEditors.includes(p.id) || tempAllowedEditors.includes(p.displayName);
+                      return (
+                        <label
+                          key={p.id}
+                          className="flex items-center gap-2.5 text-xs text-foreground cursor-pointer hover:bg-muted/50 p-1.5 rounded-lg transition-colors"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setTempAllowedEditors([...tempAllowedEditors, p.id]);
+                              } else {
+                                setTempAllowedEditors(
+                                  tempAllowedEditors.filter((id) => id !== p.id && id !== p.displayName)
+                                );
+                              }
+                            }}
+                            className="rounded border-border text-primary focus:ring-primary"
+                          />
+                          <span className="font-medium">{p.displayName} {p.isHost ? "(Host)" : ""}</span>
+                        </label>
+                      );
+                    })
+                  ) : (
+                    <p className="text-[11px] text-muted-foreground italic">No participants found in call.</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex justify-end gap-2 pt-2 border-t border-border">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setShowHostPermissionsModal(false)}
+                className="h-8 text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSaveHostPermissions}
+                className="h-8 text-xs font-semibold bg-primary text-primary-foreground"
+              >
+                Apply Settings
               </Button>
             </div>
           </div>

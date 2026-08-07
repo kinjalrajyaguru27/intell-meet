@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -71,6 +71,18 @@ export default function OrgConfig({
   // Ownership transfer state
   const [showTransfer, setShowTransfer] = useState(false);
   const [newOwnerId, setNewOwnerId] = useState("");
+
+  // Deduplicated unique projects list
+  const uniqueProjects = useMemo(() => {
+    const map = new Map<string, any>();
+    projects.forEach((p) => {
+      const key = p.id || p._id;
+      if (key && !map.has(key)) {
+        map.set(key, p);
+      }
+    });
+    return Array.from(map.values());
+  }, [projects]);
 
   // Load Organization members when selectedOrgId changes
   useEffect(() => {
@@ -173,7 +185,7 @@ export default function OrgConfig({
         setTeamName("");
         setShowCreateTeam(false);
         refetchTeams();
-        setSelectedTeamId(newTeam.id);
+        setSelectedTeamId(newTeam.id || newTeam._id);
       } else {
         const err = await res.json();
         toast({ title: "Failed", description: err.error || "Could not create team", variant: "destructive" });
@@ -209,7 +221,42 @@ export default function OrgConfig({
 
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!projectName.trim() || !selectedTeamId || !token) return;
+    if (!projectName.trim() || !token) return;
+
+    let targetTeamId = selectedTeamId;
+
+    if (!targetTeamId) {
+      if (teams && teams.length > 0) {
+        targetTeamId = teams[0].id || teams[0]._id;
+        setSelectedTeamId(targetTeamId);
+      } else if (selectedOrgId) {
+        // Auto-create a workspace team for this organization if none exists
+        try {
+          const teamRes = await fetch("/api/teams", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ name: "General Workspace", organizationId: selectedOrgId })
+          });
+          if (teamRes.ok) {
+            const newTeam = await teamRes.json();
+            targetTeamId = newTeam.id || newTeam._id;
+            setSelectedTeamId(targetTeamId);
+            refetchTeams();
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    }
+
+    if (!targetTeamId) {
+      toast({ title: "Error", description: "Please select an organization first.", variant: "destructive" });
+      return;
+    }
+
     try {
       const res = await fetch("/api/projects", {
         method: "POST",
@@ -220,20 +267,20 @@ export default function OrgConfig({
         body: JSON.stringify({
           name: projectName,
           description: projectDesc,
-          teamId: selectedTeamId,
+          teamId: targetTeamId,
           dueDate: projectDueDate || undefined,
           priority: projectPriority
         })
       });
       if (res.ok) {
         const newProj = await res.json();
-        toast({ title: "Success", description: `Project "${newProj.name}" created` });
+        toast({ title: "Success", description: `Project "${newProj.name}" created successfully` });
         setProjectName("");
         setProjectDesc("");
         setProjectDueDate("");
         setShowCreateProject(false);
         refetchProjects();
-        setSelectedProjectId(newProj.id);
+        setSelectedProjectId(newProj.id || newProj._id);
       } else {
         const err = await res.json();
         toast({ title: "Failed", description: err.error || "Could not create project", variant: "destructive" });
@@ -355,7 +402,7 @@ export default function OrgConfig({
   return (
     <div className="space-y-6">
       {/* Selection Panel */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-zinc-50 dark:bg-card/40 border border-zinc-200 dark:border-white/10 p-5 rounded-2xl shadow-sm">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-zinc-50 dark:bg-card/40 border border-zinc-200 dark:border-white/10 p-5 rounded-2xl shadow-sm">
         <div className="space-y-2">
           <Label className="text-zinc-800 dark:text-white text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
             <Building2 className="w-3.5 h-3.5 text-primary" />
@@ -390,59 +437,26 @@ export default function OrgConfig({
 
         <div className="space-y-2">
           <Label className="text-zinc-800 dark:text-white text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
-            <Users className="w-3.5 h-3.5 text-cyan-550 dark:text-cyan-400" />
-            2. Select Team Workspace
-          </Label>
-          <div className="flex gap-2">
-            <select
-              value={selectedTeamId}
-              disabled={!selectedOrgId}
-              onChange={(e) => {
-                setSelectedTeamId(e.target.value);
-                setSelectedProjectId("");
-              }}
-              className="flex-1 bg-white dark:bg-black/40 border border-zinc-250 dark:border-white/10 rounded-xl px-3 py-2 text-xs text-zinc-850 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary font-medium disabled:opacity-50"
-            >
-              <option value="" className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">-- Choose Team Workspace --</option>
-              {teams.map((t) => (
-                <option key={t.id} value={t.id} className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">{t.name}</option>
-              ))}
-            </select>
-            <Button
-              key="create-team-btn"
-              size="icon"
-              variant="outline"
-              disabled={!selectedOrgId}
-              onClick={() => setShowCreateTeam(true)}
-              className="w-9 h-9 shrink-0 rounded-xl border-zinc-250 dark:border-white/10 hover:bg-zinc-100 dark:hover:bg-white/5 text-zinc-700 dark:text-white disabled:opacity-50"
-            >
-              <Plus className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label className="text-zinc-800 dark:text-white text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
             <FolderKanban className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-            3. Select Project
+            2. Select Project
           </Label>
           <div className="flex gap-2">
             <select
               value={selectedProjectId}
-              disabled={!selectedTeamId}
+              disabled={!selectedOrgId}
               onChange={(e) => setSelectedProjectId(e.target.value)}
               className="flex-1 bg-white dark:bg-black/40 border border-zinc-250 dark:border-white/10 rounded-xl px-3 py-2 text-xs text-zinc-850 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary font-medium disabled:opacity-50"
             >
               <option value="" className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">-- Choose Project --</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id} className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">{p.name}</option>
+              {uniqueProjects.map((p) => (
+                <option key={p.id || p._id} value={p.id || p._id} className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">{p.name}</option>
               ))}
             </select>
             <Button
               key="create-project-btn"
               size="icon"
               variant="outline"
-              disabled={!selectedTeamId}
+              disabled={!selectedOrgId}
               onClick={() => setShowCreateProject(true)}
               className="w-9 h-9 shrink-0 rounded-xl border-zinc-250 dark:border-white/10 hover:bg-zinc-100 dark:hover:bg-white/5 text-zinc-700 dark:text-white disabled:opacity-50"
             >
@@ -589,138 +603,92 @@ export default function OrgConfig({
 
       {/* Selected Org Settings Pane */}
       {selectedOrgId && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Org Workspace controls */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Members List & Invite */}
-            <Card className="bg-white dark:bg-card/25 border border-zinc-200 dark:border-white/5 shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-zinc-100 dark:border-white/5">
-                <div>
-                  <CardTitle className="text-base font-bold text-zinc-900 dark:text-white">Organization Members</CardTitle>
-                  <CardDescription className="text-xs text-muted-foreground">Manage organizational user privileges</CardDescription>
+        <div className="space-y-6">
+          {/* Members List & Invite */}
+          <Card className="bg-white dark:bg-card/25 border border-zinc-200 dark:border-white/5 shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-zinc-100 dark:border-white/5">
+              <div>
+                <CardTitle className="text-base font-bold text-zinc-900 dark:text-white">Organization Members</CardTitle>
+                <CardDescription className="text-xs text-muted-foreground">Manage organizational user privileges</CardDescription>
+              </div>
+              <Badge variant="outline" className="text-xs bg-zinc-50 dark:bg-white/5 text-zinc-700 dark:text-white">
+                {orgMembers.length} active
+              </Badge>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-4">
+              {/* Invite Form */}
+              <form onSubmit={handleInviteMember} className="flex gap-2 items-end bg-zinc-50 dark:bg-black/20 p-3 rounded-xl border border-zinc-200 dark:border-white/5">
+                <div className="flex-1 space-y-1">
+                  <Label className="text-[10px] text-zinc-500 dark:text-muted-foreground uppercase font-bold pl-1">Invite Member (Email)</Label>
+                  <Input
+                    type="email"
+                    placeholder="user@domain.com"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    className="bg-white dark:bg-black/40 border-zinc-250 dark:border-white/10 h-8 text-xs text-foreground dark:text-white"
+                    required
+                  />
                 </div>
-                <Badge variant="outline" className="text-xs bg-zinc-50 dark:bg-white/5 text-zinc-700 dark:text-white">
-                  {orgMembers.length} active
-                </Badge>
-              </CardHeader>
-              <CardContent className="space-y-4 pt-4">
-                {/* Invite Form */}
-                <form onSubmit={handleInviteMember} className="flex gap-2 items-end bg-zinc-50 dark:bg-black/20 p-3 rounded-xl border border-zinc-200 dark:border-white/5">
-                  <div className="flex-1 space-y-1">
-                    <Label className="text-[10px] text-zinc-500 dark:text-muted-foreground uppercase font-bold pl-1">Invite Member (Email)</Label>
-                    <Input
-                      type="email"
-                      placeholder="user@domain.com"
-                      value={inviteEmail}
-                      onChange={(e) => setInviteEmail(e.target.value)}
-                      className="bg-white dark:bg-black/40 border-zinc-250 dark:border-white/10 h-8 text-xs text-foreground dark:text-white"
-                      required
-                    />
-                  </div>
-                  <div className="w-28 space-y-1">
-                    <Label className="text-[10px] text-zinc-500 dark:text-muted-foreground uppercase font-bold pl-1">Role</Label>
-                    <select
-                      value={inviteRole}
-                      onChange={(e) => setInviteRole(e.target.value)}
-                      className="w-full bg-white dark:bg-black/40 border border-zinc-250 dark:border-white/10 h-8 rounded-md px-2.5 text-xs text-zinc-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary font-medium"
-                    >
-                      <option value="Viewer" className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">Viewer</option>
-                      <option value="Member" className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">Member</option>
-                      <option value="Manager" className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">Manager</option>
-                      <option value="Admin" className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">Admin</option>
-                    </select>
-                  </div>
-                  <Button type="submit" size="sm" className="h-8 rounded-lg px-3">
-                    <UserPlus className="w-4 h-4 mr-1.5" />
-                    Invite
-                  </Button>
-                </form>
-
-                {/* Members list */}
-                <div className="divide-y divide-zinc-200 dark:divide-white/5 max-h-72 overflow-y-auto pr-1">
-                  {orgMembers.length === 0 ? (
-                    <div className="text-center py-6 text-xs text-muted-foreground italic">No members logged</div>
-                  ) : (
-                    orgMembers.map((m) => {
-                      const canManage = isOwner && m.userId !== currentUser?.id;
-                      return (
-                        <div key={m.userId} className="flex items-center justify-between py-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-xs text-primary">
-                              {m.name ? m.name.charAt(0).toUpperCase() : "?"}
-                            </div>
-                            <div>
-                              <span className="font-semibold text-xs text-zinc-900 dark:text-white block">{m.name || "Pending Invite"}</span>
-                              <span className="text-[10px] text-zinc-500 dark:text-muted-foreground block">{m.email}</span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {canManage ? (
-                              <select
-                                value={m.role}
-                                onChange={(e) => handleUpdateRole(m.userId, e.target.value)}
-                                className="bg-white dark:bg-black/40 border border-zinc-250 dark:border-white/10 rounded px-2 py-0.5 text-[10px] text-zinc-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary font-semibold"
-                              >
-                                <option value="Viewer" className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">Viewer</option>
-                                <option value="Member" className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">Member</option>
-                                <option value="Manager" className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">Manager</option>
-                                <option value="Admin" className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">Admin</option>
-                              </select>
-                            ) : (
-                              <span className="text-[10px] bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 px-2 py-0.5 rounded text-zinc-600 dark:text-muted-foreground font-semibold">
-                                {m.role}
-                              </span>
-                            )}
-
-                            {canManage && (
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() => handleRemoveMember(m.userId)}
-                                className="w-7 h-7 text-red-500 hover:bg-red-500/10 hover:text-red-450"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
+                <div className="w-28 space-y-1">
+                  <Label className="text-[10px] text-zinc-500 dark:text-muted-foreground uppercase font-bold pl-1">Role</Label>
+                  <select
+                    value={inviteRole}
+                    onChange={(e) => setInviteRole(e.target.value)}
+                    className="w-full bg-white dark:bg-black/40 border border-zinc-250 dark:border-white/10 h-8 rounded-md px-2.5 text-xs text-zinc-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary font-medium"
+                  >
+                    <option value="Viewer" className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">Viewer</option>
+                    <option value="Member" className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">Member</option>
+                    <option value="Manager" className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">Manager</option>
+                    <option value="Admin" className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">Admin</option>
+                  </select>
                 </div>
-              </CardContent>
-            </Card>
+                <Button type="submit" size="sm" className="h-8 rounded-lg px-3">
+                  <UserPlus className="w-4 h-4 mr-1.5" />
+                  Invite
+                </Button>
+              </form>
 
-            {/* List Projects */}
-            <Card className="bg-white dark:bg-card/25 border border-zinc-200 dark:border-white/5 shadow-sm">
-              <CardHeader className="pb-3 border-b border-zinc-100 dark:border-white/5">
-                <CardTitle className="text-base font-bold text-zinc-900 dark:text-white">Workspace Projects</CardTitle>
-                <CardDescription className="text-xs text-muted-foreground">Timeline streams for team execution</CardDescription>
-              </CardHeader>
-              <CardContent className="pt-4">
-                <div className="space-y-3">
-                  {projects.length === 0 ? (
-                    <div className="text-center py-6 text-xs text-muted-foreground italic">No projects found. Use drop down selectors to create one.</div>
-                  ) : (
-                    projects.map((p) => (
-                      <div key={p.id} className="flex justify-between items-center p-3 bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/5 rounded-xl shadow-xs">
-                        <div>
-                          <span className="font-semibold text-xs text-zinc-900 dark:text-white block">{p.name}</span>
-                          <span className="text-[10px] text-zinc-500 dark:text-muted-foreground block truncate max-w-xs">{p.description || "No description"}</span>
-                          <div className="flex gap-2 mt-1.5">
-                            <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-bold">{p.priority}</span>
-                            {p.dueDate && <span className="text-[9px] bg-zinc-150 dark:bg-white/5 text-zinc-600 dark:text-muted-foreground px-1.5 py-0.5 rounded border border-zinc-200 dark:border-white/5">Due: {p.dueDate}</span>}
+              {/* Members list */}
+              <div className="divide-y divide-zinc-200 dark:divide-white/5 max-h-72 overflow-y-auto pr-1">
+                {orgMembers.length === 0 ? (
+                  <div className="text-center py-6 text-xs text-muted-foreground italic">No members logged</div>
+                ) : (
+                  orgMembers.map((m) => {
+                    const canManage = isOwner && m.userId !== currentUser?.id;
+                    return (
+                      <div key={m.userId} className="flex items-center justify-between py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-xs text-primary">
+                            {m.name ? m.name.charAt(0).toUpperCase() : "?"}
+                          </div>
+                          <div>
+                            <span className="font-semibold text-xs text-zinc-900 dark:text-white block">{m.name || "Pending Invite"}</span>
+                            <span className="text-[10px] text-zinc-500 dark:text-muted-foreground block">{m.email}</span>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] bg-zinc-100 dark:bg-white/5 px-2 py-0.5 rounded text-zinc-800 dark:text-white font-bold border border-zinc-200 dark:border-white/5">
-                            {p.progressPercent}% progress
-                          </span>
-                          {isOwner && (
+                          {canManage ? (
+                            <select
+                              value={m.role}
+                              onChange={(e) => handleUpdateRole(m.userId, e.target.value)}
+                              className="bg-white dark:bg-black/40 border border-zinc-250 dark:border-white/10 rounded px-2 py-0.5 text-[10px] text-zinc-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary font-semibold"
+                            >
+                              <option value="Viewer" className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">Viewer</option>
+                              <option value="Member" className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">Member</option>
+                              <option value="Manager" className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">Manager</option>
+                              <option value="Admin" className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">Admin</option>
+                            </select>
+                          ) : (
+                            <span className="text-[10px] bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 px-2 py-0.5 rounded text-zinc-600 dark:text-muted-foreground font-semibold">
+                              {m.role}
+                            </span>
+                          )}
+
+                          {canManage && (
                             <Button
                               size="icon"
                               variant="ghost"
-                              onClick={() => handleDeleteProject(p.id)}
+                              onClick={() => handleRemoveMember(m.userId)}
                               className="w-7 h-7 text-red-500 hover:bg-red-500/10 hover:text-red-450"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -728,69 +696,80 @@ export default function OrgConfig({
                           )}
                         </div>
                       </div>
-                    ))
-                  )}
+                    );
+                  })
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* List Projects */}
+          <Card className="bg-white dark:bg-card/25 border border-zinc-200 dark:border-white/5 shadow-sm">
+            <CardHeader className="pb-3 border-b border-zinc-100 dark:border-white/5">
+              <CardTitle className="text-base font-bold text-zinc-900 dark:text-white">Workspace Projects</CardTitle>
+              <CardDescription className="text-xs text-muted-foreground">Timeline streams for team execution</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <div className="space-y-3">
+                {uniqueProjects.length === 0 ? (
+                  <div className="text-center py-6 text-xs text-muted-foreground italic">No projects found. Use drop down selectors to create one.</div>
+                ) : (
+                  uniqueProjects.map((p) => (
+                    <div key={p.id || p._id} className="flex justify-between items-center p-3 bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/5 rounded-xl shadow-xs">
+                      <div>
+                        <span className="font-semibold text-xs text-zinc-900 dark:text-white block">{p.name}</span>
+                        <span className="text-[10px] text-zinc-500 dark:text-muted-foreground block truncate max-w-xs">{p.description || "No description"}</span>
+                        <div className="flex gap-2 mt-1.5">
+                          <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-bold">{p.priority}</span>
+                          {p.dueDate && <span className="text-[9px] bg-zinc-150 dark:bg-white/5 text-zinc-600 dark:text-muted-foreground px-1.5 py-0.5 rounded border border-zinc-200 dark:border-white/5">Due: {p.dueDate}</span>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] bg-zinc-100 dark:bg-white/5 px-2 py-0.5 rounded text-zinc-800 dark:text-white font-bold border border-zinc-200 dark:border-white/5">
+                          {p.progressPercent}% progress
+                        </span>
+                        {isOwner && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleDeleteProject(p.id || p._id)}
+                            className="w-7 h-7 text-red-500 hover:bg-red-500/10 hover:text-red-450"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Danger Zone - Positioned at the end of the page */}
+          {isOwner && (
+            <Card className="bg-destructive/5 border-destructive/20 shadow-sm mt-8">
+              <CardHeader className="pb-3 border-b border-destructive/10">
+                <CardTitle className="text-sm font-bold text-red-500 dark:text-red-400 flex items-center gap-1.5">
+                  <AlertTriangle className="w-4 h-4 text-destructive" />
+                  Danger Zone
+                </CardTitle>
+                <CardDescription className="text-[11px] text-red-600 dark:text-red-300">Irreversible actions on organization</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="text-xs text-zinc-600 dark:text-zinc-400 max-w-md">
+                  Deleting this organization will permanently purge all associated team workspaces, projects, timelines, and tasks.
                 </div>
+                <Button
+                  onClick={handleDeleteOrg}
+                  disabled={isDeletingOrg}
+                  className="bg-destructive hover:bg-destructive/90 text-white font-semibold text-xs border-0 px-5 py-2 rounded-lg shrink-0"
+                >
+                  {isDeletingOrg ? "Deleting..." : "Permanently Delete Org"}
+                </Button>
               </CardContent>
             </Card>
-          </div>
-
-          {/* Org Settings / Danger Zone */}
-          <div className="space-y-6">
-            {/* Transfer Ownership */}
-            {isOwner && (
-              <Card className="bg-white dark:bg-card/25 border border-zinc-200 dark:border-white/5 shadow-sm">
-                <CardHeader className="pb-3 border-b border-zinc-100 dark:border-white/5">
-                  <CardTitle className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
-                    <KeyRound className="w-4 h-4 text-amber-500" />
-                    Transfer Ownership
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <form onSubmit={handleTransferOwnership} className="space-y-3">
-                    <select
-                      value={newOwnerId}
-                      onChange={(e) => setNewOwnerId(e.target.value)}
-                      className="w-full bg-white dark:bg-black/40 border border-zinc-250 dark:border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-zinc-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary font-medium"
-                      required
-                    >
-                      <option value="" className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">-- Choose New Owner --</option>
-                      {orgMembers
-                        .filter(m => m.userId !== currentUser?.id)
-                        .map(m => (
-                          <option key={m.userId} value={m.userId} className="bg-white dark:bg-[#09090b] text-zinc-900 dark:text-white">{m.name || m.email}</option>
-                        ))}
-                    </select>
-                    <Button type="submit" size="sm" className="w-full text-xs font-semibold bg-amber-500 hover:bg-amber-600 text-black border-0">
-                      Transfer Owner Privileges
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Danger Zone */}
-            {isOwner && (
-              <Card className="bg-destructive/5 border-destructive/20 shadow-sm">
-                <CardHeader className="pb-3 border-b border-destructive/10">
-                  <CardTitle className="text-sm font-bold text-red-500 dark:text-red-400 flex items-center gap-1.5">
-                    <AlertTriangle className="w-4 h-4 text-destructive" />
-                    Danger Zone
-                  </CardTitle>
-                  <CardDescription className="text-[11px] text-red-600 dark:text-red-300">Irreversible actions on organization</CardDescription>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <Button
-                    onClick={handleDeleteOrg}
-                    disabled={isDeletingOrg}
-                    className="w-full bg-destructive hover:bg-destructive/90 text-white font-semibold text-xs border-0 py-2.5 rounded-lg"
-                  >
-                    {isDeletingOrg ? "Deleting..." : "Permanently Delete Org"}
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+          )}
         </div>
       )}
     </div>

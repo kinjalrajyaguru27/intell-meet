@@ -1,16 +1,26 @@
 import { useMemo } from "react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
+  ResponsiveContainer as RechartsResponsiveContainer,
+  PieChart as RechartsPieChart,
+  Pie as RechartsPie,
+  Cell as RechartsCell,
+  BarChart as RechartsBarChart,
+  Bar as RechartsBar,
+  XAxis as RechartsXAxis,
+  YAxis as RechartsYAxis,
+  Tooltip as RechartsTooltip,
 } from "recharts";
+
+const ResponsiveContainer = RechartsResponsiveContainer as any;
+const PieChart = RechartsPieChart as any;
+const Pie = RechartsPie as any;
+const Cell = RechartsCell as any;
+const BarChart = RechartsBarChart as any;
+const Bar = RechartsBar as any;
+const XAxis = RechartsXAxis as any;
+const YAxis = RechartsYAxis as any;
+const Tooltip = RechartsTooltip as any;
 import {
   TrendingUp,
   Clock,

@@ -5,6 +5,24 @@ import { pushNotificationToUser } from "../signaling";
 import { logActivity } from "../lib/activity";
 import { canAccessTask, canAccessProject } from "../lib/authHelpers";
 
+function computeStatusFromDueDate(dueDate: string | null | undefined, currentStatus: string): string {
+  // Respect explicit user status actions (In Progress, Done, Review, Testing)
+  if (currentStatus === "Done" || currentStatus === "In Progress" || currentStatus === "Review" || currentStatus === "Testing") {
+    return currentStatus === "Review" || currentStatus === "Testing" ? "In Progress" : currentStatus;
+  }
+
+  if (!dueDate) return currentStatus || "Todo";
+  
+  const todayStr = new Date().toISOString().split("T")[0];
+  if (dueDate < todayStr) {
+    return "Done";
+  } else if (dueDate === todayStr) {
+    return "In Progress";
+  } else {
+    return currentStatus || "Todo";
+  }
+}
+
 const router = Router();
 router.use(requireAuth);
 
@@ -49,9 +67,13 @@ router.get("/tasks", async (req: AuthenticatedRequest, res) => {
       const completedChildren = children.filter((c) => c.status === "Done").length;
       const subtaskProgress = totalChildren > 0 ? Math.round((completedChildren / totalChildren) * 100) : 0;
 
+      const obj = t.toObject();
+      const effectiveStatus = computeStatusFromDueDate(obj.dueDate, obj.status);
+
       results.push({
-        ...t.toObject(),
+        ...obj,
         id: t._id.toString(),
+        status: effectiveStatus,
         totalChildren,
         completedChildren,
         subtaskProgress,
@@ -93,10 +115,18 @@ router.get("/tasks/:id", async (req: AuthenticatedRequest, res) => {
     const completedChildren = children.filter((c) => c.status === "Done").length;
     const subtaskProgress = totalChildren > 0 ? Math.round((completedChildren / totalChildren) * 100) : 0;
 
+    const obj = task.toObject();
+    const effectiveStatus = computeStatusFromDueDate(obj.dueDate, obj.status);
+
     res.json({
-      ...task.toObject(),
+      ...obj,
       id: task._id.toString(),
-      subtasks: children.map((c) => ({ ...c.toObject(), id: c._id.toString() })),
+      status: effectiveStatus,
+      subtasks: children.map((c) => ({
+        ...c.toObject(),
+        id: c._id.toString(),
+        status: computeStatusFromDueDate(c.dueDate, c.status),
+      })),
       comments,
       attachments,
       totalChildren,
@@ -144,10 +174,13 @@ router.post("/tasks", async (req: AuthenticatedRequest, res) => {
         return;
       }
     }
+
+    const initialStatus = computeStatusFromDueDate(dueDate, status || "Todo");
+
     const task = new Task({
       title,
       description: description || "",
-      status: status || "Todo",
+      status: initialStatus,
       assignee: assigneeId || null,
       reporter: req.user.id,
       dueDate: dueDate || null,
@@ -211,6 +244,7 @@ router.put("/tasks/:id", async (req: AuthenticatedRequest, res) => {
       return;
     }
 
+    const oldStatus = task.status;
     const oldAssignee = task.assignee?.toString();
 
     if (title !== undefined) task.title = title;
@@ -223,8 +257,36 @@ router.put("/tasks/:id", async (req: AuthenticatedRequest, res) => {
     if (teamId !== undefined) task.teamId = teamId || null;
     if (parentTaskId !== undefined) task.parentTaskId = parentTaskId || null;
 
+    if (status !== undefined) {
+      task.status = status;
+    } else if (task.dueDate && dueDate !== undefined) {
+      task.status = computeStatusFromDueDate(task.dueDate, task.status);
+    }
+
     await task.save();
     await logActivity(req.user!.id, "task_updated", id as string, "Task", `Updated task "${task.title}" (Status: ${task.status})`);
+
+    // Task Status Change Notification Trigger
+    if (oldStatus && task.status && oldStatus !== task.status) {
+      try {
+        const recipients = new Set<string>();
+        if (task.assignee) recipients.add(task.assignee.toString());
+        if (task.reporter) recipients.add(task.reporter.toString());
+        recipients.delete(req.user!.id);
+
+        for (const recipientId of recipients) {
+          await pushNotificationToUser(
+            recipientId,
+            "task_assignment",
+            `Task Status Updated: ${task.title}`,
+            `Status updated: ${oldStatus} → ${task.status} for task "${task.title}"`,
+            "/todo_manager"
+          );
+        }
+      } catch (err) {
+        req.log.error({ err }, "Error sending task status update notification");
+      }
+    }
 
     // Trigger assignment notification if assignee changed
     if (assigneeId && assigneeId !== req.user!.id && assigneeId !== oldAssignee) {

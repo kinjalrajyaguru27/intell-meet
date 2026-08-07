@@ -30,6 +30,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { AIInsightsDashboard } from "@/components/AIInsightsDashboard";
 import { DecisionTimeline } from "@/components/DecisionTimeline";
 import { FollowUpGenerator } from "@/components/FollowUpGenerator";
+import CollaborativeNotesPanel from "@/components/CollaborativeNotesPanel";
 import {
   ArrowLeft,
   Clock,
@@ -240,7 +241,7 @@ function ActionItemRow({ item, meetingId }: ActionItemRowProps) {
 export default function MeetingDetail() {
   const params = useParams();
   const [, setLocation] = useLocation();
-  const { isAuthenticated, token } = useAuth();
+  const { isAuthenticated, token, user } = useAuth();
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -280,7 +281,7 @@ export default function MeetingDetail() {
     const queryParams = new URLSearchParams(window.location.search);
     const tabParam = queryParams.get("tab");
     if (tabParam) {
-      if (["summary", "actions", "insights", "decisions", "followup", "transcript"].includes(tabParam)) {
+      if (["summary", "actions", "insights", "transcript"].includes(tabParam)) {
         setActiveTab(tabParam);
       }
     }
@@ -318,7 +319,7 @@ export default function MeetingDetail() {
   const [newItemDue, setNewItemDue] = useState("");
   const [showNewItemForm, setShowNewItemForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedSummaryType, setSelectedSummaryType] = useState<"Short" | "Detailed" | "Management" | "Client">("Detailed");
+  const [selectedSummaryType] = useState<"Short" | "Detailed" | "Management" | "Client">("Short");
 
   // Version History states
   const [notesVersions, setNotesVersions] = useState<any[]>([]);
@@ -573,22 +574,53 @@ export default function MeetingDetail() {
   };
 
   const handleDownloadCsvTranscript = () => {
-    if (!meeting || !meeting.transcript || meeting.transcript.length === 0) return;
-    let csv = "Timestamp,Speaker,Text\n";
-    meeting.transcript.forEach(line => {
-      const time = new Date(line.timestamp).toLocaleTimeString();
-      const speaker = `"${line.speaker.replace(/"/g, '""')}"`;
-      const text = `"${line.text.replace(/"/g, '""')}"`;
-      csv += `${time},${speaker},${text}\n`;
-    });
+    if (!meeting) return;
+    let csv = "Section,Category/Speaker,Content/Detail\n";
+    
+    // Metadata
+    csv += `Metadata,Meeting Title,"${(meeting.name || "").replace(/"/g, '""')}"\n`;
+    csv += `Metadata,Start Date,"${new Date(meeting.startedAt).toLocaleString()}"\n`;
+    csv += `Metadata,Duration,"${meeting.durationSeconds ? Math.floor(meeting.durationSeconds / 60) + ' minutes' : 'N/A'}"\n`;
+    csv += `Metadata,Participants,"${(meeting.participantNames || []).join("; ").replace(/"/g, '""')}"\n`;
+    
+    // Collaborative Notes
+    if (notes && notes.trim()) {
+      csv += `Collaborative Notes,Current Notes,"${notes.replace(/"/g, '""').replace(/\n/g, ' ')}"\n`;
+    }
+    
+    const list = (meeting as any)?.notesList || notesVersions || [];
+    if (list && list.length > 0) {
+      list.forEach((n: any, idx: number) => {
+        csv += `Version Timeline,Note #${idx + 1},"Author: ${(n.authorName || 'User').replace(/"/g, '""')} | Content: ${(n.content || '').replace(/"/g, '""').replace(/\n/g, ' ')}"\n`;
+      });
+    }
+
+    // Action Items
+    if (meeting.actionItems && meeting.actionItems.length > 0) {
+      meeting.actionItems.forEach((item: any, idx: number) => {
+        csv += `Action Item,#${idx + 1},"Task: ${(item.text || item.title || '').replace(/"/g, '""')} | Assignee: ${item.assigneeName || 'Unassigned'} | Status: ${item.isDone ? 'Done' : 'Pending'}"\n`;
+      });
+    }
+
+    // Speech Transcript
+    if (meeting.transcript && meeting.transcript.length > 0) {
+      meeting.transcript.forEach((line: any) => {
+        const time = new Date(line.timestamp).toLocaleTimeString();
+        const speaker = (line.speaker || "").replace(/"/g, '""');
+        const text = (line.text || "").replace(/"/g, '""');
+        csv += `Speech Transcript,[${time}] ${speaker}," ${text}"\n`;
+      });
+    }
+
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", `transcript_${meeting.name.replace(/\s+/g, "_")}.csv`);
+    link.setAttribute("download", `meeting_details_${(meeting.name || "meeting").replace(/\s+/g, "_")}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    toast({ title: "CSV Downloaded", description: "Entire meeting details exported to CSV." });
   };
 
   useEffect(() => {
@@ -603,6 +635,8 @@ export default function MeetingDetail() {
         setNotesDirty(false);
         fetchNotesVersions();
         queryClient.invalidateQueries({ queryKey: getGetMeetingQueryKey(meetingId) });
+        queryClient.invalidateQueries({ queryKey: getListAISummariesQueryKey({ meetingId }) });
+        summarizeMutation.mutate({ data: { meetingId, summaryType: "Short" } });
       },
     },
   });
@@ -677,37 +711,6 @@ export default function MeetingDetail() {
               </div>
               <h1 className="font-semibold text-lg text-zinc-900 dark:text-white truncate max-w-xs md:max-w-md">{meeting.name}</h1>
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={handleExportMarkdown}
-                variant="outline"
-                className="h-8 px-4 rounded-full text-xs font-semibold gap-1.5 border-border hover:bg-muted"
-              >
-                <Save className="w-3.5 h-3.5" />
-                <span>Export Report</span>
-              </Button>
-              <Button
-                onClick={handleGenerateAI}
-                disabled={isGeneratingAI || (meeting.transcript ?? []).length === 0}
-                className={`h-8 px-4 rounded-full text-xs font-semibold gap-1.5 transition-all shadow-md ${
-                  (meeting.transcript ?? []).length === 0
-                    ? "bg-muted text-muted-foreground cursor-not-allowed border border-border"
-                    : "bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white border-0 hover:scale-[1.02] active:scale-[0.98]"
-                }`}
-              >
-                {isGeneratingAI ? (
-                  <>
-                    <div className="w-3 h-3 rounded-full border border-current border-t-transparent animate-spin" />
-                    <span>Compiling AI...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-                    <span>Generate AI Summary</span>
-                  </>
-                )}
-              </Button>
-            </div>
           </div>
 
           {(meeting.transcript ?? []).length === 0 && (
@@ -775,7 +778,7 @@ export default function MeetingDetail() {
           )}
 
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 mb-8 bg-muted/30 p-1.5 rounded-xl border border-border/40">
+            <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 gap-2 mb-8 bg-muted/30 p-1.5 rounded-xl border border-border/40">
               <TabsTrigger
                 value="summary"
                 className="py-2.5 rounded-lg text-xs font-medium gap-2 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow transition-all"
@@ -803,20 +806,6 @@ export default function MeetingDetail() {
                 AI Insights
               </TabsTrigger>
               <TabsTrigger
-                value="decisions"
-                className="py-2.5 rounded-lg text-xs font-medium gap-2 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow transition-all"
-              >
-                <TrendingUp className="w-4 h-4" />
-                Decisions
-              </TabsTrigger>
-              <TabsTrigger
-                value="followup"
-                className="py-2.5 rounded-lg text-xs font-medium gap-2 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow transition-all"
-              >
-                <Save className="w-4 h-4" />
-                Follow-up & Exports
-              </TabsTrigger>
-              <TabsTrigger
                 value="transcript"
                 className="py-2.5 rounded-lg text-xs font-medium gap-2 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow transition-all"
               >
@@ -829,41 +818,44 @@ export default function MeetingDetail() {
               {/* Manual/shared notes and version history side-by-side layout */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
-                {/* Notes Textarea */}
-                <div className="lg:col-span-2 bg-card border border-border rounded-xl p-6 shadow-sm">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="font-semibold flex items-center gap-2 text-base">
-                      <Brain className="w-5 h-5 text-primary animate-pulse" />
-                      Meeting Notes
-                    </h2>
-                    {notesDirty && (
-                      <Button
-                        size="sm"
-                        className="h-8 px-4 rounded-full text-xs gap-1.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white border-0"
-                        onClick={saveNotes}
-                        disabled={upsertNotesMutation.isPending}
-                      >
-                        {upsertNotesMutation.isPending ? (
-                          <div className="w-3.5 h-3.5 rounded-full border border-current border-t-transparent animate-spin" />
-                        ) : (
-                          <Save className="w-3.5 h-3.5" />
-                        )}
-                        Save Changes
-                      </Button>
-                    )}
-                  </div>
-                  <textarea
-                    value={notes}
-                    onChange={(e) => {
-                      setNotes(e.target.value);
+                <div className="lg:col-span-2 bg-card border border-border rounded-xl p-3 shadow-sm min-h-[460px] flex flex-col">
+                  <CollaborativeNotesPanel
+                    notes={notes}
+                    onChange={(newNotesText) => {
+                      setNotes(newNotesText);
                       setNotesDirty(true);
                     }}
-                    onBlur={() => {
-                      if (notesDirty) saveNotes();
+                    onSaveNow={saveNotes}
+                    isSaving={upsertNotesMutation.isPending}
+                    meetingTitle={(meeting as any)?.title || meeting.name || "Meeting Notes"}
+                    activeMeetingId={meetingId}
+                    isHost={(meeting as any)?.host === user?.id || (meeting as any)?.host?.toString() === user?.id}
+                    currentUserId={user?.id}
+                    currentUserName={user?.name || "User"}
+                    notesPermissions={(meeting as any)?.notesPermissions}
+                    notesList={(meeting as any)?.notesList || []}
+                    onNotesListChange={(newList, newPerms) => {
+                      const textCombined = newList.map((n) => n.content).join("\n\n");
+                      setNotes(textCombined);
+                      upsertNotesMutation.mutate({
+                        meetingId,
+                        data: {
+                          content: textCombined,
+                          notesList: newList,
+                          notesPermissions: newPerms || (meeting as any)?.notesPermissions,
+                        } as any,
+                      });
                     }}
-                    rows={12}
-                    placeholder="No notes generated yet. Click 'Generate AI Summary' to synthesize transcription logs."
-                    className="w-full bg-muted/20 border border-border/80 rounded-xl px-4 py-3 text-sm outline-none focus:border-primary/60 focus:bg-card resize-y transition-all placeholder:text-muted-foreground/40 leading-relaxed font-mono"
+                    onPermissionsChange={(newPerms) => {
+                      upsertNotesMutation.mutate({
+                        meetingId,
+                        data: {
+                          content: notes,
+                          notesList: (meeting as any)?.notesList || [],
+                          notesPermissions: newPerms,
+                        } as any,
+                      });
+                    }}
                   />
                 </div>
 
@@ -934,26 +926,13 @@ export default function MeetingDetail() {
                   <div>
                     <h2 className="font-semibold flex items-center gap-2 text-base text-zinc-900 dark:text-white">
                       <Sparkles className="w-5 h-5 text-violet-400" />
-                      AI Summary Profiles
+                      AI Summary
                     </h2>
-                    <p className="text-xs text-muted-foreground mt-0.5">Toggle between target summaries compiled by AI</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Synthesized from Collaborative Notes & Version Timeline</p>
                   </div>
-                  <div className="flex flex-wrap gap-1.5 bg-muted/20 p-1 rounded-xl border border-border/60">
-                    {(["Short", "Detailed", "Management", "Client"] as const).map((type) => (
-                      <Button
-                        key={type}
-                        size="sm"
-                        variant={selectedSummaryType === type ? "default" : "ghost"}
-                        className={`h-7 rounded-lg text-xs font-semibold px-3 transition-all ${
-                          selectedSummaryType === type
-                            ? "bg-primary text-primary-foreground shadow"
-                            : "text-muted-foreground hover:text-foreground"
-                        }`}
-                        onClick={() => setSelectedSummaryType(type)}
-                      >
-                        {type}
-                      </Button>
-                    ))}
+                  <div className="flex items-center gap-1.5 bg-primary/10 px-3 py-1 rounded-lg border border-primary/20">
+                    <Sparkles className="w-3.5 h-3.5 text-primary" />
+                    <span className="text-xs font-semibold text-primary">Short Summary</span>
                   </div>
                 </div>
 
@@ -996,12 +975,31 @@ export default function MeetingDetail() {
                     );
                   }
 
-                  const displayMainSummary =
+                  const cleanMarkdownText = (str: string) => {
+                    if (!str) return "";
+                    return str
+                      .replace(/^#+\s*/gm, "")
+                      .replace(/#/g, "")
+                      .trim();
+                  };
+
+                  const rawSummary =
                     selectedSummaryType === "Short"
                       ? activeSummary.shortSummary
                       : selectedSummaryType === "Management"
                       ? activeSummary.executiveSummary
                       : activeSummary.detailedSummary;
+
+                  const displayMainSummary = cleanMarkdownText(rawSummary);
+
+                  const cleanedKeyPoints = (activeSummary.keyPoints || [])
+                    .map((pt) => cleanMarkdownText(pt))
+                    .filter(
+                      (pt) =>
+                        pt.length > 0 &&
+                        !pt.toLowerCase().startsWith("collaborative notes") &&
+                        !pt.toLowerCase().startsWith("version timeline entries")
+                    );
 
                   return (
                     <div className="space-y-6">
@@ -1009,13 +1007,13 @@ export default function MeetingDetail() {
                         {displayMainSummary}
                       </div>
 
-                      {activeSummary.keyPoints && activeSummary.keyPoints.length > 0 && (
+                      {cleanedKeyPoints.length > 0 && (
                         <div className="space-y-2">
                           <h4 className="text-xs font-bold uppercase text-muted-foreground tracking-wider pl-1">
                             Key Takeaways & Points
                           </h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {activeSummary.keyPoints.map((pt, i) => (
+                            {cleanedKeyPoints.map((pt, i) => (
                               <div
                                 key={i}
                                 className="flex items-start gap-2.5 bg-zinc-50/50 dark:bg-muted/15 p-3 rounded-xl border border-zinc-200 dark:border-white/5 text-xs text-zinc-900 dark:text-white"
@@ -1306,69 +1304,6 @@ export default function MeetingDetail() {
               <AIInsightsDashboard insight={insightsQuery.data || null} />
             </TabsContent>
 
-            <TabsContent value="decisions" className="space-y-6">
-              <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6">
-                <div className="border-b border-border/40 pb-4 flex items-center justify-between flex-wrap gap-3">
-                  <div>
-                    <h2 className="font-semibold flex items-center gap-2 text-base text-zinc-900 dark:text-white">
-                      <TrendingUp className="w-5 h-5 text-violet-400" />
-                      Critical Decisions Tracker
-                    </h2>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Chronological log of critical path choices resolved during call dialogue
-                    </p>
-                  </div>
-                </div>
-                <DecisionTimeline decisions={decisionsQuery.data || []} />
-              </div>
-            </TabsContent>
-
-            <TabsContent value="followup" className="space-y-6">
-              <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6">
-                <div className="border-b border-border/40 pb-4 flex items-center justify-between items-center flex-wrap gap-3">
-                  <div>
-                    <h2 className="font-semibold flex items-center gap-2 text-base text-zinc-900 dark:text-white">
-                      <Save className="w-5 h-5 text-violet-400" />
-                      Follow-up recaps & exports
-                    </h2>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Generate recaps and download document formats for external distribution
-                    </p>
-                  </div>
-                  {/* Export Center Buttons */}
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={handleExportCSVReport}
-                      className="text-xs h-8 rounded-full border-border hover:bg-muted"
-                    >
-                      <Download className="w-3.5 h-3.5 mr-1" />
-                      Export CSV Summary
-                    </Button>
-                  </div>
-                </div>
-                {meeting && (
-                  <FollowUpGenerator
-                    meeting={{
-                      name: meeting.name,
-                      startedAt: meeting.startedAt,
-                      durationSeconds: meeting.durationSeconds,
-                      participantNames: meeting.participantNames,
-                      notes: meeting.notes,
-                      actionItems: (aiActionItemsQuery.data || []).map(i => ({
-                        text: i.title,
-                        assigneeName: i.assigneeName,
-                        dueDate: i.dueDate ?? null,
-                        isDone: i.status === "Done"
-                      }))
-                    }}
-                    decisions={decisionsQuery.data || []}
-                  />
-                )}
-              </div>
-            </TabsContent>
-
             <TabsContent value="transcript" className="space-y-6">
               {/* Transcript Search and Bubbles */}
               <section className="bg-card border border-border rounded-xl p-6 shadow-sm">
@@ -1385,29 +1320,11 @@ export default function MeetingDetail() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={handleCopyTranscript}
-                      className="text-xs gap-1 h-8 rounded-full border-border hover:bg-muted"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                      <span>Copy Dialogue</span>
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={handleDownloadTxt}
-                      className="text-xs gap-1 h-8 rounded-full border-border hover:bg-muted"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>TXT</span>
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
                       onClick={handleDownloadCsvTranscript}
-                      className="text-xs gap-1 h-8 rounded-full border-border hover:bg-muted"
+                      className="text-xs gap-1.5 h-8 px-4 rounded-full border-border hover:bg-muted font-medium"
                     >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>CSV</span>
+                      <Download className="w-3.5 h-3.5 text-primary" />
+                      <span>Download Meeting Details (CSV)</span>
                     </Button>
                   </div>
                 </div>

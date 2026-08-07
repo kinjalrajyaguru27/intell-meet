@@ -38,6 +38,24 @@ export default function Home() {
   const [scheduleDesc, setScheduleDesc] = useState("");
   const [scheduleTime, setScheduleTime] = useState("");
   const [waitingRoomEnabled, setWaitingRoomEnabled] = useState(false);
+  const [scheduleOrgId, setScheduleOrgId] = useState("");
+  const [scheduleProjectId, setScheduleProjectId] = useState("");
+  const [organizations, setOrganizations] = useState<any[]>([]);
+  const [projects, setProjects] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (token) {
+      fetch("/api/organizations", { headers: { Authorization: `Bearer ${token}` } })
+        .then((r) => (r.ok ? r.json() : []))
+        .then(setOrganizations)
+        .catch(console.error);
+
+      fetch("/api/projects", { headers: { Authorization: `Bearer ${token}` } })
+        .then((r) => (r.ok ? r.json() : []))
+        .then(setProjects)
+        .catch(console.error);
+    }
+  }, [token]);
 
   const createRoom = useCreateRoom();
   const createMeetingMutation = useCreateMeeting();
@@ -69,35 +87,45 @@ export default function Home() {
     );
   };
 
-  const handleScheduleMeeting = () => {
+  const handleScheduleMeeting = async () => {
     if (!scheduleTitle.trim() || !scheduleTime) {
       toast({ title: "Validation Error", description: "Please enter a meeting title and date/time.", variant: "destructive" });
       return;
     }
 
-    createMeetingMutation.mutate(
-      {
-        data: {
+    try {
+      const res = await fetch("/api/meetings/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
           title: scheduleTitle,
           description: scheduleDesc,
           startTime: new Date(scheduleTime).toISOString(),
           waitingRoomEnabled,
-        },
-      },
-      {
-        onSuccess: () => {
-          toast({ title: "Success", description: "Video conference scheduled and loaded." });
-          setIsScheduleOpen(false);
-          setScheduleTitle("");
-          setScheduleDesc("");
-          setScheduleTime("");
-          refetchMeetings();
-        },
-        onError: () => {
-          toast({ title: "Error", description: "Failed to schedule meeting.", variant: "destructive" });
-        }
+          organizationId: scheduleOrgId || undefined,
+          projectId: scheduleProjectId || undefined,
+        }),
+      });
+
+      if (res.ok) {
+        toast({ title: "Success", description: "Video conference scheduled successfully." });
+        setIsScheduleOpen(false);
+        setScheduleTitle("");
+        setScheduleDesc("");
+        setScheduleTime("");
+        setScheduleOrgId("");
+        setScheduleProjectId("");
+        refetchMeetings();
+      } else {
+        toast({ title: "Error", description: "Failed to schedule meeting.", variant: "destructive" });
       }
-    );
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Error", description: "Failed to schedule meeting.", variant: "destructive" });
+    }
   };
 
   const onJoin = (data: { roomId: string }) => {
@@ -270,6 +298,41 @@ export default function Home() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
+                    <Label htmlFor="schedule-org" className="text-xs">Organization (Optional)</Label>
+                    <select
+                      id="schedule-org"
+                      value={scheduleOrgId}
+                      onChange={(e) => setScheduleOrgId(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 h-9 rounded-md px-2.5 text-xs text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-primary"
+                    >
+                      <option value="">No Organization Scope</option>
+                      {organizations.map((org) => (
+                        <option key={org._id} value={org._id}>
+                          {org.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="schedule-project" className="text-xs">Project (Optional)</Label>
+                    <select
+                      id="schedule-project"
+                      value={scheduleProjectId}
+                      onChange={(e) => setScheduleProjectId(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 h-9 rounded-md px-2.5 text-xs text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-primary"
+                    >
+                      <option value="">No Project Scope</option>
+                      {projects.map((proj) => (
+                        <option key={proj.id || proj._id} value={proj.id || proj._id}>
+                          {proj.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
                     <Label htmlFor="time">Date & Time</Label>
                     <Input
                       id="time"
@@ -280,7 +343,7 @@ export default function Home() {
                   </div>
                   <div className="space-y-1.5 flex flex-col justify-end pb-1.5">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="waiting-room" className="text-xs cursor-pointer text-zinc-300">Enable Lobbies</Label>
+                      <Label htmlFor="waiting-room" className="text-xs cursor-pointer text-slate-700 dark:text-zinc-300">Enable Lobbies</Label>
                       <Switch
                         id="waiting-room"
                         checked={waitingRoomEnabled}

@@ -198,8 +198,6 @@ export default function PostMeeting() {
         <div className="flex bg-zinc-100 dark:bg-muted/20 border border-zinc-200 dark:border-white/5 rounded-lg p-1 text-xs w-fit">
           {([
             { value: "all", label: "All Sessions" },
-            { value: "recordings", label: "Recordings Available" },
-            { value: "actions", label: "With Action Items" },
           ] as const).map((tab) => (
             <button
               key={tab.value}

@@ -32,13 +32,16 @@ export default function TeamManagement() {
     }
   }, [token]);
 
-  // Load teams when selectedOrgId changes
+  // Load teams and projects when selectedOrgId changes
   useEffect(() => {
     if (selectedOrgId && token) {
       fetchTeams();
+      fetchProjects();
     } else {
       setTeams([]);
       setSelectedTeamId("");
+      setProjects([]);
+      setSelectedProjectId("");
     }
   }, [selectedOrgId]);
 
@@ -46,9 +49,6 @@ export default function TeamManagement() {
   useEffect(() => {
     if (selectedTeamId && token) {
       fetchProjects();
-    } else {
-      setProjects([]);
-      setSelectedProjectId("");
     }
   }, [selectedTeamId]);
 
@@ -82,7 +82,7 @@ export default function TeamManagement() {
         const filtered = list.filter((t: any) => t.organizationId === selectedOrgId);
         setTeams(filtered);
         if (filtered.length > 0 && !selectedTeamId) {
-          setSelectedTeamId(filtered[0].id);
+          setSelectedTeamId(filtered[0].id || filtered[0]._id);
         }
       }
     } catch (err) {
@@ -92,14 +92,15 @@ export default function TeamManagement() {
 
   const fetchProjects = async () => {
     try {
-      const res = await fetch(`/api/projects?teamId=${selectedTeamId}`, {
+      const url = selectedTeamId ? `/api/projects?teamId=${selectedTeamId}` : `/api/projects`;
+      const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
         const data = await res.json();
         setProjects(data);
         if (data.length > 0 && !selectedProjectId) {
-          setSelectedProjectId(data[0].id);
+          setSelectedProjectId(data[0].id || data[0]._id);
         }
       }
     } catch (err) {

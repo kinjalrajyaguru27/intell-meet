@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { AIInsightsDashboard } from "@/components/AIInsightsDashboard";
 import { DecisionTimeline } from "@/components/DecisionTimeline";
-import { FollowUpGenerator } from "@/components/FollowUpGenerator";
 import {
   Brain,
   Video,
@@ -234,12 +233,11 @@ export default function AIInsights() {
 
           {/* Tabs switch panel */}
           <Tabs defaultValue="insights" className="w-full">
-            <TabsList className="grid w-full grid-cols-5 bg-zinc-100 dark:bg-muted/20 border border-zinc-200 dark:border-white/5 rounded-xl h-10 p-1">
+            <TabsList className="grid w-full grid-cols-4 bg-zinc-100 dark:bg-muted/20 border border-zinc-200 dark:border-white/5 rounded-xl h-10 p-1">
               <TabsTrigger value="insights" className="text-xs font-semibold">Insights Dashboard</TabsTrigger>
               <TabsTrigger value="summary" className="text-xs font-semibold">AI Summaries</TabsTrigger>
               <TabsTrigger value="decisions" className="text-xs font-semibold">Decisions</TabsTrigger>
               <TabsTrigger value="transcripts" className="text-xs font-semibold">Transcripts</TabsTrigger>
-              <TabsTrigger value="followups" className="text-xs font-semibold">Follow-up Recap</TabsTrigger>
             </TabsList>
 
             {/* Tab 1: Insights Dashboard */}
@@ -371,32 +369,7 @@ export default function AIInsights() {
               </Card>
             </TabsContent>
 
-            {/* Tab 5: Followups recap */}
-            <TabsContent value="followups" className="pt-4">
-              {/* Prepare data for FollowUpGenerator */}
-              {(() => {
-                const meetData = {
-                  name: meetingDetail.title || meetingDetail.name,
-                  startedAt: meetingDetail.startedAt,
-                  durationSeconds: meetingDetail.durationSeconds,
-                  participantNames: meetingDetail.participantNames || [],
-                  notes: summaries.length > 0 ? summaries[0].shortSummary : "",
-                  actionItems: meetingDetail.actionItems?.map((ai: any) => ({
-                    text: ai.text || ai.title,
-                    assigneeName: ai.assigneeName,
-                    dueDate: ai.dueDate,
-                    isDone: ai.isDone || false,
-                  })) || [],
-                };
-                const decData = decisions.map((d) => ({
-                  decision: d.decision,
-                  owner: d.owner,
-                  impact: d.impact,
-                }));
 
-                return <FollowUpGenerator meeting={meetData} decisions={decData} />;
-              })()}
-            </TabsContent>
           </Tabs>
         </div>
       )}

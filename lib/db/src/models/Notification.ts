@@ -2,7 +2,7 @@ import mongoose, { Schema, type Document } from "mongoose";
 
 export interface INotification extends Document {
   recipient: mongoose.Types.ObjectId;
-  type: "mention" | "reply" | "message" | "file_upload" | "task_assignment" | "meeting_reminder";
+  type: string;
   title: string;
   content: string;
   isRead: boolean;
@@ -14,7 +14,6 @@ const NotificationSchema: Schema = new Schema({
   recipient: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
   type: {
     type: String,
-    enum: ["mention", "reply", "message", "file_upload", "task_assignment", "meeting_reminder"],
     required: true,
   },
   title: { type: String, required: true },

@@ -245,7 +245,18 @@ router.get("/ai/summaries", async (req: AuthenticatedRequest, res) => {
       return;
     }
 
-    const summaries = await MeetingSummary.find({ meetingId });
+    let summaries = await MeetingSummary.find({ meetingId });
+    if (summaries.length === 0) {
+      try {
+        const generated = await AIService.generateSummary(meetingId as string, "Short");
+        if (generated) {
+          summaries = [generated];
+        }
+      } catch (err) {
+        logger.error({ err }, "Auto-generation of summary on GET /ai/summaries failed");
+      }
+    }
+
     const formatted = summaries.map((s) => ({
       id: s._id.toString(),
       meetingId: s.meetingId.toString(),

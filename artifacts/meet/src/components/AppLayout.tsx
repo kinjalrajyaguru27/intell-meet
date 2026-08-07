@@ -8,18 +8,36 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Menu, Search, Bell, Command } from "lucide-react";
 import { COLOR_MAP } from "@/pages/EditProfile";
 
+import UserAvatar from "./UserAvatar";
+
 interface AppLayoutProps {
   children: React.ReactNode;
 }
 
 export default function AppLayout({ children }: AppLayoutProps) {
   const [location, setLocation] = useLocation();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, token, user, updateUser } = useAuth();
   
   // Sidebar state settings
   const [isOpen, setIsOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [globalSearch, setGlobalSearch] = useState("");
+
+  // Sync user profile from backend to ensure avatar & details are up to date
+  useEffect(() => {
+    if (token) {
+      fetch("/api/users/profile", {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data) {
+            updateUser(data);
+          }
+        })
+        .catch(err => console.error("Error syncing profile in layout", err));
+    }
+  }, [token, location]);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -121,22 +139,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
             </Button>
 
             {/* User Avatar */}
-            <Avatar
-              className="w-8 h-8 rounded-lg border border-border cursor-pointer shrink-0 transition-transform active:scale-95 overflow-hidden flex items-center justify-center"
-              onClick={() => setLocation("/profile")}
-              title="View Profile"
-            >
-              {user?.avatar && (user.avatar.startsWith("http") || user.avatar.startsWith("/")) ? (
-                <img src={user.avatar} alt={user.name} className="w-full h-full object-cover rounded-lg" />
-              ) : (
-                <div 
-                  className="w-full h-full text-white font-bold text-xs flex items-center justify-center rounded-lg"
-                  style={{ background: COLOR_MAP[user?.profileColor || "purple"] || COLOR_MAP.purple }}
-                >
-                  {getInitials(user?.name || "")}
-                </div>
-              )}
-            </Avatar>
+            <div onClick={() => setLocation("/profile")} className="cursor-pointer transition-transform active:scale-95" title="View Profile">
+              <UserAvatar user={user} sizeClassName="w-8 h-8" roundedClassName="rounded-full" />
+            </div>
           </div>
         </header>
 

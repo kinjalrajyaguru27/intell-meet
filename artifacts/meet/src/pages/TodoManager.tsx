@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -44,7 +44,7 @@ import {
   Users,
 } from "lucide-react";
 
-type TaskStatus = "Todo" | "In Progress" | "Review" | "Done";
+type TaskStatus = "Todo" | "In Progress" | "Done";
 type TaskPriority = "Low" | "Medium" | "High" | "Critical";
 
 interface TaskItem {
@@ -92,7 +92,6 @@ export default function TodoManager() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [filterAssignee, setFilterAssignee] = useState<string>("all");
-  const [filterProject, setFilterProject] = useState<string>("all");
 
   // Create Task form state
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -102,8 +101,6 @@ export default function TodoManager() {
   const [createStatus, setCreateStatus] = useState<TaskStatus>("Todo");
   const [createDueDate, setCreateDueDate] = useState("");
   const [createAssigneeId, setCreateAssigneeId] = useState("");
-  const [createProjectId, setCreateProjectId] = useState("");
-  const [createTeamId, setCreateTeamId] = useState("");
 
   // Edit Task detail modal state
   const [activeTaskDetail, setActiveTaskDetail] = useState<any | null>(null);
@@ -256,6 +253,14 @@ export default function TodoManager() {
     e.preventDefault();
     if (!createTitle.trim()) return;
 
+    const todayStr = new Date().toISOString().split("T")[0];
+    let initialStatus = createStatus;
+    if (createDueDate) {
+      if (createDueDate > todayStr) initialStatus = "Todo";
+      else if (createDueDate === todayStr) initialStatus = "In Progress";
+      else initialStatus = "Done";
+    }
+
     try {
       const res = await fetch("/api/tasks", {
         method: "POST",
@@ -266,12 +271,10 @@ export default function TodoManager() {
         body: JSON.stringify({
           title: createTitle,
           description: createDesc,
-          status: createStatus,
+          status: initialStatus,
           priority: createPriority,
           dueDate: createDueDate || undefined,
           assigneeId: createAssigneeId || undefined,
-          projectId: createProjectId || undefined,
-          teamId: createTeamId || undefined,
         }),
       });
 
@@ -281,8 +284,6 @@ export default function TodoManager() {
         setCreateDesc("");
         setCreateDueDate("");
         setCreateAssigneeId("");
-        setCreateProjectId("");
-        setCreateTeamId("");
         setIsCreateOpen(false);
         fetchTasks();
       }
@@ -508,6 +509,23 @@ export default function TodoManager() {
     }
   };
 
+  // Helper to determine status based on due date & explicit status
+  const getEffectiveStatus = useCallback((t: TaskItem, todayStr: string): TaskStatus => {
+    const s = t.status as string;
+    // Explicit user actions (Done / In Progress / Review / Testing) take priority
+    if (s === "Done") return "Done";
+    if (s === "In Progress" || s === "Review" || s === "Testing") return "In Progress";
+
+    // Automatic default status rules based on due date for unassigned/todo tasks
+    if (t.dueDate) {
+      if (t.dueDate < todayStr) return "Done";
+      if (t.dueDate === todayStr) return "In Progress";
+      if (t.dueDate > todayStr) return "Todo";
+    }
+
+    return "Todo";
+  }, []);
+
   // Compute Dashboard Widgets stats
   const stats = useMemo(() => {
     const todayStr = new Date().toISOString().split("T")[0];
@@ -522,7 +540,8 @@ export default function TodoManager() {
     let upcomingDeadlines = 0;
 
     tasks.forEach((t) => {
-      const isDone = t.status === "Done";
+      const effectiveStatus = getEffectiveStatus(t, todayStr);
+      const isDone = effectiveStatus === "Done";
       if (isDone) {
         completed++;
       } else {
@@ -553,7 +572,7 @@ export default function TodoManager() {
       todayTasks,
       upcomingDeadlines,
     };
-  }, [tasks]);
+  }, [tasks, getEffectiveStatus]);
 
   // Filters application
   const filteredTasks = useMemo(() => {
@@ -574,38 +593,29 @@ export default function TodoManager() {
           ? !t.assignee
           : t.assignee?.id === filterAssignee || t.assignee?._id === filterAssignee;
 
-      // 4. Project Filter
-      const matchesProject =
-        filterProject === "all" ? true : t.projectId === filterProject || t.projectId?.id === filterProject || t.projectId?._id === filterProject;
-
-      return matchesSearch && matchesPriority && matchesAssignee && matchesProject;
+      return matchesSearch && matchesPriority && matchesAssignee;
     });
-  }, [tasks, searchQuery, filterPriority, filterAssignee, filterProject]);
+  }, [tasks, searchQuery, filterPriority, filterAssignee]);
 
   // Columns partition
   const columnsData = useMemo(() => {
+    const todayStr = new Date().toISOString().split("T")[0];
     const list: Record<TaskStatus, TaskItem[]> = {
       Todo: [],
       "In Progress": [],
-      Review: [],
       Done: [],
     };
 
     filteredTasks.forEach((t) => {
-      // Map other Backlog/Testing/etc to nearest Todo manager columns
-      if (t.status === "Backlog" || t.status === "Todo") {
-        list["Todo"].push(t);
-      } else if (t.status === "In Progress") {
-        list["In Progress"].push(t);
-      } else if (t.status === "Review" || t.status === "Testing") {
-        list["Review"].push(t);
-      } else if (t.status === "Done") {
-        list["Done"].push(t);
-      }
+      const effectiveStatus = getEffectiveStatus(t, todayStr);
+      list[effectiveStatus].push({
+        ...t,
+        status: effectiveStatus,
+      });
     });
 
     return list;
-  }, [filteredTasks]);
+  }, [filteredTasks, getEffectiveStatus]);
 
   return (
     <div className="flex-1 flex flex-col min-h-0 space-y-6">
@@ -617,125 +627,7 @@ export default function TodoManager() {
         </div>
 
         <div className="flex gap-2">
-          {/* AI Import Trigger */}
-          <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
-            <DialogTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-full px-4 text-xs font-bold gap-1.5 border-zinc-200 dark:border-white/10 text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-500/10"
-              >
-                <Brain className="w-3.5 h-3.5" />
-                Import AI Action Items
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <Brain className="w-5 h-5 text-violet-400" />
-                  Import AI Action Items
-                </DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleImportActionItem} className="space-y-4 py-4">
-                <div className="space-y-1">
-                  <Label>Select Action Item</Label>
-                  <Select
-                    value={selectedActionItemId}
-                    onValueChange={setSelectedActionItemId}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select an AI action item to tasks" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {actionItems
-                        .filter((ai) => !ai.taskId)
-                        .map((ai) => (
-                          <SelectItem key={ai.id} value={ai.id}>
-                            {ai.title} ({ai.assigneeName || "Unassigned"})
-                          </SelectItem>
-                        ))}
-                      {actionItems.filter((ai) => !ai.taskId).length === 0 && (
-                        <SelectItem value="none" disabled>
-                          No pending action items found.
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
 
-                {selectedActionItemId && (
-                  <>
-                    <div className="p-3 bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/5 rounded-xl text-xs space-y-1 text-zinc-700 dark:text-zinc-300">
-                      <span className="font-bold text-zinc-900 dark:text-white block">Description:</span>
-                      <p>{actionItems.find(ai => ai.id === selectedActionItemId)?.description || "No details provided"}</p>
-                    </div>
-
-                    <div className="space-y-1">
-                      <Label>Team</Label>
-                      <Select value={importTeamId} onValueChange={setImportTeamId}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Assign Workspace Team" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {teams.map((t) => (
-                            <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-1">
-                      <Label>Project Link</Label>
-                      <Select value={importProjectId} onValueChange={setImportProjectId}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Link Project Board (Optional)" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {projects
-                            .filter(p => !importTeamId || p.teamId === importTeamId)
-                            .map((p) => (
-                              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-1">
-                      <Label>Assignee</Label>
-                      <Select value={importAssigneeId} onValueChange={setImportAssigneeId}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select Task Assignee" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {coworkers.map((c) => (
-                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </>
-                )}
-
-                <DialogFooter className="pt-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    type="button"
-                    onClick={() => setIsImportOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    size="sm"
-                    type="submit"
-                    disabled={!selectedActionItemId}
-                  >
-                    Import as Task
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
 
           {/* Create Task trigger */}
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
@@ -804,7 +696,6 @@ export default function TodoManager() {
                       <SelectContent>
                         <SelectItem value="Todo">To Do</SelectItem>
                         <SelectItem value="In Progress">In Progress</SelectItem>
-                        <SelectItem value="Review">Review</SelectItem>
                         <SelectItem value="Done">Done</SelectItem>
                       </SelectContent>
                     </Select>
@@ -837,37 +728,6 @@ export default function TodoManager() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <Label>Team Link</Label>
-                    <Select value={createTeamId} onValueChange={setCreateTeamId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="No Team linked" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {teams.map((t) => (
-                          <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-1">
-                    <Label>Project Link</Label>
-                    <Select value={createProjectId} onValueChange={setCreateProjectId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="No Project linked" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {projects
-                          .filter(p => !createTeamId || p.teamId === createTeamId)
-                          .map((p) => (
-                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
 
                 <DialogFooter className="pt-4">
                   <Button variant="outline" size="sm" type="button" onClick={() => setIsCreateOpen(false)}>
@@ -952,20 +812,6 @@ export default function TodoManager() {
             </Select>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-zinc-500 font-semibold whitespace-nowrap">Project:</span>
-            <Select value={filterProject} onValueChange={setFilterProject}>
-              <SelectTrigger className="w-36 bg-zinc-50 dark:bg-black/40 border-zinc-200 dark:border-white/10 h-8 text-foreground dark:text-white">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-white dark:bg-[#09090b] border-zinc-200 dark:border-white/10 text-foreground dark:text-white">
-                <SelectItem value="all">All Projects</SelectItem>
-                {projects.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
         </div>
       </div>
 
@@ -976,11 +822,10 @@ export default function TodoManager() {
           <span className="text-xs text-muted-foreground">Loading tasks database...</span>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-5 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-start">
           {([
             { title: "To Do", status: "Todo", color: "text-amber-400 border-amber-400/20 bg-amber-500/5" },
             { title: "In Progress", status: "In Progress", color: "text-sky-400 border-sky-400/20 bg-sky-500/5" },
-            { title: "Review", status: "Review", color: "text-violet-400 border-violet-400/20 bg-violet-500/5" },
             { title: "Done", status: "Done", color: "text-emerald-400 border-emerald-400/20 bg-emerald-500/5" },
           ] as const).map((col) => {
             const colTasks = columnsData[col.status] || [];
@@ -997,8 +842,7 @@ export default function TodoManager() {
                   <div className="flex items-center gap-2">
                     <span className={`w-1.5 h-1.5 rounded-full ${
                       col.status === "Todo" ? "bg-amber-400" :
-                      col.status === "In Progress" ? "bg-sky-400" :
-                      col.status === "Review" ? "bg-violet-400" : "bg-emerald-400"
+                      col.status === "In Progress" ? "bg-sky-400" : "bg-emerald-400"
                     }`} />
                     <span className="text-xs font-bold text-zinc-900 dark:text-white tracking-wide uppercase">{col.title}</span>
                   </div>

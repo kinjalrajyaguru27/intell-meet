@@ -1,5 +1,5 @@
 import { logger } from "./logger";
-import { MeetingTranscript, MeetingSummary, ActionItem, MeetingInsight, Decision, User, Task } from "@workspace/db";
+import { MeetingTranscript, MeetingSummary, ActionItem, MeetingInsight, Decision, User, Task, MeetingChat, Meeting } from "@workspace/db";
 
 // Types
 export interface TranscriptLine {
@@ -41,6 +41,12 @@ export class AIService {
 
         if (response.ok) {
           const data = (await response.json()) as { text: string };
+          await MeetingTranscript.create({
+            meetingId,
+            speaker,
+            text: data.text,
+            timestamp: Date.now(),
+          });
           return { text: data.text };
         } else {
           const errText = await response.text();
@@ -69,35 +75,89 @@ export class AIService {
    */
   public static async generateSummary(
     meetingId: string,
-    summaryType: "Short" | "Detailed" | "Management" | "Client"
+    summaryType: "Short" | "Detailed" | "Management" | "Client" = "Short"
   ): Promise<any> {
-    const transcripts = await MeetingTranscript.find({ meetingId }).sort({ timestamp: 1 });
-    const transcriptText = transcripts.map((t) => `${t.speaker}: ${t.text}`).join("\n");
+    // 1. Fetch meeting document
+    const meeting = (await Meeting.findOne({ $or: [{ meetingId }, { roomId: meetingId }] })) || (await Meeting.findById(meetingId).catch(() => null));
 
-    if (!transcriptText.trim()) {
-      throw new Error("Cannot generate summary on empty transcript");
+    // 2. Extract Collaborative Notes & Version Timeline
+    const collabNotes = meeting?.notes?.trim() || "";
+    const versionTimelineItems = (meeting?.notesList || [])
+      .map((item: any) => `${item.title ? item.title + ": " : ""}${item.content}`)
+      .filter((text: string) => text.trim().length > 0)
+      .join("\n");
+
+    // Extract shared attachments / PDFs
+    const attachments: string[] = [];
+    (meeting?.notesList || []).forEach((item: any) => {
+      if (Array.isArray(item.attachments)) {
+        item.attachments.forEach((att: any) => {
+          if (att.name) attachments.push(att.name);
+        });
+      }
+    });
+
+    const attachmentNote = attachments.length > 0
+      ? `Shared Attachments & PDFs: ${attachments.join(", ")}`
+      : "Shared Attachments & PDFs: None shared";
+
+    const hasContent = Boolean(collabNotes || versionTimelineItems);
+
+    // 3. If there is NOTHING from both Collaborative Notes & Version Timeline
+    if (!hasContent) {
+      const emptyMessage = "No collaborative notes or version timeline content recorded for this meeting. Please add notes or save a version timeline item to generate an AI summary.";
+      return await MeetingSummary.findOneAndUpdate(
+        { meetingId, summaryType: "Short" },
+        {
+          meetingId,
+          summaryType: "Short",
+          shortSummary: emptyMessage,
+          detailedSummary: emptyMessage,
+          executiveSummary: emptyMessage,
+          keyPoints: [],
+          decisions: [],
+          outcomes: [],
+          highlights: [],
+          risks: [],
+          opportunities: [],
+        },
+        { upsert: true, new: true }
+      );
     }
+
+    const sanitizeText = (str: string) => {
+      return str.replace(/^#+\s*/gm, "").replace(/#/g, "").trim();
+    };
+
+    // 4. Combine Collaborative Notes & Version Timeline content cleanly without markdown hash symbols
+    const cleanCollab = collabNotes ? sanitizeText(collabNotes) : "";
+    const cleanTimeline = versionTimelineItems ? sanitizeText(versionTimelineItems) : "";
+
+    const sourceText = [
+      cleanCollab ? `Collaborative Notes:\n${cleanCollab}` : "",
+      cleanTimeline ? `Version Timeline Entries:\n${cleanTimeline}` : "",
+      attachmentNote,
+    ].filter(Boolean).join("\n\n");
 
     const apiKey = this.getOpenAIKey();
     if (apiKey) {
       try {
-        const prompt = `You are an AI meeting assistant. Summarize the following meeting transcript into a structured format.
-The target audience format is a "${summaryType}" Summary.
+        const prompt = `You are an AI meeting assistant. Summarize the following Collaborative Notes, Version Timeline entries, and Shared Attachments into a clean 3 to 4 line summary without special symbols like '#' or '###'.
 Return the result strictly as a JSON object matching this structure:
 {
-  "shortSummary": "1-2 sentence quick summary",
-  "detailedSummary": "detailed multi-paragraph markdown summary",
-  "executiveSummary": "executive level highlights summary",
-  "keyPoints": ["bullet point 1", "bullet point 2", ...],
-  "decisions": ["decision 1", "decision 2", ...],
-  "outcomes": ["outcome 1", "outcome 2", ...],
-  "highlights": ["highlight 1", "highlight 2", ...],
-  "risks": ["risk 1", "risk 2", ...],
-  "opportunities": ["opportunity 1", "opportunity 2", ...]
+  "shortSummary": "3 to 4 clear professional summary lines summarizing meeting discussions and shared files",
+  "detailedSummary": "Detailed professional breakdown of the notes and attachments",
+  "executiveSummary": "Executive level summary including notes and shared files",
+  "keyPoints": ["3 to 4 clean key takeaway points without special symbols like '#'"],
+  "decisions": [],
+  "outcomes": [],
+  "highlights": [],
+  "risks": [],
+  "opportunities": []
 }
 
-Transcript:
-${transcriptText}`;
+Notes & Timeline Content:
+${sourceText}`;
 
         const response = await fetch("https://api.openai.com/v1/chat/completions", {
           method: "POST",
@@ -116,8 +176,8 @@ ${transcriptText}`;
           const data = (await response.json()) as any;
           const content = JSON.parse(data.choices[0].message.content);
           return await MeetingSummary.findOneAndUpdate(
-            { meetingId, summaryType },
-            { meetingId, summaryType, ...content },
+            { meetingId, summaryType: "Short" },
+            { meetingId, summaryType: "Short", ...content },
             { upsert: true, new: true }
           );
         }
@@ -126,57 +186,32 @@ ${transcriptText}`;
       }
     }
 
-    // Heuristic Local Parser (100% Functional Fallback)
+    // Heuristic Fallback: Generate 3 to 4 clean summary lines without '#' or '###' symbols
     const keyPoints: string[] = [];
-    const decisions: string[] = [];
-    const outcomes: string[] = [];
-    const highlights: string[] = [];
-    const risks: string[] = [];
-    const opportunities: string[] = [];
+    if (cleanCollab) {
+      keyPoints.push(`Discussion Notes: ${cleanCollab}`);
+    }
+    if (cleanTimeline) {
+      keyPoints.push(`Timeline Updates: ${cleanTimeline}`);
+    }
+    keyPoints.push(attachmentNote);
 
-    // Parse transcript keywords
-    transcripts.forEach((line) => {
-      const text = line.text.toLowerCase();
-      if (text.includes("decid") || text.includes("we agreed") || text.includes("choose to")) {
-        decisions.push(`Decided: ${line.text} (stated by ${line.speaker})`);
-      } else if (text.includes("need to") || text.includes("will do") || text.includes("should")) {
-        keyPoints.push(`${line.speaker}: ${line.text}`);
-      } else if (text.includes("risk") || text.includes("issue") || text.includes("delay") || text.includes("bug") || text.includes("warning")) {
-        risks.push(`Risk: ${line.text}`);
-      } else if (text.includes("optimize") || text.includes("improve") || text.includes("opportunity") || text.includes("better")) {
-        opportunities.push(`Opportunity: ${line.text}`);
-      } else {
-        outcomes.push(`${line.speaker} discussed: ${line.text}`);
-      }
-    });
+    const shortSummary = keyPoints.slice(0, 4).join("\n\n");
 
-    // Populate defaults if transcript is short
-    if (decisions.length === 0) decisions.push("Finalize workspace setup and code verification routes.");
-    if (keyPoints.length === 0) keyPoints.push("Discussed compiler warning resolutions and WebRTC connection latency.");
-    if (outcomes.length === 0) outcomes.push("Coordinated developmental sprints for Q3 launch timelines.");
-    if (risks.length === 0) risks.push("Database connection timeouts if environment configurations are misaligned.");
-    if (opportunities.length === 0) opportunities.push("Upgrading to HTTP/3 to reduce signaling latency.");
-    highlights.push(...keyPoints.slice(0, 2));
-
-    const shortSummary = `Meeting reviewed room coordination and developer sprint tasks, focusing on Q3 release preparations.`;
-    const detailedSummary = `### Meeting Recap\nThe meeting focused on engineering deliverables and architectural syncs.\n\n### Key Discussion Areas\n- **Engineering Tasks**: Audited compiler warnings and file permissions.\n- **Design Polish**: CSS animations and responsive tile display.\n- **Strategy**: Coordinated client demo timing for upcoming features.`;
-    const executiveSummary = `Executive sync completed successfully. Team has aligned on developmental roadmaps for the upcoming sprint.`;
-
-    // Save and return
     return await MeetingSummary.findOneAndUpdate(
-      { meetingId, summaryType },
+      { meetingId, summaryType: "Short" },
       {
         meetingId,
-        summaryType,
+        summaryType: "Short",
         shortSummary,
-        detailedSummary,
-        executiveSummary,
-        keyPoints,
-        decisions,
-        outcomes,
-        highlights,
-        risks,
-        opportunities,
+        detailedSummary: shortSummary,
+        executiveSummary: shortSummary,
+        keyPoints: keyPoints.slice(0, 4),
+        decisions: [],
+        outcomes: [],
+        highlights: [],
+        risks: [],
+        opportunities: [],
       },
       { upsert: true, new: true }
     );

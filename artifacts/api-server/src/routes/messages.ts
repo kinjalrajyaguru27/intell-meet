@@ -164,6 +164,11 @@ router.post("/", async (req: AuthenticatedRequest, res) => {
     const message = new Message(messageData);
     await message.save();
 
+    if (text) {
+      const { detectAndSendMentions } = await import("../lib/activity");
+      await detectAndSendMentions(text, { id: req.user.id, name: req.user.name }, "/collaboration");
+    }
+
     const populated = await Message.findById(message._id)
       .populate("sender", "name email avatar")
       .populate("recipient", "name email avatar")

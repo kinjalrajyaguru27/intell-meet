@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import UserAvatar from "@/components/UserAvatar";
 import { COLOR_MAP } from "./EditProfile";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -287,18 +288,13 @@ export default function Profile() {
               <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
                 {/* Large Avatar */}
                 <div className="relative shrink-0">
-                  <Avatar className="w-24 h-24 rounded-full border-4 border-primary/20 shadow-xl overflow-hidden flex items-center justify-center">
-                    {profile.avatar && (profile.avatar.startsWith("http") || profile.avatar.startsWith("/")) ? (
-                      <img src={profile.avatar} alt={profile.name} className="w-full h-full object-cover rounded-full" />
-                    ) : (
-                      <div 
-                        className="w-full h-full text-white font-bold text-3xl flex items-center justify-center"
-                        style={{ background: COLOR_MAP[(profile as any).profileColor || "purple"] || COLOR_MAP.purple }}
-                      >
-                        {getInitials(profile.name)}
-                      </div>
-                    )}
-                  </Avatar>
+                  <UserAvatar
+                    user={profile}
+                    sizeClassName="w-24 h-24"
+                    textClassName="text-3xl"
+                    roundedClassName="rounded-full"
+                    className="border-4 border-primary/20 shadow-xl"
+                  />
                 </div>
 
                 {/* Basic metadata */}

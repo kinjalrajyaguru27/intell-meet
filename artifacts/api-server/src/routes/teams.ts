@@ -34,6 +34,7 @@ router.get("/teams", async (req: AuthenticatedRequest, res) => {
     const formatted = teams.map((team) => ({
       id: team._id.toString(),
       name: team.name,
+      organizationId: team.organizationId ? team.organizationId.toString() : null,
       members: team.members.map((member: any) => ({
         user: {
           id: member.user._id.toString(),
@@ -90,6 +91,7 @@ router.post("/teams", async (req: AuthenticatedRequest, res) => {
     res.status(201).json({
       id: populated._id.toString(),
       name: populated.name,
+      organizationId: populated.organizationId ? populated.organizationId.toString() : null,
       members: populated.members.map((member: any) => ({
         user: {
           id: member.user._id.toString(),
@@ -161,6 +163,22 @@ router.post("/teams/:teamId/invite", async (req: AuthenticatedRequest, res) => {
     });
 
     await team.save();
+
+    // Mentions Notification Trigger: Added to Project Workspace
+    try {
+      const { pushNotificationToUser } = await import("../signaling");
+      if (targetUser._id.toString() !== req.user.id) {
+        await pushNotificationToUser(
+          targetUser._id.toString(),
+          "mention",
+          "Added to Project Workspace",
+          `You were added to project workspace "${team.name}" by ${req.user.name}`,
+          "/kanban"
+        );
+      }
+    } catch (notifErr) {
+      req.log.error({ notifErr }, "Error sending project member addition notification");
+    }
 
     const populated = await Team.findById(team._id).populate("members.user", "name email role createdAt");
     if (!populated) {

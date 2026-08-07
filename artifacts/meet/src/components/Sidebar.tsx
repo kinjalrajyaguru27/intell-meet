@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import UserAvatar from "./UserAvatar";
 import { COLOR_MAP } from "@/pages/EditProfile";
 import {
   Video, LayoutGrid, FolderKanban, Brain, Users, Bell,
@@ -302,18 +303,7 @@ export default function Sidebar({ isOpen, setIsOpen, isCollapsed }: SidebarProps
         <div className="p-3 border-t border-zinc-200 dark:border-white/5 bg-zinc-100 dark:bg-[#09090b]/80 shrink-0">
           <div className="flex items-center justify-between gap-2 bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/5 p-2 rounded-xl">
             <div className="flex items-center gap-2 min-w-0">
-              <Avatar className="w-8 h-8 rounded-lg border border-zinc-200 dark:border-white/10 shrink-0 overflow-hidden flex items-center justify-center">
-                {user.avatar && (user.avatar.startsWith("http") || user.avatar.startsWith("/")) ? (
-                  <img src={user.avatar} alt={user.name} className="w-full h-full object-cover rounded-lg" />
-                ) : (
-                  <div 
-                    className="w-full h-full text-white font-bold text-xs flex items-center justify-center rounded-lg"
-                    style={{ background: COLOR_MAP[user.profileColor || "purple"] || COLOR_MAP.purple }}
-                  >
-                    {getInitials(user.name)}
-                  </div>
-                )}
-              </Avatar>
+              <UserAvatar user={user} sizeClassName="w-8 h-8" roundedClassName="rounded-lg" />
               {!isCollapsed && (
                 <div className="min-w-0 flex flex-col text-left">
                   <span className="text-[11px] font-bold text-zinc-900 dark:text-white truncate leading-tight">{user.name}</span>

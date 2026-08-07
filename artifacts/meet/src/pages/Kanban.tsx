@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -7,26 +7,24 @@ import {
   Settings, Building2, Users, FolderKanban, Loader2
 } from "lucide-react";
 import { io, Socket } from "socket.io-client";
-import KanbanBoard from "@/components/KanbanBoard";
-import TimelineGantt from "@/components/TimelineGantt";
 import CalendarView from "@/components/CalendarView";
 import ActivityLogView from "@/components/ActivityLogView";
 
-type WorkspaceTab = "board" | "gantt" | "calendar" | "audit";
+type WorkspaceTab = "calendar" | "audit";
 
 export default function Kanban() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, user, token } = useAuth();
 
   // Navigation tabs
-  const [activeTab, setActiveTab] = useState<WorkspaceTab>("board");
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>("calendar");
 
   // Synchronize activeTab state with URL query parameters
   useEffect(() => {
     const queryParams = new URLSearchParams(window.location.search);
     const tabParam = queryParams.get("tab");
     if (tabParam) {
-      if (["board", "gantt", "calendar", "audit"].includes(tabParam)) {
+      if (["calendar", "audit"].includes(tabParam)) {
         setActiveTab(tabParam as any);
       }
     }
@@ -48,6 +46,17 @@ export default function Kanban() {
   const [projects, setProjects] = useState<any[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState("");
 
+  const uniqueProjects = useMemo(() => {
+    const map = new Map<string, any>();
+    projects.forEach((p) => {
+      const key = p.id || p._id;
+      if (key && !map.has(key)) {
+        map.set(key, p);
+      }
+    });
+    return Array.from(map.values());
+  }, [projects]);
+
   const [isLoading, setIsLoading] = useState(false);
   const [socket, setSocket] = useState<Socket | null>(null);
 
@@ -64,13 +73,16 @@ export default function Kanban() {
     }
   }, [token]);
 
-  // Load teams when selectedOrgId changes
+  // Load teams and projects when selectedOrgId changes
   useEffect(() => {
     if (selectedOrgId && token) {
       fetchTeams();
+      fetchProjects();
     } else {
       setTeams([]);
       setSelectedTeamId("");
+      setProjects([]);
+      setSelectedProjectId("");
     }
   }, [selectedOrgId]);
 
@@ -140,14 +152,15 @@ export default function Kanban() {
 
   const fetchProjects = async () => {
     try {
-      const res = await fetch(`/api/projects?teamId=${selectedTeamId}`, {
+      const url = selectedTeamId ? `/api/projects?teamId=${selectedTeamId}` : `/api/projects`;
+      const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
         const data = await res.json();
         setProjects(data);
         if (data.length > 0 && !selectedProjectId) {
-          setSelectedProjectId(data[0].id);
+          setSelectedProjectId(data[0].id || data[0]._id);
         }
       }
     } catch (err) {
@@ -161,33 +174,58 @@ export default function Kanban() {
     <div className="flex-1 flex flex-col min-h-0 space-y-6">
 
       {/* Workspace selector dropdown header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-200 dark:border-white/5 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-zinc-800 pb-4">
         <div className="flex items-center gap-3 flex-wrap">
-          <LayoutGrid className="w-5 h-5 text-primary" />
-          <h1 className="font-semibold text-lg text-zinc-900 dark:text-white">Team Workspace Hub</h1>
+          <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-xs">
+            <LayoutGrid className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="font-bold text-xl text-slate-900 dark:text-white tracking-tight">Team Workspace Hub</h1>
+            <p className="text-xs text-slate-500 dark:text-zinc-400 font-medium">Manage project schedules & track system audit trail logs</p>
+          </div>
 
-          <div className="h-5 w-px bg-zinc-200 dark:bg-white/10 hidden sm:block" />
+          <div className="h-6 w-px bg-slate-200 dark:bg-zinc-800 hidden sm:block mx-1" />
 
-          {/* Quick Scope Selectors Info labels */}
-          <div className="flex items-center gap-2 text-xs bg-zinc-100 dark:bg-white/5 px-3 py-1.5 rounded-full border border-zinc-200 dark:border-white/5">
-            <span className="text-muted-foreground flex items-center gap-1">
-              <Building2 className="w-3.5 h-3.5" /> Org:
-            </span>
-            <span className="text-zinc-900 dark:text-white font-bold">
-              {organizations.find(o => o._id === selectedOrgId)?.name || "Not Selected"}
-            </span>
-            <span className="text-muted-foreground ml-2 flex items-center gap-1">
-              <Users className="w-3.5 h-3.5" /> Team:
-            </span>
-            <span className="text-zinc-900 dark:text-white font-bold">
-              {teams.find(t => t.id === selectedTeamId)?.name || "Not Selected"}
-            </span>
-            <span className="text-muted-foreground ml-2 flex items-center gap-1">
-              <FolderKanban className="w-3.5 h-3.5" /> Project:
-            </span>
-            <span className="text-zinc-900 dark:text-white font-bold">
-              {projects.find(p => p.id === selectedProjectId)?.name || "Not Selected"}
-            </span>
+          {/* Quick Scope Selectors: Interactive Organization & Project Dropdowns */}
+          <div className="flex items-center gap-2 text-xs flex-wrap">
+            {/* Select Organization */}
+            <div className="flex items-center gap-1.5 bg-slate-100/80 dark:bg-zinc-800/60 px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-700/60 shadow-2xs hover:border-slate-300 dark:hover:border-zinc-600 transition-colors">
+              <Building2 className="w-3.5 h-3.5 text-primary shrink-0" />
+              <span className="text-slate-500 dark:text-zinc-400 font-semibold">Org:</span>
+              <select
+                value={selectedOrgId}
+                onChange={(e) => {
+                  setSelectedOrgId(e.target.value);
+                  setSelectedProjectId("");
+                }}
+                className="bg-transparent text-slate-900 dark:text-white font-bold focus:outline-none cursor-pointer text-xs"
+              >
+                <option value="" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-white">Select Organization</option>
+                {organizations.map((org) => (
+                  <option key={org._id} value={org._id} className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-white">
+                    {org.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Select Project */}
+            <div className="flex items-center gap-1.5 bg-slate-100/80 dark:bg-zinc-800/60 px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-700/60 shadow-2xs hover:border-slate-300 dark:hover:border-zinc-600 transition-colors">
+              <FolderKanban className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span className="text-slate-500 dark:text-zinc-400 font-semibold">Project:</span>
+              <select
+                value={selectedProjectId}
+                onChange={(e) => setSelectedProjectId(e.target.value)}
+                className="bg-transparent text-slate-900 dark:text-white font-bold focus:outline-none cursor-pointer text-xs"
+              >
+                <option value="" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-white">Select Project</option>
+                {uniqueProjects.map((proj) => (
+                  <option key={proj.id || proj._id} value={proj.id || proj._id} className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-white">
+                    {proj.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
@@ -196,52 +234,34 @@ export default function Kanban() {
             size="sm"
             variant="outline"
             onClick={() => setLocation("/team-management")}
-            className="rounded-full px-4 text-xs font-semibold border-zinc-250 dark:border-white/10 text-foreground dark:text-zinc-250 hover:bg-zinc-100 dark:hover:bg-white/5"
+            className="rounded-xl px-4 text-xs font-semibold border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 shadow-2xs transition-all"
           >
-            <Settings className="w-3.5 h-3.5 mr-1" />
+            <Settings className="w-3.5 h-3.5 mr-1.5 text-slate-500 dark:text-zinc-400" />
             Configure Workspace
           </Button>
         </div>
       </div>
 
       {/* Tab Selection Row */}
-      <div className="flex border-b border-zinc-200 dark:border-white/5 overflow-x-auto pb-px">
-        <button
-          onClick={() => handleTabChange("board")}
-          className={`flex items-center gap-2 px-5 py-3 border-b-2 font-semibold text-xs uppercase tracking-wider transition-all whitespace-nowrap ${activeTab === "board"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-zinc-900 dark:hover:text-white"
-            }`}
-        >
-          <LayoutGrid className="w-4 h-4" />
-          Kanban Board
-        </button>
-        <button
-          onClick={() => handleTabChange("gantt")}
-          className={`flex items-center gap-2 px-5 py-3 border-b-2 font-semibold text-xs uppercase tracking-wider transition-all whitespace-nowrap ${activeTab === "gantt"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-zinc-900 dark:hover:text-white"
-            }`}
-        >
-          <Clock className="w-4 h-4" />
-          Gantt Timeline
-        </button>
+      <div className="inline-flex p-1 bg-slate-100/80 dark:bg-zinc-900/80 border border-slate-200/80 dark:border-zinc-800 rounded-xl self-start gap-1">
         <button
           onClick={() => handleTabChange("calendar")}
-          className={`flex items-center gap-2 px-5 py-3 border-b-2 font-semibold text-xs uppercase tracking-wider transition-all whitespace-nowrap ${activeTab === "calendar"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-zinc-900 dark:hover:text-white"
-            }`}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-xs transition-all cursor-pointer ${
+            activeTab === "calendar"
+              ? "bg-white dark:bg-zinc-800 text-primary shadow-xs"
+              : "text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white"
+          }`}
         >
           <CalendarIcon className="w-4 h-4" />
           Team Calendar
         </button>
         <button
           onClick={() => handleTabChange("audit")}
-          className={`flex items-center gap-2 px-5 py-3 border-b-2 font-semibold text-xs uppercase tracking-wider transition-all whitespace-nowrap ${activeTab === "audit"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-zinc-900 dark:hover:text-white"
-            }`}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-xs transition-all cursor-pointer ${
+            activeTab === "audit"
+              ? "bg-white dark:bg-zinc-800 text-primary shadow-xs"
+              : "text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white"
+          }`}
         >
           <ShieldAlert className="w-4 h-4" />
           Audit Trail
@@ -260,51 +280,10 @@ export default function Kanban() {
       {!isLoading && (
         <div className="space-y-6">
 
-          {activeTab === "board" && (
-            selectedProjectId ? (
-              <KanbanBoard
-                token={token}
-                socket={socket}
-                selectedProjectId={selectedProjectId}
-                selectedTeamId={selectedTeamId}
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center py-20 text-center bg-zinc-50/50 dark:bg-card/20 border border-zinc-200 dark:border-white/5 rounded-2xl shadow-sm">
-                <LayoutGrid className="w-12 h-12 text-muted-foreground/30 mb-4" />
-                <h3 className="font-semibold text-sm mb-1 text-zinc-900 dark:text-white">No Project Selected</h3>
-                <p className="text-xs text-muted-foreground max-w-xs mb-4">
-                  Please select or configure an organization, team, and project inside settings.
-                </p>
-                <Button size="sm" onClick={() => setLocation("/team-management")} className="rounded-full">
-                  Configure Workspace
-                </Button>
-              </div>
-            )
-          )}
-
-          {activeTab === "gantt" && (
-            selectedProjectId ? (
-              <TimelineGantt
-                token={token}
-                selectedProjectId={selectedProjectId}
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center py-20 text-center bg-zinc-50/50 dark:bg-card/20 border border-zinc-200 dark:border-white/5 rounded-2xl shadow-sm">
-                <Clock className="w-12 h-12 text-muted-foreground/30 mb-4" />
-                <h3 className="font-semibold text-sm mb-1 text-zinc-900 dark:text-white">No Project Selected</h3>
-                <p className="text-xs text-muted-foreground max-w-xs mb-4">
-                  Configure your timelines inside settings to inspect project Gantt views.
-                </p>
-                <Button size="sm" onClick={() => setLocation("/team-management")} className="rounded-full">
-                  Configure Workspace
-                </Button>
-              </div>
-            )
-          )}
-
           {activeTab === "calendar" && (
             <CalendarView
               token={token}
+              selectedOrgId={selectedOrgId}
               selectedProjectId={selectedProjectId}
             />
           )}

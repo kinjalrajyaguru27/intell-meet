@@ -172,6 +172,16 @@ router.get("/rooms/:roomId/active-meeting", requireAuth, async (req: Authenticat
       return;
     }
 
+    const currentUserId = req.user!.id;
+    const isHost = meeting.host?.toString() === currentUserId;
+    const rawNotesList = (meeting as any).notesList || [];
+    const filteredNotesList = rawNotesList.filter((note: any) => {
+      if (note.visibility === "everyone" || !note.visibility) return true;
+      if (note.authorId === currentUserId || isHost) return true;
+      if (Array.isArray(note.allowedViewers) && (note.allowedViewers.includes(currentUserId) || note.allowedViewers.includes(req.user?.name || ""))) return true;
+      return false;
+    });
+
     res.json({
       id: meeting._id.toString(),
       roomId: meeting.roomId,
@@ -181,6 +191,8 @@ router.get("/rooms/:roomId/active-meeting", requireAuth, async (req: Authenticat
       durationSeconds: null,
       participantNames: meeting.participantNames,
       notes: meeting.notes || null,
+      notesPermissions: (meeting as any).notesPermissions || { mode: "everyone", allowedEditors: [] },
+      notesList: filteredNotesList,
       transcript: meeting.transcript.map((line: any) => ({
         speaker: line.speaker,
         text: line.text,
@@ -209,21 +221,46 @@ router.get("/meetings", requireAuth, async (req: AuthenticatedRequest, res) => {
     const participantMeetings = await Participant.find({ user: req.user!.id }).select("meeting");
     const meetingIds = participantMeetings.map((p) => p.meeting);
 
-    const meetings = await Meeting.find({
+    const queryFilter: any = {
       $or: [
         { host: req.user!.id },
-        { _id: { $in: meetingIds } }
+        { _id: { $in: meetingIds } },
+        { organizationId: { $exists: true, $ne: null } }
       ]
-    }).sort({ startedAt: -1 });
+    };
+
+    const { organizationId, projectId } = req.query;
+    if (organizationId && typeof organizationId === "string" && organizationId.trim()) {
+      queryFilter.organizationId = organizationId;
+    }
+    if (projectId && typeof projectId === "string" && projectId.trim()) {
+      queryFilter.projectId = projectId;
+    }
+
+    const meetings = await Meeting.find(queryFilter)
+      .populate("host", "name email avatar")
+      .sort({ startedAt: -1 });
 
     const results = meetings.map((m) => ({
       id: m._id.toString(),
       roomId: m.roomId,
-      name: m.name,
+      meetingId: m.meetingId || m.roomId,
+      name: m.name || m.title,
+      title: m.title || m.name,
+      description: m.description || "",
+      status: m.status || "scheduled",
       startedAt: m.startedAt.toISOString(),
+      startTime: m.startTime ? m.startTime.toISOString() : m.startedAt.toISOString(),
       endedAt: m.endedAt ? m.endedAt.toISOString() : null,
       durationSeconds: m.durationSeconds ?? null,
       participantNames: m.participantNames,
+      organizationId: m.organizationId ? m.organizationId.toString() : null,
+      projectId: m.projectId ? m.projectId.toString() : null,
+      host: m.host ? {
+        id: (m.host as any)._id?.toString(),
+        name: (m.host as any).name,
+        email: (m.host as any).email,
+      } : null,
       actionItemCount: m.actionItems.length,
       openActionItemCount: m.actionItems.filter((i: any) => !i.isDone).length,
       hasNotes: !!m.notes,
@@ -264,6 +301,16 @@ router.get("/meetings/:meetingId", requireAuth, async (req: AuthenticatedRequest
       return;
     }
 
+    const currentUserId = req.user!.id;
+    const isHost = meeting.host?.toString() === currentUserId;
+    const rawNotesList = (meeting as any).notesList || [];
+    const filteredNotesList = rawNotesList.filter((note: any) => {
+      if (note.visibility === "everyone" || !note.visibility) return true;
+      if (note.authorId === currentUserId || isHost) return true;
+      if (Array.isArray(note.allowedViewers) && (note.allowedViewers.includes(currentUserId) || note.allowedViewers.includes(req.user?.name || ""))) return true;
+      return false;
+    });
+
     res.json({
       id: meeting._id.toString(),
       roomId: meeting.roomId,
@@ -273,6 +320,8 @@ router.get("/meetings/:meetingId", requireAuth, async (req: AuthenticatedRequest
       durationSeconds: meeting.durationSeconds ?? null,
       participantNames: meeting.participantNames,
       notes: meeting.notes || null,
+      notesPermissions: (meeting as any).notesPermissions || { mode: "everyone", allowedEditors: [] },
+      notesList: filteredNotesList,
       transcript: meeting.transcript.map((line: any) => ({
         speaker: line.speaker,
         text: line.text,
@@ -301,11 +350,6 @@ router.put("/meetings/:meetingId/notes", requireAuth, async (req: AuthenticatedR
     res.status(400).json({ error: "Invalid meeting ID" });
     return;
   }
-  const body = UpsertNotesBody.safeParse(req.body);
-  if (!body.success) {
-    res.status(400).json({ error: "Invalid request body" });
-    return;
-  }
 
   try {
     const meeting = await Meeting.findById(params.data.meetingId);
@@ -320,7 +364,18 @@ router.put("/meetings/:meetingId/notes", requireAuth, async (req: AuthenticatedR
       return;
     }
 
-    meeting.notes = body.data.content;
+    if (req.body.notesList && Array.isArray(req.body.notesList)) {
+      (meeting as any).notesList = req.body.notesList;
+    }
+    if (req.body.notesPermissions) {
+      (meeting as any).notesPermissions = req.body.notesPermissions;
+    }
+    if (typeof req.body.content === "string") {
+      meeting.notes = req.body.content;
+    } else if (req.body.notesList && Array.isArray(req.body.notesList)) {
+      meeting.notes = req.body.notesList.map((n: any) => n.content).join("\n\n");
+    }
+
     await meeting.save();
 
     // Log activity
@@ -337,7 +392,7 @@ router.put("/meetings/:meetingId/notes", requireAuth, async (req: AuthenticatedR
     const { MeetingNotesVersion } = await import("@workspace/db");
     const notesVersion = new MeetingNotesVersion({
       meetingId: meeting._id,
-      content: body.data.content,
+      content: meeting.notes || "",
       author: req.user!.id,
     });
     await notesVersion.save();
@@ -346,6 +401,8 @@ router.put("/meetings/:meetingId/notes", requireAuth, async (req: AuthenticatedR
       id: meeting._id.toString() + "_notes",
       meetingId: meeting._id.toString(),
       content: meeting.notes,
+      notesPermissions: (meeting as any).notesPermissions,
+      notesList: (meeting as any).notesList,
       updatedAt: new Date().toISOString(),
     });
   } catch (error) {
@@ -864,6 +921,8 @@ router.post("/meetings/create", requireAuth, async (req: AuthenticatedRequest, r
     const st = startTime ? new Date(startTime) : new Date();
     const status = st.getTime() > Date.now() + 60000 ? "scheduled" : "active";
 
+    const { organizationId, projectId } = req.body;
+
     const meeting = new Meeting({
       // Compat fields
       roomId: meetingId,
@@ -882,9 +941,59 @@ router.post("/meetings/create", requireAuth, async (req: AuthenticatedRequest, r
       recurrenceRule: recurrenceRule || "",
       isPersonalRoom: false,
       waitingRoomEnabled: !!waitingRoomEnabled,
+      organizationId: organizationId || undefined,
+      projectId: projectId || undefined,
     });
 
     await meeting.save();
+
+    // Meeting Notifications Trigger
+    try {
+      const { pushNotificationToUser } = await import("../signaling");
+      const { User, Member, Team, Project } = await import("@workspace/db");
+
+      let targetUserIds: string[] = [];
+      if (organizationId) {
+        const members = await Member.find({ organizationId });
+        targetUserIds = members.map((m) => m.userId.toString());
+      } else if (projectId) {
+        const proj = await Project.findById(projectId);
+        if (proj?.teamId) {
+          const team = await Team.findById(proj.teamId);
+          if (team) {
+            targetUserIds = team.members.map((m: any) => m.user?.toString()).filter(Boolean);
+          }
+        }
+      }
+
+      if (targetUserIds.length === 0) {
+        const allUsers = await User.find({ _id: { $ne: req.user!.id } }).select("_id");
+        targetUserIds = allUsers.map((u) => u._id.toString());
+      }
+
+      const uniqueUserIds = Array.from(new Set(targetUserIds)).filter((id) => id !== req.user!.id);
+      const hoursUntilStart = (st.getTime() - Date.now()) / (1000 * 60 * 60);
+
+      const notifTitle = hoursUntilStart < 24
+        ? `Upcoming Meeting: ${title}`
+        : `Meeting Scheduled: ${title}`;
+
+      const notifContent = hoursUntilStart < 24
+        ? `You are invited to "${title}" starting at ${st.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.`
+        : `You are invited to "${title}" scheduled for ${st.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}.`;
+
+      for (const userId of uniqueUserIds) {
+        await pushNotificationToUser(
+          userId,
+          "meeting_reminder",
+          notifTitle,
+          notifContent,
+          `/room/${meetingId}`
+        );
+      }
+    } catch (notifErr) {
+      req.log.error({ notifErr }, "Failed to send meeting notifications");
+    }
 
     // Log activity
     const { logActivity } = await import("../lib/activity");

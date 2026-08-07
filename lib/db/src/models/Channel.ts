@@ -5,6 +5,8 @@ export interface IChannel extends Document {
   description?: string;
   isPrivate: boolean;
   teamId: mongoose.Types.ObjectId;
+  createdBy?: mongoose.Types.ObjectId;
+  members?: mongoose.Types.ObjectId[];
   createdAt: Date;
 }
 
@@ -13,6 +15,8 @@ const ChannelSchema: Schema = new Schema({
   description: { type: String, default: "" },
   isPrivate: { type: Boolean, default: false },
   teamId: { type: Schema.Types.ObjectId, ref: "Team", required: true, index: true },
+  createdBy: { type: Schema.Types.ObjectId, ref: "User", index: true },
+  members: [{ type: Schema.Types.ObjectId, ref: "User", index: true }],
   createdAt: { type: Date, default: Date.now },
 });
 

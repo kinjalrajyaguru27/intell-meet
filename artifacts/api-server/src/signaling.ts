@@ -53,7 +53,7 @@ export let ioInstance: SocketIOServer | null = null;
 // Helper to push real-time notifications and persist them
 export async function pushNotificationToUser(
   recipientId: string,
-  type: "mention" | "reply" | "message" | "file_upload" | "task_assignment" | "meeting_reminder",
+  type: string,
   title: string,
   content: string,
   link?: string
@@ -127,6 +127,7 @@ export function initSignaling(httpServer: HttpServer) {
 
     // Track presence and active socket mapping
     if (user?.id) {
+      socket.join(`user:${user.id}`);
       if (!activeUsers.has(user.id)) {
         activeUsers.set(user.id, new Set());
       }
@@ -824,6 +825,16 @@ export function initSignaling(httpServer: HttpServer) {
     socket.on("shared-notes-update", ({ notes }: { notes: string }) => {
       if (!currentRoomId) return;
       socket.to(currentRoomId).emit("shared-notes-update", { notes });
+    });
+
+    socket.on("notes-permissions-update", (data: any) => {
+      if (!currentRoomId) return;
+      socket.to(currentRoomId).emit("notes-permissions-updated", data);
+    });
+
+    socket.on("notes-list-update", (data: any) => {
+      if (!currentRoomId) return;
+      socket.to(currentRoomId).emit("notes-list-updated", data);
     });
 
     socket.on("task-changed", () => {

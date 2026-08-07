@@ -25,6 +25,7 @@ export function useSpeechTranscript({
   localStream,
 }: UseSpeechTranscriptOptions) {
   const [transcript, setTranscript] = useState<TranscriptLine[]>([]);
+  const [currentSpeech, setCurrentSpeech] = useState<TranscriptLine | null>(null);
   const recognitionRef = useRef<any>(null);
   const transcriptRef = useRef<TranscriptLine[]>([]);
 
@@ -103,7 +104,7 @@ export function useSpeechTranscript({
     console.log("[useSpeechTranscript] Initializing SpeechRecognition instance");
     const rec = new SpeechRecognition();
     rec.continuous = true;
-    rec.interimResults = false;
+    rec.interimResults = true;
     rec.lang = "en-US";
 
     rec.onstart = () => {
@@ -113,30 +114,48 @@ export function useSpeechTranscript({
 
     rec.onresult = (event: any) => {
       if (isTranscriptionPausedRef.current) {
-        console.log("[useSpeechTranscript] Speech Recognition result ignored because transcription is paused");
         return;
       }
-      const resultIndex = event.resultIndex;
-      const text = event.results[resultIndex][0].transcript.trim();
-      console.log("[useSpeechTranscript] Captured raw transcript chunk:", text);
 
-      if (text) {
-        // Emit through socket to broadcast to other participants
+      let interimTranscript = "";
+      let finalTranscript = "";
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const textChunk = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += textChunk;
+        } else {
+          interimTranscript += textChunk;
+        }
+      }
+
+      if (interimTranscript.trim()) {
         const currentSocket = socketRef.current;
         if (currentSocket && currentSocket.connected) {
-          console.log("[useSpeechTranscript] Emitting transcription-chunk to socket:", text);
-          currentSocket.emit("transcription-chunk", { text });
-        } else {
-          console.warn("[useSpeechTranscript] Socket disconnected, skipped broadcasting transcript chunk");
+          currentSocket.emit("transcription-chunk", { text: interimTranscript.trim(), isInterim: true });
+        }
+
+        setCurrentSpeech({
+          speaker: displayNameRef.current,
+          text: interimTranscript.trim(),
+          timestamp: Date.now(),
+        });
+      }
+
+      if (finalTranscript.trim()) {
+        const currentSocket = socketRef.current;
+        if (currentSocket && currentSocket.connected) {
+          currentSocket.emit("transcription-chunk", { text: finalTranscript.trim(), isFinal: true });
         }
 
         const newLine: TranscriptLine = {
           speaker: displayNameRef.current,
-          text,
+          text: finalTranscript.trim(),
           timestamp: Date.now(),
         };
 
         setTranscript((prev) => [...prev, newLine]);
+        setCurrentSpeech(null);
       }
     };
 
@@ -153,7 +172,7 @@ export function useSpeechTranscript({
       console.log("[useSpeechTranscript] SpeechRecognition ended");
       isListeningRef.current = false;
       
-      // Automatically restart with a 400ms delay to prevent OS locking loops
+      // Automatically restart with a 300ms delay to prevent OS locking loops
       setTimeout(() => {
         const shouldListen = hasLocalAudioRef.current && !isMutedRef.current && !isTranscriptionPausedRef.current;
         if (recognitionRef.current && shouldListen && !isListeningRef.current) {
@@ -165,7 +184,7 @@ export function useSpeechTranscript({
             // ignore already started errors
           }
         }
-      }, 400);
+      }, 300);
     };
 
     recognitionRef.current = rec;
@@ -207,14 +226,23 @@ export function useSpeechTranscript({
       displayName: string;
       text: string;
       timestamp: number;
+      isInterim?: boolean;
     }) => {
-      console.log("[useSpeechTranscript] Received remote transcript chunk:", data);
-      const newLine: TranscriptLine = {
-        speaker: data.displayName,
-        text: data.text,
-        timestamp: data.timestamp,
-      };
-      setTranscript((prev) => [...prev, newLine]);
+      if (data.isInterim) {
+        setCurrentSpeech({
+          speaker: data.displayName,
+          text: data.text,
+          timestamp: data.timestamp || Date.now(),
+        });
+      } else {
+        const newLine: TranscriptLine = {
+          speaker: data.displayName,
+          text: data.text,
+          timestamp: data.timestamp || Date.now(),
+        };
+        setTranscript((prev) => [...prev, newLine]);
+        setCurrentSpeech(null);
+      }
     };
 
     socket.on("transcription-chunk", handleRemoteChunk);
@@ -243,6 +271,8 @@ export function useSpeechTranscript({
   return {
     transcript,
     setTranscript,
+    currentSpeech,
     transcriptRef,
+    recognitionRef,
   };
 }

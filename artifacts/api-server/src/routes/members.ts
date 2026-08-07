@@ -92,6 +92,23 @@ router.post("/organizations/:orgId/members/invite", async (req: AuthenticatedReq
       }
     }
 
+    // Mentions Notification Trigger: Added to Organization
+    try {
+      const { pushNotificationToUser } = await import("../signaling");
+      const org = await Organization.findById(orgId);
+      if (user._id.toString() !== req.user.id) {
+        await pushNotificationToUser(
+          user._id.toString(),
+          "mention",
+          "Added to Organization Workspace",
+          `You were added to organization "${org?.name || "Workspace"}" by ${req.user.name}`,
+          "/team-management"
+        );
+      }
+    } catch (notifErr) {
+      req.log.error({ notifErr }, "Error sending org member addition notification");
+    }
+
     res.status(201).json(member);
   } catch (error) {
     req.log.error({ error }, "Error inviting member");

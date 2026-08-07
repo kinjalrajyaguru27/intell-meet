@@ -3,9 +3,10 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   FileText, User, Calendar, Search, Shield, Users,
-  FolderKanban, CheckSquare, Settings
+  FolderKanban, CheckSquare, Settings, RefreshCw, Filter, Sparkles
 } from "lucide-react";
 
 interface ActivityLogViewProps {
@@ -62,7 +63,8 @@ export default function ActivityLogView({ token, selectedOrgId }: ActivityLogVie
     const matchesSearch =
       log.action?.toLowerCase().includes(query) ||
       log.details?.toLowerCase().includes(query) ||
-      log.userId?.name?.toLowerCase().includes(query);
+      log.userId?.name?.toLowerCase().includes(query) ||
+      log.userId?.email?.toLowerCase().includes(query);
 
     const matchesType = filterType === "all" || log.entityType === filterType;
 
@@ -71,96 +73,144 @@ export default function ActivityLogView({ token, selectedOrgId }: ActivityLogVie
 
   return (
     <div className="space-y-6">
-      {/* Filtering and Search Actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-card/40 border border-white/10 p-4 rounded-xl items-end">
+      {/* Filtering and Search Actions Bar */}
+      <div className="bg-white dark:bg-zinc-900/80 border border-slate-200/80 dark:border-zinc-800 p-4 rounded-2xl shadow-xs grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
         <div className="space-y-1.5 col-span-2">
-          <Label className="text-[10px] text-muted-foreground uppercase font-bold pl-1">Search Audit Logs</Label>
+          <Label className="text-[11px] text-slate-500 dark:text-zinc-400 font-bold uppercase tracking-wider pl-0.5 flex items-center gap-1.5">
+            <Search className="w-3.5 h-3.5 text-primary" />
+            Search Audit Logs
+          </Label>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Search user, detail description, action..."
+              placeholder="Search by user name, action, or details..."
               value={searchVal}
               onChange={(e) => setSearchVal(e.target.value)}
-              className="pl-9 bg-black/40 border-white/10 text-xs h-9"
+              className="pl-9 bg-slate-50 dark:bg-zinc-800/60 border-slate-200 dark:border-zinc-700/60 text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 text-xs h-10 rounded-xl focus:ring-2 focus:ring-primary/20 transition-all"
             />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-zinc-500" />
           </div>
         </div>
 
         <div className="space-y-1.5">
-          <Label className="text-[10px] text-muted-foreground uppercase font-bold pl-1">Filter Entity</Label>
+          <Label className="text-[11px] text-slate-500 dark:text-zinc-400 font-bold uppercase tracking-wider pl-0.5 flex items-center gap-1.5">
+            <Filter className="w-3.5 h-3.5 text-primary" />
+            Filter Entity
+          </Label>
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
-            className="w-full bg-black/40 border border-white/10 h-9 rounded-md px-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary font-medium"
+            className="w-full bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700/60 h-10 rounded-xl px-3 text-xs text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-primary/20 font-semibold cursor-pointer transition-all"
           >
-            <option value="all">All Entities</option>
-            <option value="Organization">Organization</option>
-            <option value="Team">Team Workspace</option>
-            <option value="Project">Project</option>
-            <option value="Task">Task Issue</option>
+            <option value="all" className="bg-white dark:bg-zinc-900">All Entities</option>
+            <option value="Organization" className="bg-white dark:bg-zinc-900">Organization</option>
+            <option value="Team" className="bg-white dark:bg-zinc-900">Team Workspace</option>
+            <option value="Project" className="bg-white dark:bg-zinc-900">Project</option>
+            <option value="Task" className="bg-white dark:bg-zinc-900">Task Issue</option>
           </select>
         </div>
       </div>
 
       {/* Logs timeline list */}
-      <Card className="bg-card/20 border-white/5 backdrop-blur-md">
-        <CardHeader className="py-4 border-b border-white/5">
-          <CardTitle className="text-xs font-bold uppercase text-muted-foreground tracking-wider flex items-center gap-1.5">
+      <Card className="bg-white dark:bg-zinc-900/80 border-slate-200/80 dark:border-zinc-800 shadow-sm rounded-2xl overflow-hidden">
+        <CardHeader className="py-4 px-6 border-b border-slate-100 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-900/40 flex flex-row items-center justify-between">
+          <CardTitle className="text-xs font-bold uppercase text-slate-600 dark:text-zinc-400 tracking-wider flex items-center gap-2">
             <FileText className="w-4 h-4 text-primary" />
-            Audit Action Trail Logs ({filteredLogs.length})
+            Audit Action Trail Logs
+            <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full font-extrabold text-[11px] ml-1">
+              {filteredLogs.length}
+            </span>
           </CardTitle>
+
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={fetchLogs}
+            disabled={isLoading}
+            className="h-8 px-2.5 text-xs text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white rounded-lg"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${isLoading ? "animate-spin text-primary" : ""}`} />
+            Refresh
+          </Button>
         </CardHeader>
-        <CardContent className="py-4">
+
+        <CardContent className="p-0">
           {isLoading ? (
-            <div className="py-16 text-center text-xs text-muted-foreground">
-              Retrieving workspace audit history...
+            <div className="py-20 text-center flex flex-col items-center justify-center gap-2 text-slate-400 dark:text-zinc-500">
+              <RefreshCw className="w-6 h-6 animate-spin text-primary" />
+              <span className="text-xs font-medium">Retrieving workspace audit trail...</span>
             </div>
           ) : filteredLogs.length === 0 ? (
-            <div className="py-12 text-center text-xs text-muted-foreground italic">
-              No audit logs captured for the current scope.
+            <div className="py-20 text-center flex flex-col items-center justify-center gap-3 text-slate-400 dark:text-zinc-500">
+              <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-zinc-800 flex items-center justify-center text-slate-400 dark:text-zinc-500">
+                <Sparkles className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-700 dark:text-zinc-300">No activity records found</p>
+                <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-0.5">Try clearing filters or search query to view logs</p>
+              </div>
             </div>
           ) : (
-            <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1">
+            <div className="divide-y divide-slate-100 dark:divide-zinc-800/60 max-h-[600px] overflow-y-auto">
               {filteredLogs.map((log) => {
                 const icons = {
-                  Organization: <Shield className="w-4 h-4 text-primary shrink-0" />,
-                  Team: <Users className="w-4 h-4 text-cyan-400 shrink-0" />,
-                  Project: <FolderKanban className="w-4 h-4 text-emerald-400 shrink-0" />,
-                  Task: <CheckSquare className="w-4 h-4 text-amber-400 shrink-0" />
-                }[log.entityType as "Organization" | "Team" | "Project" | "Task"] || <Settings className="w-4 h-4 text-zinc-400 shrink-0" />;
+                  Organization: <Shield className="w-4 h-4 shrink-0" />,
+                  Team: <Users className="w-4 h-4 shrink-0" />,
+                  Project: <FolderKanban className="w-4 h-4 shrink-0" />,
+                  Task: <CheckSquare className="w-4 h-4 shrink-0" />
+                }[log.entityType as "Organization" | "Team" | "Project" | "Task"] || <Settings className="w-4 h-4 shrink-0" />;
 
-                const actionSuffix = (log.action?.split("_")[1] || "update") as "create" | "update" | "delete";
-                const actionStyle = {
-                  create: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-                  update: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-                  delete: "bg-red-500/10 text-red-400 border-red-500/20",
-                }[actionSuffix] || "bg-white/5 text-muted-foreground";
+                const iconBoxStyles = {
+                  Organization: "bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border-indigo-200/80 dark:border-indigo-800/50",
+                  Team: "bg-cyan-50 dark:bg-cyan-950/50 text-cyan-600 dark:text-cyan-400 border-cyan-200/80 dark:border-cyan-800/50",
+                  Project: "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border-emerald-200/80 dark:border-emerald-800/50",
+                  Task: "bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border-amber-200/80 dark:border-amber-800/50"
+                }[log.entityType as "Organization" | "Team" | "Project" | "Task"] || "bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 border-slate-200 dark:border-zinc-700";
+
+                const actionRaw = (log.action || "").toLowerCase();
+                const isCreate = actionRaw.includes("create");
+                const isDelete = actionRaw.includes("delete") || actionRaw.includes("remove");
+                
+                const actionBadgeStyle = isCreate
+                  ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60"
+                  : isDelete
+                  ? "bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800/60"
+                  : "bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800/60";
 
                 return (
-                  <div key={log._id} className="flex gap-4 items-start text-xs border-b border-white/5 pb-3.5 last:border-b-0 last:pb-0">
-                    <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                  <div key={log._id} className="p-4 flex gap-4 items-start hover:bg-slate-50/70 dark:hover:bg-zinc-800/40 transition-colors group">
+                    <div className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 shadow-2xs ${iconBoxStyles}`}>
                       {icons}
                     </div>
-                    <div className="flex-1 space-y-1 text-left">
-                      <div className="flex justify-between items-baseline flex-wrap gap-2">
+
+                    <div className="flex-1 min-w-0 space-y-1.5 text-left">
+                      <div className="flex justify-between items-center gap-2 flex-wrap">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-white">
+                          <span className="font-bold text-xs text-slate-900 dark:text-white">
                             {log.userId?.name || "System Automated"}
                           </span>
-                          <span className="text-muted-foreground">({log.userId?.email || "api"})</span>
+                          {log.userId?.email && (
+                            <span className="text-[11px] text-slate-500 dark:text-zinc-400 font-medium">
+                              ({log.userId.email})
+                            </span>
+                          )}
                         </div>
-                        <span className="text-[10px] text-muted-foreground flex items-center gap-1 font-semibold">
-                          <Calendar className="w-3.5 h-3.5" />
-                          {timeAgo(log.createdAt)}
-                        </span>
+
+                        <div className="flex items-center gap-1 text-[11px] text-slate-400 dark:text-zinc-500 font-medium">
+                          <Calendar className="w-3 h-3" />
+                          <span>{timeAgo(log.createdAt)}</span>
+                        </div>
                       </div>
+
                       <div className="flex items-center gap-2 flex-wrap">
-                        <Badge variant="outline" className={`text-[9px] font-extrabold uppercase py-0.5 px-2.5 ${actionStyle}`}>
+                        <Badge variant="outline" className={`text-[10px] font-extrabold uppercase py-0.5 px-2 rounded-md ${actionBadgeStyle}`}>
                           {log.action}
                         </Badge>
-                        <span className="text-white/90 font-medium">
-                          {log.details}
-                        </span>
+
+                        {log.details && (
+                          <span className="text-xs text-slate-700 dark:text-zinc-300 font-medium leading-relaxed">
+                            {log.details}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>

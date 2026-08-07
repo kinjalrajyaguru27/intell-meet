@@ -56,7 +56,7 @@ export default function Room() {
   const [, params] = useRoute("/room/:roomId");
   const roomId = (params?.roomId || "").trim().toLowerCase();
   const [, setLocation] = useLocation();
-  const { isAuthenticated, token } = useAuth();
+  const { isAuthenticated, token, user } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -141,7 +141,9 @@ export default function Room() {
 
   const {
     transcript,
+    currentSpeech,
     transcriptRef,
+    recognitionRef,
   } = useSpeechTranscript({
     roomId,
     displayName,
@@ -197,15 +199,44 @@ export default function Room() {
   // Shared notes state
   const [sharedNotes, setSharedNotes] = useState("");
   const sharedNotesRef = useRef("");
+  const [notesPermissions, setNotesPermissions] = useState<any>(
+    (activeMeeting as any)?.notesPermissions || { mode: "everyone", allowedEditors: [] }
+  );
+  const [notesList, setNotesList] = useState<any[]>(
+    (activeMeeting as any)?.notesList || []
+  );
   const saveTimeoutRef = useRef<any>(null);
   const upsertNotesMutation = useUpsertNotes();
 
   // Determine if active user is host
   const isHost = useMemo(() => {
-    if (!roomInfo) return false;
-    // Check if the current user ID matches the host defined in room metadata or host transfers
-    return roomInfo.host === userId || roomHostId === userId;
-  }, [roomInfo, userId, roomHostId]);
+    const currentAuthId = user?.id || (user as any)?._id;
+    const meetingHostId =
+      (roomInfo?.host as any)?.id ||
+      (roomInfo?.host as any)?._id ||
+      roomInfo?.host ||
+      (activeMeeting as any)?.host?.id ||
+      (activeMeeting as any)?.host?._id ||
+      (activeMeeting as any)?.host;
+
+    if (currentAuthId && meetingHostId && String(meetingHostId) === String(currentAuthId)) {
+      return true;
+    }
+    if (userId && meetingHostId && String(meetingHostId) === String(userId)) {
+      return true;
+    }
+    if (roomHostId && (roomHostId === userId || (currentAuthId && roomHostId === currentAuthId))) {
+      return true;
+    }
+    if (roomInfo?.host === userId || roomInfo?.host === currentAuthId) {
+      return true;
+    }
+    // Fallback: If room host is not explicitly assigned to another user, logged-in creator is host
+    if (!meetingHostId && !roomHostId && user) {
+      return true;
+    }
+    return false;
+  }, [roomInfo, activeMeeting, user, userId, roomHostId]);
 
   // Sync initial notes when activeMeeting loads
   useEffect(() => {
@@ -213,7 +244,27 @@ export default function Room() {
       setSharedNotes(activeMeeting.notes);
       sharedNotesRef.current = activeMeeting.notes;
     }
-  }, [activeMeeting?.notes]);
+    if ((activeMeeting as any)?.notesPermissions) {
+      setNotesPermissions((activeMeeting as any).notesPermissions);
+    }
+    if ((activeMeeting as any)?.notesList && (activeMeeting as any).notesList.length > 0) {
+      setNotesList((activeMeeting as any).notesList);
+    }
+  }, [activeMeeting?.notes, (activeMeeting as any)?.notesPermissions, (activeMeeting as any)?.notesList]);
+
+  // Save notes list & permissions to DB helper
+  const saveNotesListToDb = (newList: any[], newPerms?: any) => {
+    if (activeMeetingId) {
+      upsertNotesMutation.mutate({
+        meetingId: activeMeetingId,
+        data: {
+          content: newList.map((n) => n.content).join("\n\n"),
+          notesList: newList,
+          notesPermissions: newPerms || notesPermissions,
+        } as any,
+      });
+    }
+  };
 
   // Listen for socket updates of notes
   useEffect(() => {
@@ -529,8 +580,22 @@ export default function Room() {
 
   const handleLeave = useCallback(() => {
     hasEndedRef.current = true;
-    if (isRecording) stopRecording();
-    
+    if (isRecording) {
+      try { stopRecording(); } catch (e) {}
+    }
+
+    // Stop local media stream tracks immediately to free camera & microphone
+    if (localStream) {
+      localStream.getTracks().forEach((track) => {
+        try { track.stop(); } catch (e) {}
+      });
+    }
+
+    // Stop speech recognition instance
+    if (recognitionRef && recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch (e) {}
+    }
+
     if (isHost) {
       const durationSeconds = Math.round((Date.now() - joinedAt.current) / 1000);
       const allNames = [displayName, ...participantList.map((p) => p.displayName)];
@@ -538,10 +603,14 @@ export default function Room() {
         { roomId, data: { participantNames: allNames, durationSeconds, transcript: transcriptRef.current } },
         { onSettled: () => setLocation("/dashboard") }
       );
+      // Safety fallback to guarantee navigation even if mutation hangs
+      setTimeout(() => {
+        setLocation("/dashboard");
+      }, 500);
     } else {
       setLocation("/dashboard");
     }
-  }, [isRecording, stopRecording, displayName, participantList, endMeetingMutation, roomId, setLocation, transcriptRef, isHost]);
+  }, [isRecording, stopRecording, localStream, displayName, participantList, endMeetingMutation, roomId, setLocation, transcriptRef, isHost, recognitionRef]);
 
   // Keep refs of values needed in the unmount effect to avoid stale closures
   const isRecordingRef = useRef(isRecording);
@@ -956,13 +1025,13 @@ export default function Room() {
           </div>
 
           {/* Captions Overlay */}
-          {transcript.length > 0 && (
+          {(currentSpeech || transcript.length > 0) && (
             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 pointer-events-none bg-black/85 px-5 py-2.5 rounded-xl border border-white/10 max-w-xl text-center shadow-lg">
               <p className="text-[10px] font-bold text-primary uppercase tracking-wider mb-0.5">
-                {transcript[transcript.length - 1].speaker}
+                {currentSpeech ? currentSpeech.speaker : transcript[transcript.length - 1].speaker}
               </p>
               <p className="text-sm text-white font-medium">
-                "{transcript[transcript.length - 1].text}"
+                "{currentSpeech ? currentSpeech.text : transcript[transcript.length - 1].text}"
               </p>
             </div>
           )}
@@ -1327,15 +1396,30 @@ export default function Room() {
                 onChange={handleNotesChange}
                 onSaveNow={() => {
                   if (activeMeetingId) {
-                    upsertNotesMutation.mutate({ meetingId: activeMeetingId, data: { content: sharedNotes } });
+                    saveNotesListToDb(notesList, notesPermissions);
                     toast({ title: "Notes Saved", description: "All meeting notes have been saved to the database." });
                   }
                 }}
                 isSaving={upsertNotesMutation.isPending}
-                meetingTitle={activeMeeting?.title || activeMeeting?.name || "Meeting Notes"}
+                meetingTitle={(activeMeeting as any)?.title || activeMeeting?.name || "Meeting Notes"}
                 activeMeetingId={activeMeetingId}
                 socket={socket}
                 userRole={isHost ? "host" : "participant"}
+                isHost={isHost}
+                currentUserId={userId}
+                currentUserName={displayName || "User"}
+                participants={participantList}
+                notesPermissions={notesPermissions}
+                notesList={notesList}
+                onNotesListChange={(newList, newPerms) => {
+                  setNotesList(newList);
+                  if (newPerms) setNotesPermissions(newPerms);
+                  saveNotesListToDb(newList, newPerms || notesPermissions);
+                }}
+                onPermissionsChange={(newPerms) => {
+                  setNotesPermissions(newPerms);
+                  saveNotesListToDb(notesList, newPerms);
+                }}
               />
             ) : sidebarTab === "tasks" ? (
               <div className="flex-1 flex flex-col overflow-hidden">
