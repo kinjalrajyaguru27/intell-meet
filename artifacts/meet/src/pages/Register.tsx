@@ -97,11 +97,12 @@ export default function Register() {
       { data: { name: data.name, email: data.email, password: data.password, role: data.role } },
       {
         onSuccess: (res) => {
+          sessionStorage.setItem("intell_meet_home_landing", "true");
           toast({
             title: "Registration successful",
-            description: "Your account has been created successfully. Please log in to continue.",
+            description: "Your account has been created successfully. Welcome to Intell Meet!",
           });
-          setLocation("/login");
+          setLocation("/");
         },
         onError: (err: any) => {
           toast({

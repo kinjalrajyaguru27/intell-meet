@@ -317,8 +317,9 @@ export default function Sidebar({ isOpen, setIsOpen, isCollapsed }: SidebarProps
                 size="icon"
                 variant="ghost"
                 onClick={() => {
+                  sessionStorage.setItem("intell_meet_home_landing", "true");
                   logout();
-                  setLocation("/login");
+                  setLocation("/");
                 }}
                 className="w-7 h-7 hover:bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 rounded-lg shrink-0"
                 title="Logout"
