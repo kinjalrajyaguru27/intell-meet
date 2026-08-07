@@ -39,14 +39,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
     }
   }, [token, location]);
 
-  // Redirect if not authenticated
+  // Redirect if not authenticated (except on public Home route "/")
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated && location !== "/") {
       setLocation("/login");
     }
-  }, [isAuthenticated, setLocation]);
+  }, [isAuthenticated, location, setLocation]);
 
-  if (!isAuthenticated) return null;
+  if (!isAuthenticated && location !== "/") return null;
 
   const getInitials = (name: string) => {
     if (!name) return "U";
