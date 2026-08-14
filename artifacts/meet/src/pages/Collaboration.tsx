@@ -390,15 +390,6 @@ export default function Collaboration() {
         const newMsg = await res.json();
         setChatMessages((prev) => (prev.some((m) => m._id === newMsg._id) ? prev : [...prev, newMsg]));
       }
-
-      // 2. Also emit via socket if connected
-      if (socket && socket.connected) {
-        if (activeChannelId) {
-          socket.emit("send-channel-message", { channelId: activeChannelId, text });
-        } else if (activeDmUserId) {
-          socket.emit("send-direct-message", { recipientId: activeDmUserId, text });
-        }
-      }
     } catch (err) {
       console.error("Error sending chat message:", err);
     }
@@ -485,22 +476,6 @@ export default function Collaboration() {
       if (msgRes.ok) {
         const newMsg = await msgRes.json();
         setChatMessages((prev) => (prev.some((m) => m._id === newMsg._id) ? prev : [...prev, newMsg]));
-      }
-
-      if (socket && socket.connected) {
-        if (activeChannelId) {
-          socket.emit("send-channel-message", {
-            channelId: activeChannelId,
-            text: `Shared file: ${file.name}`,
-            fileId: fileObj._id,
-          });
-        } else if (activeDmUserId) {
-          socket.emit("send-direct-message", {
-            recipientId: activeDmUserId,
-            text: `Shared file: ${file.name}`,
-            fileId: fileObj._id,
-          });
-        }
       }
 
       toast({ title: "Attachment shared", description: `Successfully shared ${file.name}` });
@@ -702,14 +677,6 @@ export default function Collaboration() {
       if (res.ok) {
         const newMsg = await res.json();
         setChatMessages((prev) => (prev.some((m) => m._id === newMsg._id) ? prev : [...prev, newMsg]));
-      }
-
-      if (socket && socket.connected) {
-        if (activeChannelId) {
-          socket.emit("send-channel-message", { channelId: activeChannelId, text, type: "note", title });
-        } else if (activeDmUserId) {
-          socket.emit("send-direct-message", { recipientId: activeDmUserId, text, type: "note", title });
-        }
       }
       toast({ title: "Note Published", description: "Shared note sent to all members." });
     } catch (err) {

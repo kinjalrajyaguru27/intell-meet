@@ -194,6 +194,25 @@ router.post("/", async (req: AuthenticatedRequest, res) => {
       .populate("recipient", "name email avatar")
       .populate("file");
 
+    // Live Socket Broadcast to channel / DM room
+    try {
+      const { ioInstance, activeUsers } = await import("../signaling");
+      if (ioInstance) {
+        if (channelId) {
+          ioInstance.to(channelId).emit("channel-message", populated);
+        } else if (recipientId) {
+          const recipientSockets = activeUsers.get(recipientId);
+          if (recipientSockets) {
+            recipientSockets.forEach((sId) => ioInstance!.to(sId).emit("direct-message", populated));
+          }
+          const senderSockets = activeUsers.get(req.user.id);
+          if (senderSockets) {
+            senderSockets.forEach((sId) => ioInstance!.to(sId).emit("direct-message", populated));
+          }
+        }
+      }
+    } catch (e) {}
+
     res.status(201).json(populated);
   } catch (error) {
     req.log.error({ error }, "Error creating message");

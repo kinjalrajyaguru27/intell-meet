@@ -23033,6 +23033,24 @@ router13.post("/", async (req, res) => {
       await detectAndSendMentions2(text, { id: req.user.id, name: req.user.name }, "/collaboration");
     }
     const populated = await Message.findById(message._id).populate("sender", "name email avatar").populate("recipient", "name email avatar").populate("file");
+    try {
+      const { ioInstance: ioInstance2, activeUsers: activeUsers2 } = await Promise.resolve().then(() => (init_signaling(), signaling_exports));
+      if (ioInstance2) {
+        if (channelId) {
+          ioInstance2.to(channelId).emit("channel-message", populated);
+        } else if (recipientId) {
+          const recipientSockets = activeUsers2.get(recipientId);
+          if (recipientSockets) {
+            recipientSockets.forEach((sId) => ioInstance2.to(sId).emit("direct-message", populated));
+          }
+          const senderSockets = activeUsers2.get(req.user.id);
+          if (senderSockets) {
+            senderSockets.forEach((sId) => ioInstance2.to(sId).emit("direct-message", populated));
+          }
+        }
+      }
+    } catch (e) {
+    }
     res.status(201).json(populated);
   } catch (error) {
     req.log.error({ error }, "Error creating message");
