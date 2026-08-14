@@ -436,8 +436,8 @@ export default function Collaboration() {
     try {
       const headers = new Headers();
       headers.append("Authorization", `Bearer ${token}`);
-      headers.append("Content-Type", file.type);
-      headers.append("x-filename", file.name);
+      headers.append("Content-Type", file.type || "application/octet-stream");
+      headers.append("x-filename", encodeURIComponent(file.name));
       if (activeChannelId) {
         headers.append("x-channel-id", activeChannelId);
       }
@@ -449,7 +449,12 @@ export default function Collaboration() {
       });
 
       if (!uploadRes.ok) {
-        throw new Error("Failed to upload file to backend uploads directory");
+        let errorMsg = "Failed to upload file to backend server.";
+        try {
+          const errData = await uploadRes.json();
+          if (errData.error) errorMsg = errData.error;
+        } catch (e) {}
+        throw new Error(errorMsg);
       }
 
       const fileObj = await uploadRes.json();

@@ -23384,7 +23384,13 @@ router15.post("/upload", async (req, res) => {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
-  const filename = req.headers["x-filename"] || `file_${Date.now()}`;
+  const rawFilename = req.headers["x-filename"] || `file_${Date.now()}`;
+  let filename = rawFilename;
+  try {
+    filename = decodeURIComponent(rawFilename);
+  } catch (e) {
+    filename = rawFilename;
+  }
   const mimeType = req.headers["content-type"] || "application/octet-stream";
   const channelId = req.headers["x-channel-id"];
   const meetingId = req.headers["x-meeting-id"];
@@ -23395,7 +23401,7 @@ router15.post("/upload", async (req, res) => {
         res.status(404).json({ error: "Channel not found" });
         return;
       }
-      const isChannelMember = channel.members?.some((m) => m.toString() === req.user?.id);
+      const isChannelMember = channel.members?.some((m) => (m._id?.toString() || m.toString()) === req.user?.id);
       const isChannelCreator = channel.createdBy?.toString() === req.user?.id;
       const team = await Team.findOne({
         _id: channel.teamId,
@@ -23419,11 +23425,19 @@ router15.post("/upload", async (req, res) => {
     const safeFilename = `${Date.now()}_${filename.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
     const filePath = import_node_path.default.join(UPLOADS_DIR, safeFilename);
     const writeStream = import_node_fs.default.createWriteStream(filePath);
-    req.pipe(writeStream);
     req.on("error", (err) => {
       req.log.error({ err }, "File upload stream error");
-      res.status(500).json({ error: "Upload failed: " + err.message });
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Upload failed: " + err.message });
+      }
     });
+    writeStream.on("error", (err) => {
+      req.log.error({ err }, "File write stream error");
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Failed to write file to disk: " + err.message });
+      }
+    });
+    req.pipe(writeStream);
     writeStream.on("finish", async () => {
       try {
         const stats = import_node_fs.default.statSync(filePath);
@@ -23443,7 +23457,9 @@ router15.post("/upload", async (req, res) => {
         res.status(201).json(fileObj);
       } catch (error) {
         req.log.error({ error }, "Error finalising file upload");
-        res.status(500).json({ error: "Failed to save file metadata" });
+        if (!res.headersSent) {
+          res.status(500).json({ error: "Failed to save file metadata" });
+        }
       }
     });
   } catch (error) {

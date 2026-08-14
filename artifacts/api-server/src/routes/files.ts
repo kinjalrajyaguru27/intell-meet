@@ -19,7 +19,14 @@ router.post("/upload", async (req: AuthenticatedRequest, res) => {
     return;
   }
 
-  const filename = (req.headers["x-filename"] as string) || `file_${Date.now()}`;
+  const rawFilename = (req.headers["x-filename"] as string) || `file_${Date.now()}`;
+  let filename = rawFilename;
+  try {
+    filename = decodeURIComponent(rawFilename);
+  } catch (e) {
+    filename = rawFilename;
+  }
+
   const mimeType = (req.headers["content-type"] as string) || "application/octet-stream";
   const channelId = req.headers["x-channel-id"] as string;
   const meetingId = req.headers["x-meeting-id"] as string;
@@ -32,7 +39,7 @@ router.post("/upload", async (req: AuthenticatedRequest, res) => {
         res.status(404).json({ error: "Channel not found" });
         return;
       }
-      const isChannelMember = channel.members?.some((m: any) => m.toString() === req.user?.id);
+      const isChannelMember = channel.members?.some((m: any) => (m._id?.toString() || m.toString()) === req.user?.id);
       const isChannelCreator = channel.createdBy?.toString() === req.user?.id;
       const team = await Team.findOne({
         _id: channel.teamId,
@@ -63,12 +70,22 @@ router.post("/upload", async (req: AuthenticatedRequest, res) => {
     const filePath = path.join(UPLOADS_DIR, safeFilename);
 
     const writeStream = fs.createWriteStream(filePath);
-    req.pipe(writeStream);
 
     req.on("error", (err) => {
       req.log.error({ err }, "File upload stream error");
-      res.status(500).json({ error: "Upload failed: " + err.message });
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Upload failed: " + err.message });
+      }
     });
+
+    writeStream.on("error", (err) => {
+      req.log.error({ err }, "File write stream error");
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Failed to write file to disk: " + err.message });
+      }
+    });
+
+    req.pipe(writeStream);
 
     writeStream.on("finish", async () => {
       try {
@@ -92,7 +109,9 @@ router.post("/upload", async (req: AuthenticatedRequest, res) => {
         res.status(201).json(fileObj);
       } catch (error) {
         req.log.error({ error }, "Error finalising file upload");
-        res.status(500).json({ error: "Failed to save file metadata" });
+        if (!res.headersSent) {
+          res.status(500).json({ error: "Failed to save file metadata" });
+        }
       }
     });
   } catch (error) {
