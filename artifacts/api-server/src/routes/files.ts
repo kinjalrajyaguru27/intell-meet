@@ -32,11 +32,13 @@ router.post("/upload", async (req: AuthenticatedRequest, res) => {
         res.status(404).json({ error: "Channel not found" });
         return;
       }
+      const isChannelMember = channel.members?.some((m: any) => m.toString() === req.user?.id);
+      const isChannelCreator = channel.createdBy?.toString() === req.user?.id;
       const team = await Team.findOne({
         _id: channel.teamId,
         $or: [{ owner: req.user.id }, { "members.user": req.user.id }],
       });
-      if (!team) {
+      if (!isChannelMember && !isChannelCreator && !team && req.user.role !== "Admin") {
         res.status(403).json({ error: "Forbidden: You do not have access to this channel" });
         return;
       }
@@ -173,11 +175,15 @@ router.get("/:fileId", async (req: AuthenticatedRequest, res) => {
     if (!hasAccess && file.channel) {
       const channel = await Channel.findById(file.channel);
       if (channel) {
+        const isChannelMember = channel.members?.some((m: any) => m.toString() === req.user?.id);
+        const isChannelCreator = channel.createdBy?.toString() === req.user?.id;
         const team = await Team.findOne({
           _id: channel.teamId,
           $or: [{ owner: req.user.id }, { "members.user": req.user.id }],
         });
-        if (team) hasAccess = true;
+        if (isChannelMember || isChannelCreator || team || req.user?.role === "Admin") {
+          hasAccess = true;
+        }
       }
     }
     if (!hasAccess && file.meeting) {
@@ -243,12 +249,20 @@ router.get("/download/:filename", async (req: AuthenticatedRequest, res) => {
       if (!hasAccess && fileMeta.channel) {
         const channel = await Channel.findById(fileMeta.channel);
         if (channel) {
+          const isChannelMember = channel.members?.some((m: any) => m.toString() === req.user?.id);
+          const isChannelCreator = channel.createdBy?.toString() === req.user?.id;
           const team = await Team.findOne({
             _id: channel.teamId,
             $or: [{ owner: req.user.id }, { "members.user": req.user.id }],
           });
-          if (team) hasAccess = true;
+          if (isChannelMember || isChannelCreator || team || req.user?.role === "Admin") {
+            hasAccess = true;
+          }
         }
+      }
+      // If message is in direct message or general workspace files, allow authenticated workspace users
+      if (!hasAccess && !fileMeta.channel && !fileMeta.meeting) {
+        hasAccess = true;
       }
       if (!hasAccess && fileMeta.meeting) {
         const hasMeetingAccess = await canAccessMeeting(fileMeta.meeting, req.user.id);

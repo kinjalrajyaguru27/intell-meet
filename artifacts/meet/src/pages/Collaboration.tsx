@@ -905,65 +905,7 @@ export default function Collaboration() {
                     />
                   </div>
 
-                  {/* View Filter Tabs & Action Buttons */}
-                  <div className="flex items-center gap-1 bg-zinc-100 dark:bg-white/5 p-1 rounded-lg border border-zinc-200 dark:border-white/10">
-                    <button
-                      onClick={() => setActiveTab("all")}
-                      className={`px-2 py-0.5 text-[10px] font-semibold rounded ${
-                        activeTab === "all"
-                          ? "bg-white dark:bg-black/60 text-zinc-900 dark:text-white shadow-sm"
-                          : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
-                      }`}
-                    >
-                      All
-                    </button>
-                    <button
-                      onClick={() => setActiveTab("messages")}
-                      className={`px-2 py-0.5 text-[10px] font-semibold rounded flex items-center gap-1 ${
-                        activeTab === "messages"
-                          ? "bg-white dark:bg-black/60 text-zinc-900 dark:text-white shadow-sm"
-                          : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
-                      }`}
-                    >
-                      <MessageSquare className="w-3 h-3 text-sky-500" />
-                      Chat
-                    </button>
-                    <button
-                      onClick={() => setActiveTab("notes")}
-                      className={`px-2 py-0.5 text-[10px] font-semibold rounded flex items-center gap-1 ${
-                        activeTab === "notes"
-                          ? "bg-white dark:bg-black/60 text-amber-600 dark:text-amber-400 font-bold shadow-sm"
-                          : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
-                      }`}
-                    >
-                      <FileText className="w-3 h-3 text-amber-500" />
-                      Notes ({chatMessages.filter((m) => m.type === "note").length})
-                    </button>
-                  </div>
-
-                  {/* Create Note Button */}
-                  <Button
-                    size="sm"
-                    onClick={() => setIsCreateNoteOpen(true)}
-                    className="h-7 px-2.5 text-[10px] gap-1 bg-amber-600 hover:bg-amber-700 text-white font-semibold shadow-sm"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>+ Add Note</span>
-                  </Button>
-
-                  {/* Download All Notes Button */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDownloadAllNotes("txt")}
-                    className="h-7 px-2 text-[10px] gap-1 bg-white dark:bg-black/40 border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
-                    title="Download all shared notes in this channel"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Download Notes</span>
-                  </Button>
-
-                  {/* Share Chat Button */}
+                  {/* Share / Export Chat Button */}
                   <Button
                     variant="outline"
                     size="sm"
@@ -1089,22 +1031,24 @@ export default function Collaboration() {
                             {msg.text}
                           </div>
 
-                          {msg.file && (
-                            <div className="p-2 bg-zinc-200/50 dark:bg-black/30 rounded-lg flex items-center justify-between gap-4 border border-zinc-350 dark:border-white/5 text-[10px]">
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                <Paperclip className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400 shrink-0" />
-                                <span className="font-semibold truncate text-zinc-900 dark:text-white">{msg.file.filename}</span>
+                            {msg.file && (
+                              <div className="mt-2 p-2.5 bg-blue-500/10 dark:bg-blue-500/20 rounded-xl flex items-center justify-between gap-3 border border-blue-500/20 text-xs">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                                  <span className="font-semibold truncate text-zinc-900 dark:text-white text-xs">{msg.file.filename}</span>
+                                </div>
+                                <a
+                                  href={msg.file.fileUrl}
+                                  download={msg.file.filename}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 text-[10px] font-bold shrink-0 transition-all shadow-sm"
+                                >
+                                  <Download className="w-3 h-3" />
+                                  <span>Download</span>
+                                </a>
                               </div>
-                              <a
-                                href={msg.file.fileUrl}
-                                download
-                                target="_blank"
-                                className="p-1 rounded bg-zinc-250 hover:bg-zinc-300 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-800 dark:text-white shrink-0"
-                              >
-                                <Download className="w-3 h-3" />
-                              </a>
-                            </div>
-                          )}
+                            )}
                         </div>
                       );
                     }
@@ -1128,18 +1072,20 @@ export default function Collaboration() {
                             {msg.text}
 
                             {msg.file && (
-                              <div className="mt-2 p-2 bg-zinc-200/50 dark:bg-black/30 rounded-lg flex items-center justify-between gap-4 border border-zinc-350 dark:border-white/5 text-[10px]">
+                              <div className="mt-2.5 p-2 bg-blue-500/10 dark:bg-blue-500/20 rounded-xl flex items-center justify-between gap-3 border border-blue-500/20 text-xs">
                                 <div className="flex items-center gap-1.5 min-w-0">
-                                  <Paperclip className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400 shrink-0" />
-                                  <span className="font-semibold truncate text-zinc-900 dark:text-white">{msg.file.filename}</span>
+                                  <FileText className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400 shrink-0" />
+                                  <span className="font-semibold truncate text-zinc-900 dark:text-white text-[11px]">{msg.file.filename}</span>
                                 </div>
                                 <a
                                   href={msg.file.fileUrl}
-                                  download
+                                  download={msg.file.filename}
                                   target="_blank"
-                                  className="p-1 rounded bg-zinc-250 hover:bg-zinc-300 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-800 dark:text-white shrink-0"
+                                  rel="noopener noreferrer"
+                                  className="px-2 py-0.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1 text-[10px] font-bold shrink-0 transition-all shadow-sm"
                                 >
                                   <Download className="w-3 h-3" />
+                                  <span>Download</span>
                                 </a>
                               </div>
                             )}
