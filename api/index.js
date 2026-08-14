@@ -8677,6 +8677,10 @@ router4.post("/forgot-password", rateLimiter(15 * 60 * 1e3, 10), async (req, res
     const emailSent = await sendOtpEmail({ to: user.email, otp });
     if (!emailSent) {
       console.warn(`[MAILER WARNING] Could not send OTP email to ${user.email}. Check SMTP credentials in production environment variables.`);
+      res.status(500).json({
+        error: "Failed to send OTP email. Please configure SMTP_USER & SMTP_PASS in Vercel Environment Variables."
+      });
+      return;
     }
     res.json({
       message: `OTP code successfully sent to ${email}.`
