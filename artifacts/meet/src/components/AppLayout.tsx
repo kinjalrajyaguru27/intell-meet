@@ -16,7 +16,7 @@ interface AppLayoutProps {
 
 export default function AppLayout({ children }: AppLayoutProps) {
   const [location, setLocation] = useLocation();
-  const { isAuthenticated, token, user, updateUser } = useAuth();
+  const { isAuthenticated, token, user, fetchCurrentUser } = useAuth();
 
   // Sidebar state settings
   const [isOpen, setIsOpen] = useState(false);
@@ -26,18 +26,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
   // Sync user profile from backend to ensure avatar & details are up to date
   useEffect(() => {
     if (token) {
-      fetch("/api/users/profile", {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-        .then(res => res.ok ? res.json() : null)
-        .then(data => {
-          if (data) {
-            updateUser(data);
-          }
-        })
-        .catch(err => console.error("Error syncing profile in layout", err));
+      fetchCurrentUser();
     }
-  }, [token, location]);
+  }, [token, location, fetchCurrentUser]);
 
   // Redirect if not authenticated (except on root home route "/")
   useEffect(() => {

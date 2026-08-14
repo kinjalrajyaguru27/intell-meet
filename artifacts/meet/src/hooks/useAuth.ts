@@ -10,8 +10,9 @@ export interface User {
   department?: string;
   bio?: string;
   timezone?: string;
-  avatar?: string;
-  profileColor?: string;
+  avatar?: string | null;
+  profilePicture?: string | null;
+  profileColor?: string | null;
   notificationSettings?: {
     email: boolean;
     push: boolean;
@@ -27,6 +28,7 @@ interface AuthState {
   login: (token: string, user: User) => void;
   logout: () => void;
   updateUser: (user: Partial<User>) => void;
+  fetchCurrentUser: () => Promise<void>;
   setToken: (token: string) => void;
 }
 
@@ -92,9 +94,28 @@ export const useAuth = create<AuthState>((set, get) => {
     }
   };
 
-  // If there is an existing token, start refresh timer
+  const fetchCurrentUser = async () => {
+    const currentToken = get().token || localStorage.getItem("intell_meet_token");
+    if (!currentToken) return;
+    try {
+      const res = await fetch("/api/users/profile", {
+        headers: { Authorization: `Bearer ${currentToken}` }
+      });
+      if (res.ok) {
+        const freshUser = await res.json();
+        localStorage.setItem("intell_meet_user", JSON.stringify(freshUser));
+        localStorage.setItem("intell_meet_name", freshUser.name);
+        set({ user: freshUser });
+      }
+    } catch (e) {
+      console.error("Failed to sync user profile", e);
+    }
+  };
+
+  // If there is an existing token, start refresh timer and fetch fresh user profile
   if (savedToken) {
     startRefreshTimer(savedToken, triggerRefresh);
+    fetchCurrentUser();
   }
 
   return {
@@ -109,6 +130,7 @@ export const useAuth = create<AuthState>((set, get) => {
       sessionStorage.setItem("intell_meet_just_logged_in", "true");
       set({ token, user, isAuthenticated: true });
       startRefreshTimer(token, triggerRefresh);
+      fetchCurrentUser();
     },
     logout: () => {
       localStorage.removeItem("intell_meet_token");
@@ -131,6 +153,7 @@ export const useAuth = create<AuthState>((set, get) => {
       localStorage.setItem("intell_meet_name", newUser.name);
       set({ user: newUser });
     },
+    fetchCurrentUser,
     setToken: (token) => {
       localStorage.setItem("intell_meet_token", token);
       set({ token });
