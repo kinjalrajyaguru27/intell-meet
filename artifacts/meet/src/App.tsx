@@ -25,6 +25,7 @@ import TodoManager from "@/pages/TodoManager";
 import Collaboration from "@/pages/Collaboration";
 import AIInsights from "@/pages/AIInsights";
 import PostMeeting from "@/pages/PostMeeting";
+import LandingHome from "@/pages/LandingHome";
 import AppLayout from "@/components/AppLayout";
 import { setAuthTokenGetter, setBaseUrl } from "@workspace/api-client-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -62,18 +63,42 @@ function AuthenticatedRoutes({ children }: { children: React.ReactNode }) {
 }
 
 function HomeWrapper() {
-  return (
-    <AppLayout>
-      <Home />
-    </AppLayout>
-  );
+  const { isAuthenticated } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      const justLoggedIn = sessionStorage.getItem("intell_meet_just_logged_in");
+      if (justLoggedIn === "true") {
+        sessionStorage.removeItem("intell_meet_just_logged_in");
+        setLocation("/dashboard");
+      }
+    }
+  }, [isAuthenticated, setLocation]);
+
+  if (isAuthenticated) {
+    const justLoggedIn = sessionStorage.getItem("intell_meet_just_logged_in");
+    if (justLoggedIn === "true") {
+      return null;
+    }
+    return (
+      <AuthenticatedRoutes>
+        <Home />
+      </AuthenticatedRoutes>
+    );
+  }
+
+  return <Redirect to="/login" />;
 }
 
 function Router() {
   return (
     <Switch>
-      <Route path="/">
-        <HomeWrapper />
+      <Route path="/" component={LandingHome} />
+      <Route path="/meetings">
+        <AuthenticatedRoutes>
+          <Home />
+        </AuthenticatedRoutes>
       </Route>
       <Route path="/auth">
         <Redirect to="/login" />

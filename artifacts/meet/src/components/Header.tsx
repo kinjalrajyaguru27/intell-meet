@@ -212,7 +212,7 @@ export default function Header() {
             <DropdownMenuItem
               onClick={() => {
                 logout();
-                setLocation("/login");
+                setLocation("/");
               }}
               className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-450 hover:text-rose-700 dark:hover:text-rose-400 hover:bg-rose-500/10 cursor-pointer"
             >
