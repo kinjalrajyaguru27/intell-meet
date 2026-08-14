@@ -112,7 +112,12 @@ export default function Collaboration() {
       if (res.ok) {
         const data = await res.json();
         setChannels(data);
-        if (data.length > 0 && !activeChannelId && !activeDmUserId) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlChannelId = urlParams.get("channel");
+        if (urlChannelId && data.some((c: any) => c._id === urlChannelId)) {
+          setActiveChannelId(urlChannelId);
+          setActiveDmUserId(null);
+        } else if (data.length > 0 && !activeChannelId && !activeDmUserId) {
           setActiveChannelId(data[0]._id);
         }
       }

@@ -86,12 +86,16 @@ router.get("/", async (req: AuthenticatedRequest, res) => {
 
     // Channels where user is creator, explicit member, or in public team channel
     const channels = await Channel.find({
-      teamId: { $in: teamIds },
       $or: [
-        { createdBy: req.user.id },
         { members: req.user.id },
-        { isPrivate: false, members: { $exists: true, $size: 0 } },
-        { createdBy: { $exists: false } }
+        { createdBy: req.user.id },
+        {
+          teamId: { $in: teamIds },
+          $or: [
+            { isPrivate: false, members: { $exists: true, $size: 0 } },
+            { createdBy: { $exists: false } }
+          ]
+        }
       ]
     })
       .populate("createdBy", "name email avatar")
@@ -185,6 +189,25 @@ router.post("/", async (req: AuthenticatedRequest, res) => {
 
     // Real-time Socket sync: notify all channel members
     broadcastChannelEvent("channel-created", populated, memberIds);
+
+    // Send notifications to added initial members
+    const addedInitialMembers = (initialMembers || []).filter((id: string) => id !== req.user?.id);
+    if (addedInitialMembers.length > 0) {
+      try {
+        const { pushNotificationToUser } = await import("../signaling");
+        for (const addedId of addedInitialMembers) {
+          await pushNotificationToUser(
+            addedId,
+            "channel_invite",
+            "Added to Collaboration Channel",
+            `${req.user.name || "A workspace member"} added you to the collaboration channel "${channel.name}".`,
+            `/collaboration?channel=${channel._id}`
+          );
+        }
+      } catch (notifErr) {
+        req.log.error({ notifErr }, "Error sending initial channel member notifications");
+      }
+    }
 
     res.status(201).json(populated);
   } catch (error) {
@@ -312,6 +335,7 @@ router.post("/:channelId/members", async (req: AuthenticatedRequest, res) => {
     }
 
     const currentMemberIds = (channel.members || []).map((m: any) => m.toString());
+    const newlyAddedIds = userIds.filter((id: string) => !currentMemberIds.includes(id) && id !== req.user?.id);
     const newMemberIds = Array.from(new Set([...currentMemberIds, ...userIds]));
 
     channel.members = newMemberIds;
@@ -324,6 +348,24 @@ router.post("/:channelId/members", async (req: AuthenticatedRequest, res) => {
     // Broadcast sync to updated members
     broadcastChannelEvent("channel-updated", updated);
     broadcastChannelEvent("channel-created", updated, userIds);
+
+    // Send notifications to newly added members
+    if (newlyAddedIds.length > 0) {
+      try {
+        const { pushNotificationToUser } = await import("../signaling");
+        for (const addedId of newlyAddedIds) {
+          await pushNotificationToUser(
+            addedId,
+            "channel_invite",
+            "Added to Collaboration Channel",
+            `${req.user.name || "A workspace member"} added you to the collaboration channel "${channel.name}".`,
+            `/collaboration?channel=${channel._id}`
+          );
+        }
+      } catch (notifErr) {
+        req.log.error({ notifErr }, "Error sending channel member addition notifications");
+      }
+    }
 
     res.json(updated);
   } catch (error) {

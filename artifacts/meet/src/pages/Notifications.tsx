@@ -158,6 +158,15 @@ export default function Notifications() {
   const unreadCount = notifications.filter(n => !n.isRead).length;
   const filteredNotifs = getFilteredNotifications();
 
+  const handleNotificationClick = (n: any) => {
+    if (!n.isRead) {
+      markRead(n._id);
+    }
+    if (n.link) {
+      setLocation(n.link);
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col min-h-0 space-y-6">
       {/* Header */}
@@ -218,7 +227,8 @@ export default function Notifications() {
             {filteredNotifs.map(n => (
               <div
                 key={n._id}
-                className={`p-4 flex gap-4 items-start transition-colors ${
+                onClick={() => handleNotificationClick(n)}
+                className={`p-4 flex gap-4 items-start transition-colors cursor-pointer ${
                   !n.isRead ? "bg-blue-50/40 dark:bg-blue-950/20 hover:bg-blue-50/70 dark:hover:bg-blue-950/30" : "hover:bg-slate-50/70 dark:hover:bg-zinc-800/40"
                 }`}
               >
@@ -239,7 +249,7 @@ export default function Notifications() {
                 </div>
 
                 {/* Actions Panel */}
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                   {!n.isRead && (
                     <Button
                       size="icon"

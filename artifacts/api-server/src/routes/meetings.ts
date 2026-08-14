@@ -966,10 +966,7 @@ router.post("/meetings/create", requireAuth, async (req: AuthenticatedRequest, r
         }
       }
 
-      if (targetUserIds.length === 0) {
-        const allUsers = await User.find({ _id: { $ne: req.user!.id } }).select("_id");
-        targetUserIds = allUsers.map((u) => u._id.toString());
-      }
+      // Note: If organizationId and projectId are not selected, targetUserIds remains empty so no notifications go to other accounts.
 
       const uniqueUserIds = Array.from(new Set(targetUserIds)).filter((id) => id !== req.user!.id);
       const hoursUntilStart = (st.getTime() - Date.now()) / (1000 * 60 * 60);
