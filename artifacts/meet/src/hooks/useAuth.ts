@@ -94,8 +94,8 @@ export const useAuth = create<AuthState>((set, get) => {
     }
   };
 
-  const fetchCurrentUser = async () => {
-    const currentToken = get().token || localStorage.getItem("intell_meet_token");
+  const fetchCurrentUser = async (overrideToken?: string) => {
+    const currentToken = overrideToken || localStorage.getItem("intell_meet_token");
     if (!currentToken) return;
     try {
       const res = await fetch("/api/users/profile", {
@@ -115,7 +115,7 @@ export const useAuth = create<AuthState>((set, get) => {
   // If there is an existing token, start refresh timer and fetch fresh user profile
   if (savedToken) {
     startRefreshTimer(savedToken, triggerRefresh);
-    fetchCurrentUser();
+    fetchCurrentUser(savedToken);
   }
 
   return {
@@ -130,7 +130,7 @@ export const useAuth = create<AuthState>((set, get) => {
       sessionStorage.setItem("intell_meet_just_logged_in", "true");
       set({ token, user, isAuthenticated: true });
       startRefreshTimer(token, triggerRefresh);
-      fetchCurrentUser();
+      fetchCurrentUser(token);
     },
     logout: () => {
       localStorage.removeItem("intell_meet_token");
