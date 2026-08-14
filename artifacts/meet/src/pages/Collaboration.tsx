@@ -1213,25 +1213,6 @@ export default function Collaboration() {
 
               {/* Chat Input panel */}
               <div className="p-3.5 border-t border-zinc-200 dark:border-white/5 flex items-center gap-2 shrink-0 bg-zinc-50/50 dark:bg-black/20">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isUploading}
-                  className="w-9 h-9 rounded-full text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-250 dark:hover:bg-white/5"
-                >
-                  {isUploading ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                  ) : (
-                    <Paperclip className="w-4 h-4" />
-                  )}
-                </Button>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
 
                 <Input
                   placeholder={`Message ${activeChatName}...`}
