@@ -262,14 +262,20 @@ export default function Collaboration() {
         (activeDmUserId === senderId && user?.id === recipientId) ||
         (activeDmUserId === recipientId && user?.id === senderId)
       ) {
-        setChatMessages((prev) => [...prev, msg]);
+        setChatMessages((prev) => {
+          if (prev.some((m) => m._id === msg._id)) return prev;
+          return [...prev, msg];
+        });
         s.emit("message-read", { messageIds: [msg._id], senderId });
       }
     });
 
     s.on("channel-message", (msg: any) => {
       if (activeChannelId === msg.channel) {
-        setChatMessages((prev) => [...prev, msg]);
+        setChatMessages((prev) => {
+          if (prev.some((m) => m._id === msg._id)) return prev;
+          return [...prev, msg];
+        });
         s.emit("message-read", { messageIds: [msg._id], channelId: msg.channel });
       }
     });

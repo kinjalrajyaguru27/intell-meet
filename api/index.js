@@ -22923,13 +22923,19 @@ router13.get("/channel/:channelId", async (req, res) => {
       res.status(404).json({ error: "Channel not found" });
       return;
     }
-    const isChannelMember = channel.members?.some((m) => m.toString() === req.user?.id);
-    const isChannelCreator = channel.createdBy?.toString() === req.user?.id;
-    const team = await Team.findOne({
-      _id: channel.teamId,
-      $or: [{ owner: req.user.id }, { "members.user": req.user.id }]
-    });
-    if (!isChannelMember && !isChannelCreator && !team && req.user.role !== "Admin") {
+    const isChannelMember = channel.members?.some((m) => (m._id?.toString() || m.toString()) === req.user?.id);
+    const isChannelCreator = (channel.createdBy?._id?.toString() || channel.createdBy?.toString()) === req.user?.id;
+    let hasTeamAccess = false;
+    if (channel.teamId) {
+      const team = await Team.findOne({
+        _id: channel.teamId,
+        $or: [{ owner: req.user.id }, { "members.user": req.user.id }]
+      });
+      if (team) hasTeamAccess = true;
+    } else {
+      hasTeamAccess = true;
+    }
+    if (!isChannelMember && !isChannelCreator && !hasTeamAccess && req.user?.role !== "Admin") {
       res.status(403).json({ error: "Forbidden: You do not have access to this channel" });
       return;
     }
@@ -22996,13 +23002,19 @@ router13.post("/", async (req, res) => {
         res.status(404).json({ error: "Channel not found" });
         return;
       }
-      const isChannelMember = channel.members?.some((m) => m.toString() === req.user?.id);
-      const isChannelCreator = channel.createdBy?.toString() === req.user?.id;
-      const team = await Team.findOne({
-        _id: channel.teamId,
-        $or: [{ owner: req.user.id }, { "members.user": req.user.id }]
-      });
-      if (!isChannelMember && !isChannelCreator && !team && req.user.role !== "Admin") {
+      const isChannelMember = channel.members?.some((m) => (m._id?.toString() || m.toString()) === req.user?.id);
+      const isChannelCreator = (channel.createdBy?._id?.toString() || channel.createdBy?.toString()) === req.user?.id;
+      let hasTeamAccess = false;
+      if (channel.teamId) {
+        const team = await Team.findOne({
+          _id: channel.teamId,
+          $or: [{ owner: req.user.id }, { "members.user": req.user.id }]
+        });
+        if (team) hasTeamAccess = true;
+      } else {
+        hasTeamAccess = true;
+      }
+      if (!isChannelMember && !isChannelCreator && !hasTeamAccess && req.user?.role !== "Admin") {
         res.status(403).json({ error: "Forbidden: You do not have access to this channel" });
         return;
       }
