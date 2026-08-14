@@ -353,7 +353,7 @@ export function initSignaling(httpServer: HttpServer) {
     });
 
     // ─── CHANNEL MESSAGES ───────────────────────────────────────────────────
-    socket.on("send-channel-message", async ({ channelId, text, fileId }: { channelId: string; text: string; fileId?: string }) => {
+    socket.on("send-channel-message", async ({ channelId, text, fileId, type, title }: { channelId: string; text: string; fileId?: string; type?: "text" | "note"; title?: string }) => {
       if (!user?.id) return;
       try {
         const channelObj = await Channel.findById(channelId);
@@ -362,10 +362,16 @@ export function initSignaling(httpServer: HttpServer) {
           return;
         }
 
-        // Verify team membership
-        const team = await Team.findOne({ _id: channelObj.teamId, "members.user": user.id });
-        if (!team) {
-          socket.emit("error", "Forbidden: You are not a member of this team");
+        // Verify channel & team access (allow if explicit member, creator, team owner, team member, or admin)
+        const isChannelMember = channelObj.members?.some((m: any) => m.toString() === user.id);
+        const isChannelCreator = channelObj.createdBy?.toString() === user.id;
+        const team = await Team.findOne({
+          _id: channelObj.teamId,
+          $or: [{ owner: user.id }, { "members.user": user.id }],
+        });
+
+        if (!isChannelMember && !isChannelCreator && !team && user.role !== "Admin") {
+          socket.emit("error", "Forbidden: You are not a member of this channel or team");
           return;
         }
 
@@ -373,6 +379,8 @@ export function initSignaling(httpServer: HttpServer) {
           sender: user.id,
           channel: channelId,
           text: text || "",
+          type: type || "text",
+          title: title || "",
           file: fileId || undefined,
           delivered: true,
         });
@@ -384,19 +392,21 @@ export function initSignaling(httpServer: HttpServer) {
 
         io.to(channelId).emit("channel-message", populated);
 
-        // Scan for mentions
-        for (const member of team.members) {
-          if (member.user.toString() === user.id) continue;
+        // Scan for mentions if team exists
+        if (team && team.members) {
+          for (const member of team.members) {
+            if (member.user.toString() === user.id) continue;
 
-          const memberUser = await User.findById(member.user);
-          if (memberUser && text.toLowerCase().includes(`@${memberUser.name.toLowerCase()}`)) {
-            await pushNotificationToUser(
-              memberUser._id.toString(),
-              "mention",
-              `Mentioned in #${channelObj.name}`,
-              `${user.name}: "${text.length > 50 ? text.slice(0, 50) + "..." : text}"`,
-              `/dashboard?tab=chat&channel=${channelId}`
-            );
+            const memberUser = await User.findById(member.user);
+            if (memberUser && text.toLowerCase().includes(`@${memberUser.name.toLowerCase()}`)) {
+              await pushNotificationToUser(
+                memberUser._id.toString(),
+                "mention",
+                `Mentioned in #${channelObj.name}`,
+                `${user.name}: "${text.length > 50 ? text.slice(0, 50) + "..." : text}"`,
+                `/dashboard?tab=chat&channel=${channelId}`
+              );
+            }
           }
         }
       } catch (err) {
@@ -405,13 +415,15 @@ export function initSignaling(httpServer: HttpServer) {
     });
 
     // ─── DIRECT MESSAGES (1-on-1 Chat) ──────────────────────────────────────
-    socket.on("send-direct-message", async ({ recipientId, text, fileId }: { recipientId: string; text: string; fileId?: string }) => {
+    socket.on("send-direct-message", async ({ recipientId, text, fileId, type, title }: { recipientId: string; text: string; fileId?: string; type?: "text" | "note"; title?: string }) => {
       if (!user?.id) return;
       try {
         const msg = new Message({
           sender: user.id,
           recipient: recipientId,
           text: text || "",
+          type: type || "text",
+          title: title || "",
           file: fileId || undefined,
           delivered: true,
         });
@@ -822,19 +834,28 @@ export function initSignaling(httpServer: HttpServer) {
       }
     });
 
-    socket.on("shared-notes-update", ({ notes }: { notes: string }) => {
-      if (!currentRoomId) return;
-      socket.to(currentRoomId).emit("shared-notes-update", { notes });
+    socket.on("shared-notes-update", ({ notes, channelId }: { notes: string; channelId?: string }) => {
+      if (channelId) {
+        socket.to(channelId).emit("shared-notes-update", { notes });
+      } else if (currentRoomId) {
+        socket.to(currentRoomId).emit("shared-notes-update", { notes });
+      }
     });
 
     socket.on("notes-permissions-update", (data: any) => {
-      if (!currentRoomId) return;
-      socket.to(currentRoomId).emit("notes-permissions-updated", data);
+      if (data?.channelId) {
+        socket.to(data.channelId).emit("notes-permissions-updated", data);
+      } else if (currentRoomId) {
+        socket.to(currentRoomId).emit("notes-permissions-updated", data);
+      }
     });
 
     socket.on("notes-list-update", (data: any) => {
-      if (!currentRoomId) return;
-      socket.to(currentRoomId).emit("notes-list-updated", data);
+      if (data?.channelId) {
+        socket.to(data.channelId).emit("notes-list-updated", data);
+      } else if (currentRoomId) {
+        socket.to(currentRoomId).emit("notes-list-updated", data);
+      }
     });
 
     socket.on("task-changed", () => {

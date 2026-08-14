@@ -5,6 +5,8 @@ export interface IMessage extends Document {
   recipient?: mongoose.Types.ObjectId; // populated for 1-to-1 direct messages
   channel?: mongoose.Types.ObjectId;   // populated for team channel messages
   text: string;
+  type?: "text" | "note";
+  title?: string;
   file?: mongoose.Types.ObjectId;      // optional shared file reference
   readBy: mongoose.Types.ObjectId[];  // users who read the message (read receipts)
   delivered: boolean;                  // delivery status
@@ -16,6 +18,8 @@ const MessageSchema: Schema = new Schema({
   recipient: { type: Schema.Types.ObjectId, ref: "User", index: true },
   channel: { type: Schema.Types.ObjectId, ref: "Channel", index: true },
   text: { type: String, required: true },
+  type: { type: String, enum: ["text", "note"], default: "text" },
+  title: { type: String, default: "" },
   file: { type: Schema.Types.ObjectId, ref: "File" },
   readBy: [{ type: Schema.Types.ObjectId, ref: "User", default: [] }],
   delivered: { type: Boolean, default: false },

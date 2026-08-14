@@ -51,12 +51,15 @@ router.get("/channel/:channelId", async (req: AuthenticatedRequest, res) => {
       return;
     }
 
-    // Verify user belongs to the channel's team (either owner or member)
+    // Verify user belongs to the channel (creator, explicit member, team member/owner, or admin)
+    const isChannelMember = channel.members?.some((m: any) => m.toString() === req.user?.id);
+    const isChannelCreator = channel.createdBy?.toString() === req.user?.id;
     const team = await Team.findOne({
       _id: channel.teamId,
       $or: [{ owner: req.user.id }, { "members.user": req.user.id }],
     });
-    if (!team) {
+
+    if (!isChannelMember && !isChannelCreator && !team && req.user.role !== "Admin") {
       res.status(403).json({ error: "Forbidden: You do not have access to this channel" });
       return;
     }
@@ -122,7 +125,7 @@ router.post("/", async (req: AuthenticatedRequest, res) => {
     return;
   }
 
-  const { recipientId, channelId, text, fileId } = req.body;
+  const { recipientId, channelId, text, fileId, type, title } = req.body;
 
   if (!text && !fileId) {
     res.status(400).json({ error: "Message text or fileId is required" });
@@ -133,6 +136,8 @@ router.post("/", async (req: AuthenticatedRequest, res) => {
     const messageData: any = {
       sender: req.user.id,
       text: text || "",
+      type: type || "text",
+      title: title || "",
     };
 
     if (recipientId) {
@@ -143,11 +148,13 @@ router.post("/", async (req: AuthenticatedRequest, res) => {
         res.status(404).json({ error: "Channel not found" });
         return;
       }
+      const isChannelMember = channel.members?.some((m: any) => m.toString() === req.user?.id);
+      const isChannelCreator = channel.createdBy?.toString() === req.user?.id;
       const team = await Team.findOne({
         _id: channel.teamId,
         $or: [{ owner: req.user.id }, { "members.user": req.user.id }],
       });
-      if (!team) {
+      if (!isChannelMember && !isChannelCreator && !team && req.user.role !== "Admin") {
         res.status(403).json({ error: "Forbidden: You do not have access to this channel" });
         return;
       }

@@ -60,6 +60,12 @@ export default function Collaboration() {
   const [messageInput, setMessageInput] = useState("");
   const [chatSearchQuery, setChatSearchQuery] = useState("");
 
+  // Shared Notes & View Filter State
+  const [activeTab, setActiveTab] = useState<"all" | "messages" | "notes">("all");
+  const [isCreateNoteOpen, setIsCreateNoteOpen] = useState(false);
+  const [noteTitleInput, setNoteTitleInput] = useState("");
+  const [noteContentInput, setNoteContentInput] = useState("");
+
   const [isCreateChannelOpen, setIsCreateChannelOpen] = useState(false);
   const [newChannelName, setNewChannelName] = useState("");
   const [newChannelDesc, setNewChannelDesc] = useState("");
@@ -218,6 +224,9 @@ export default function Collaboration() {
 
     s.on("connect", () => {
       s.emit("get-presence");
+      if (activeChannelId) {
+        s.emit("join-channel", { channelId: activeChannelId });
+      }
     });
 
     s.on("presence-list", (list: Array<{ userId: string; status: any }>) => {
@@ -593,6 +602,102 @@ export default function Collaboration() {
     toast({ title: "Transcript Exported", description: `Downloaded as ${format.toUpperCase()} file.` });
   };
 
+  // Publish Note Action
+  const handleSendNote = () => {
+    if (!noteContentInput.trim()) return;
+    const title = noteTitleInput.trim() || "Shared Note";
+    const text = noteContentInput.trim();
+
+    if (activeChannelId) {
+      socket?.emit("send-channel-message", {
+        channelId: activeChannelId,
+        text,
+        type: "note",
+        title,
+      });
+    } else if (activeDmUserId) {
+      socket?.emit("send-direct-message", {
+        recipientId: activeDmUserId,
+        text,
+        type: "note",
+        title,
+      });
+    }
+    setIsCreateNoteOpen(false);
+    setNoteTitleInput("");
+    setNoteContentInput("");
+    toast({ title: "Note Published", description: "Shared note sent to all members in real-time." });
+  };
+
+  // Single Note Download Action
+  const handleDownloadSingleNote = (msg: any, format: "txt" | "md") => {
+    const title = msg.title || "Note";
+    const author = msg.sender?.name || "Member";
+    const time = new Date(msg.createdAt).toLocaleString();
+
+    let text = `==================================================\n`;
+    text += `SHARED NOTE: ${title.toUpperCase()}\n`;
+    text += `Author: ${author}\n`;
+    text += `Date: ${time}\n`;
+    text += `Channel/Chat: ${activeChatName}\n`;
+    text += `==================================================\n\n`;
+    text += `${msg.text}\n\n`;
+    if (msg.file) {
+      text += `Attachment: ${msg.file.filename}\n`;
+    }
+
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    const cleanTitle = title.replace(/[^a-zA-Z0-9_-]/g, "_");
+    link.download = `${cleanTitle}_note.${format}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast({ title: "Note Downloaded", description: `Saved as ${cleanTitle}_note.${format}` });
+  };
+
+  // Download All Notes Action
+  const handleDownloadAllNotes = (format: "txt" | "md") => {
+    const noteMsgs = chatMessages.filter((m) => m.type === "note");
+    if (noteMsgs.length === 0) {
+      toast({ title: "No Notes Available", description: "There are no shared notes in this channel to download.", variant: "destructive" });
+      return;
+    }
+    let text = `==================================================\n`;
+    text += `ALL SHARED NOTES - ${activeChatName.toUpperCase()}\n`;
+    text += `Exported: ${new Date().toLocaleString()}\n`;
+    text += `Total Notes: ${noteMsgs.length}\n`;
+    text += `==================================================\n\n`;
+
+    noteMsgs.forEach((msg, idx) => {
+      const title = msg.title || `Note ${idx + 1}`;
+      const author = msg.sender?.name || "Member";
+      const time = new Date(msg.createdAt).toLocaleString();
+      text += `--- NOTE ${idx + 1}: ${title} ---\n`;
+      text += `Author: ${author} | Date: ${time}\n\n`;
+      text += `${msg.text}\n\n`;
+      if (msg.file) {
+        text += `Attachment: ${msg.file.filename}\n`;
+      }
+      text += `--------------------------------------------------\n\n`;
+    });
+
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    const cleanName = activeChatName.replace(/[^a-zA-Z0-9_-]/g, "");
+    link.download = `${cleanName}_all_notes.${format}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast({ title: "All Notes Downloaded", description: `Downloaded ${noteMsgs.length} note(s) as .${format.toUpperCase()}` });
+  };
+
   return (
     <div className="flex-1 flex flex-col min-h-0 space-y-4">
       {/* Header with presence selection */}
@@ -800,6 +905,64 @@ export default function Collaboration() {
                     />
                   </div>
 
+                  {/* View Filter Tabs & Action Buttons */}
+                  <div className="flex items-center gap-1 bg-zinc-100 dark:bg-white/5 p-1 rounded-lg border border-zinc-200 dark:border-white/10">
+                    <button
+                      onClick={() => setActiveTab("all")}
+                      className={`px-2 py-0.5 text-[10px] font-semibold rounded ${
+                        activeTab === "all"
+                          ? "bg-white dark:bg-black/60 text-zinc-900 dark:text-white shadow-sm"
+                          : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
+                      }`}
+                    >
+                      All
+                    </button>
+                    <button
+                      onClick={() => setActiveTab("messages")}
+                      className={`px-2 py-0.5 text-[10px] font-semibold rounded flex items-center gap-1 ${
+                        activeTab === "messages"
+                          ? "bg-white dark:bg-black/60 text-zinc-900 dark:text-white shadow-sm"
+                          : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
+                      }`}
+                    >
+                      <MessageSquare className="w-3 h-3 text-sky-500" />
+                      Chat
+                    </button>
+                    <button
+                      onClick={() => setActiveTab("notes")}
+                      className={`px-2 py-0.5 text-[10px] font-semibold rounded flex items-center gap-1 ${
+                        activeTab === "notes"
+                          ? "bg-white dark:bg-black/60 text-amber-600 dark:text-amber-400 font-bold shadow-sm"
+                          : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
+                      }`}
+                    >
+                      <FileText className="w-3 h-3 text-amber-500" />
+                      Notes ({chatMessages.filter((m) => m.type === "note").length})
+                    </button>
+                  </div>
+
+                  {/* Create Note Button */}
+                  <Button
+                    size="sm"
+                    onClick={() => setIsCreateNoteOpen(true)}
+                    className="h-7 px-2.5 text-[10px] gap-1 bg-amber-600 hover:bg-amber-700 text-white font-semibold shadow-sm"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>+ Add Note</span>
+                  </Button>
+
+                  {/* Download All Notes Button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDownloadAllNotes("txt")}
+                    className="h-7 px-2 text-[10px] gap-1 bg-white dark:bg-black/40 border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
+                    title="Download all shared notes in this channel"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Download Notes</span>
+                  </Button>
+
                   {/* Share Chat Button */}
                   <Button
                     variant="outline"
@@ -808,7 +971,7 @@ export default function Collaboration() {
                     className="h-7 px-2 text-[10px] gap-1 bg-white dark:bg-black/40 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"
                   >
                     <Share2 className="w-3.5 h-3.5 text-sky-500" />
-                    <span className="hidden sm:inline">Share / Export</span>
+                    <span className="hidden sm:inline">Export</span>
                   </Button>
 
                   {/* Channel specific action buttons */}
@@ -863,15 +1026,90 @@ export default function Collaboration() {
               {/* Message history */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {chatMessages
-                  .filter((m) =>
-                    !chatSearchQuery.trim()
+                  .filter((m) => {
+                    if (activeTab === "messages" && m.type === "note") return false;
+                    if (activeTab === "notes" && m.type !== "note") return false;
+                    return !chatSearchQuery.trim()
                       ? true
-                      : m.text.toLowerCase().includes(chatSearchQuery.toLowerCase())
-                  )
+                      : (m.text + " " + (m.title || "")).toLowerCase().includes(chatSearchQuery.toLowerCase());
+                  })
                   .map((msg) => {
                     const isMe = msg.sender?._id === user?.id;
                     const senderInitial = (msg.sender?.name || "?").charAt(0).toUpperCase();
 
+                    // RENDER NOTE ITEM
+                    if (msg.type === "note") {
+                      return (
+                        <div key={msg._id} className="w-full bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 space-y-3 shadow-sm relative group">
+                          <div className="flex items-center justify-between border-b border-amber-500/20 pb-2">
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold flex items-center justify-center text-xs shrink-0">
+                                <FileText className="w-4 h-4" />
+                              </div>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="font-bold text-xs text-zinc-900 dark:text-white truncate">{msg.title || "Shared Note"}</h4>
+                                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold uppercase tracking-wider shrink-0">
+                                    Note
+                                  </span>
+                                </div>
+                                <span className="text-[10px] text-zinc-500">
+                                  By {msg.sender?.name || "Member"} • {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Download Single Note Actions */}
+                            <div className="flex items-center gap-1 shrink-0">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleDownloadSingleNote(msg, "txt")}
+                                className="h-6 text-[10px] px-2 gap-1 border-amber-500/30 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 bg-white dark:bg-black/40"
+                                title="Download Note as TXT"
+                              >
+                                <Download className="w-3 h-3" />
+                                <span>.TXT</span>
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleDownloadSingleNote(msg, "md")}
+                                className="h-6 text-[10px] px-2 gap-1 border-amber-500/30 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 bg-white dark:bg-black/40"
+                                title="Download Note as Markdown"
+                              >
+                                <FileText className="w-3 h-3" />
+                                <span>.MD</span>
+                              </Button>
+                            </div>
+                          </div>
+
+                          {/* Note Body Text */}
+                          <div className="text-xs text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap leading-relaxed font-sans bg-white/60 dark:bg-black/30 p-3 rounded-xl border border-amber-500/10">
+                            {msg.text}
+                          </div>
+
+                          {msg.file && (
+                            <div className="p-2 bg-zinc-200/50 dark:bg-black/30 rounded-lg flex items-center justify-between gap-4 border border-zinc-350 dark:border-white/5 text-[10px]">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <Paperclip className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400 shrink-0" />
+                                <span className="font-semibold truncate text-zinc-900 dark:text-white">{msg.file.filename}</span>
+                              </div>
+                              <a
+                                href={msg.file.fileUrl}
+                                download
+                                target="_blank"
+                                className="p-1 rounded bg-zinc-250 hover:bg-zinc-300 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-800 dark:text-white shrink-0"
+                              >
+                                <Download className="w-3 h-3" />
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+
+                    // RENDER STANDARD CHAT MESSAGE
                     return (
                       <div key={msg._id} className={`flex items-start gap-3 ${isMe ? "flex-row-reverse text-right" : ""}`}>
                         <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
@@ -1178,6 +1416,56 @@ export default function Collaboration() {
               className="bg-primary text-primary-foreground"
             >
               Add Selected ({selectedAttendeeIds.length})
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create & Share Note Dialog */}
+      <Dialog open={isCreateNoteOpen} onOpenChange={setIsCreateNoteOpen}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-sm font-bold text-zinc-900 dark:text-white">
+              <FileText className="w-4 h-4 text-amber-500" />
+              Create & Share Note
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-xs text-zinc-500">
+              Publish a note to <strong className="text-zinc-900 dark:text-white">{activeChatName}</strong>. All channel members will see this note in real-time and can download it anytime.
+            </p>
+            <div>
+              <Label className="text-xs font-semibold mb-1 block">Note Title</Label>
+              <Input
+                placeholder="e.g. Project Specs / Key Action Items"
+                value={noteTitleInput}
+                onChange={(e) => setNoteTitleInput(e.target.value)}
+                className="text-xs"
+              />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold mb-1 block">Note Content *</Label>
+              <textarea
+                rows={5}
+                placeholder="Write your note content here..."
+                value={noteContentInput}
+                onChange={(e) => setNoteContentInput(e.target.value)}
+                className="w-full bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/10 rounded-xl p-3 text-xs text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 resize-y leading-relaxed"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => setIsCreateNoteOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleSendNote}
+              disabled={!noteContentInput.trim()}
+              className="bg-amber-600 hover:bg-amber-700 text-white gap-1.5 font-semibold"
+            >
+              <Send className="w-3.5 h-3.5" />
+              Publish Note
             </Button>
           </DialogFooter>
         </DialogContent>
