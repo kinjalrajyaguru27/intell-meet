@@ -170,14 +170,19 @@ export default function Collaboration() {
       });
       if (res.ok) {
         const data = await res.json();
-        setChatMessages(data);
+        setChatMessages((prev) => {
+          if (prev.length === data.length && JSON.stringify(prev.map((m) => m._id)) === JSON.stringify(data.map((m: any) => m._id))) {
+            return prev;
+          }
+          return data;
+        });
 
         // Mark read
         const unreadIds = data
           .filter((m: any) => m.sender?._id !== user?.id && !m.readBy?.includes(user?.id))
           .map((m: any) => m._id);
-        if (unreadIds.length > 0) {
-          socket?.emit("message-read", {
+        if (unreadIds.length > 0 && socket && socket.connected) {
+          socket.emit("message-read", {
             messageIds: unreadIds,
             channelId: channelId || undefined,
             senderId: dmUserId || undefined,
@@ -188,6 +193,15 @@ export default function Collaboration() {
       console.error(err);
     }
   };
+
+  // Periodic polling fallback for Vercel deployment (where WebSockets are serverless/ephemeral)
+  useEffect(() => {
+    if ((!activeChannelId && !activeDmUserId) || !token) return;
+    const interval = setInterval(() => {
+      fetchChatHistory(activeChannelId, activeDmUserId);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [activeChannelId, activeDmUserId, token]);
 
   // Fetch meeting attendees for adding members
   const fetchMeetingAttendees = async () => {
@@ -346,25 +360,50 @@ export default function Collaboration() {
     socket?.emit("update-presence", { status });
   };
 
-  const handleSendChatMessage = () => {
-    if (!messageInput.trim()) return;
-    if (activeChannelId) {
-      socket?.emit("send-channel-message", {
-        channelId: activeChannelId,
-        text: messageInput.trim(),
+  const handleSendChatMessage = async () => {
+    const text = messageInput.trim();
+    if (!text || !token) return;
+    setMessageInput("");
+
+    try {
+      // 1. Post via REST API first so it works 100% on Vercel deployment & localhost
+      const bodyData: any = { text };
+      if (activeChannelId) bodyData.channelId = activeChannelId;
+      else if (activeDmUserId) bodyData.recipientId = activeDmUserId;
+
+      const res = await fetch("/api/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(bodyData),
       });
-    } else if (activeDmUserId) {
-      socket?.emit("send-direct-message", {
-        recipientId: activeDmUserId,
-        text: messageInput.trim(),
+
+      if (res.ok) {
+        const newMsg = await res.json();
+        setChatMessages((prev) => (prev.some((m) => m._id === newMsg._id) ? prev : [...prev, newMsg]));
+      }
+
+      // 2. Also emit via socket if connected
+      if (socket && socket.connected) {
+        if (activeChannelId) {
+          socket.emit("send-channel-message", { channelId: activeChannelId, text });
+        } else if (activeDmUserId) {
+          socket.emit("send-direct-message", { recipientId: activeDmUserId, text });
+        }
+      }
+    } catch (err) {
+      console.error("Error sending chat message:", err);
+    }
+
+    if (socket && socket.connected) {
+      socket.emit("typing-indicator", {
+        channelId: activeChannelId || undefined,
+        recipientId: activeDmUserId || undefined,
+        isTyping: false,
       });
     }
-    setMessageInput("");
-    socket?.emit("typing-indicator", {
-      channelId: activeChannelId || undefined,
-      recipientId: activeDmUserId || undefined,
-      isTyping: false,
-    });
   };
 
   const typingTimeoutRef = useRef<any>(null);
@@ -415,18 +454,42 @@ export default function Collaboration() {
 
       const fileObj = await uploadRes.json();
 
-      if (activeChannelId) {
-        socket?.emit("send-channel-message", {
-          channelId: activeChannelId,
-          text: `Shared file: ${file.name}`,
-          fileId: fileObj._id,
-        });
-      } else if (activeDmUserId) {
-        socket?.emit("send-direct-message", {
-          recipientId: activeDmUserId,
-          text: `Shared file: ${file.name}`,
-          fileId: fileObj._id,
-        });
+      // Post message with file attachment via REST API so it works reliably on Vercel deployment
+      const bodyData: any = {
+        text: `Shared file: ${file.name}`,
+        fileId: fileObj._id,
+      };
+      if (activeChannelId) bodyData.channelId = activeChannelId;
+      else if (activeDmUserId) bodyData.recipientId = activeDmUserId;
+
+      const msgRes = await fetch("/api/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(bodyData),
+      });
+
+      if (msgRes.ok) {
+        const newMsg = await msgRes.json();
+        setChatMessages((prev) => (prev.some((m) => m._id === newMsg._id) ? prev : [...prev, newMsg]));
+      }
+
+      if (socket && socket.connected) {
+        if (activeChannelId) {
+          socket.emit("send-channel-message", {
+            channelId: activeChannelId,
+            text: `Shared file: ${file.name}`,
+            fileId: fileObj._id,
+          });
+        } else if (activeDmUserId) {
+          socket.emit("send-direct-message", {
+            recipientId: activeDmUserId,
+            text: `Shared file: ${file.name}`,
+            fileId: fileObj._id,
+          });
+        }
       }
 
       toast({ title: "Attachment shared", description: `Successfully shared ${file.name}` });
@@ -603,30 +666,44 @@ export default function Collaboration() {
   };
 
   // Publish Note Action
-  const handleSendNote = () => {
-    if (!noteContentInput.trim()) return;
+  const handleSendNote = async () => {
+    if (!noteContentInput.trim() || !token) return;
     const title = noteTitleInput.trim() || "Shared Note";
     const text = noteContentInput.trim();
-
-    if (activeChannelId) {
-      socket?.emit("send-channel-message", {
-        channelId: activeChannelId,
-        text,
-        type: "note",
-        title,
-      });
-    } else if (activeDmUserId) {
-      socket?.emit("send-direct-message", {
-        recipientId: activeDmUserId,
-        text,
-        type: "note",
-        title,
-      });
-    }
     setIsCreateNoteOpen(false);
     setNoteTitleInput("");
     setNoteContentInput("");
-    toast({ title: "Note Published", description: "Shared note sent to all members in real-time." });
+
+    try {
+      const bodyData: any = { text, type: "note", title };
+      if (activeChannelId) bodyData.channelId = activeChannelId;
+      else if (activeDmUserId) bodyData.recipientId = activeDmUserId;
+
+      const res = await fetch("/api/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(bodyData),
+      });
+
+      if (res.ok) {
+        const newMsg = await res.json();
+        setChatMessages((prev) => (prev.some((m) => m._id === newMsg._id) ? prev : [...prev, newMsg]));
+      }
+
+      if (socket && socket.connected) {
+        if (activeChannelId) {
+          socket.emit("send-channel-message", { channelId: activeChannelId, text, type: "note", title });
+        } else if (activeDmUserId) {
+          socket.emit("send-direct-message", { recipientId: activeDmUserId, text, type: "note", title });
+        }
+      }
+      toast({ title: "Note Published", description: "Shared note sent to all members." });
+    } catch (err) {
+      console.error("Error sending note:", err);
+    }
   };
 
   // Single Note Download Action
