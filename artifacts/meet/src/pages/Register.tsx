@@ -167,7 +167,7 @@ export default function Register() {
                 <UserPlus className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   id="name"
-                  placeholder="John Doe"
+                  placeholder="Enter Your Name"
                   {...register("name", { required: "Full name is required" })}
                   className="bg-zinc-50 dark:bg-black/40 border-zinc-200 dark:border-white/10 pl-10 text-sm focus-visible:ring-primary h-11 text-foreground dark:text-white"
                 />

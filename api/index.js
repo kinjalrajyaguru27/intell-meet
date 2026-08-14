@@ -33,7 +33,6 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 var import_pino, isProduction, logger;
 var init_logger = __esm({
   "src/lib/logger.ts"() {
-    "use strict";
     import_pino = __toESM(require("pino"), 1);
     isProduction = process.env.NODE_ENV === "production";
     logger = (0, import_pino.default)({
@@ -57,7 +56,6 @@ var init_logger = __esm({
 var import_mongoose, UserSchema, User;
 var init_User = __esm({
   "../../lib/db/src/models/User.ts"() {
-    "use strict";
     import_mongoose = __toESM(require("mongoose"), 1);
     UserSchema = new import_mongoose.Schema({
       name: { type: String, required: true },
@@ -79,6 +77,8 @@ var init_User = __esm({
       refreshToken: { type: String },
       resetPasswordToken: { type: String },
       resetPasswordExpires: { type: Date },
+      resetPasswordOtp: { type: String },
+      resetPasswordOtpExpires: { type: Date },
       authProvider: { type: String, enum: ["local", "google"], default: "local", required: true },
       googleId: { type: String, index: true },
       profilePicture: { type: String, default: "" },
@@ -90,10 +90,9 @@ var init_User = __esm({
 });
 
 // ../../lib/db/src/models/Meeting.ts
-var import_mongoose2, TranscriptLineSchema, ActionItemSchema, MeetingSchema, Meeting;
+var import_mongoose2, TranscriptLineSchema, ActionItemSchema, NoteAttachmentSchema, NoteItemSchema, NotesPermissionsSchema, MeetingSchema, Meeting;
 var init_Meeting = __esm({
   "../../lib/db/src/models/Meeting.ts"() {
-    "use strict";
     import_mongoose2 = __toESM(require("mongoose"), 1);
     TranscriptLineSchema = new import_mongoose2.Schema({
       speaker: { type: String, required: true },
@@ -107,6 +106,30 @@ var init_Meeting = __esm({
       isDone: { type: Boolean, default: false },
       createdAt: { type: Date, default: Date.now }
     });
+    NoteAttachmentSchema = new import_mongoose2.Schema({
+      id: { type: String, required: true },
+      name: { type: String, required: true },
+      url: { type: String, required: true },
+      size: { type: String, default: "" },
+      type: { type: String, default: "file" },
+      addedAt: { type: String, default: "" }
+    });
+    NoteItemSchema = new import_mongoose2.Schema({
+      id: { type: String, required: true },
+      title: { type: String, default: "" },
+      content: { type: String, default: "" },
+      authorId: { type: String, default: "" },
+      authorName: { type: String, default: "" },
+      createdAt: { type: String, default: "" },
+      updatedAt: { type: String, default: "" },
+      visibility: { type: String, enum: ["everyone", "selected"], default: "everyone" },
+      allowedViewers: [{ type: String }],
+      attachments: [NoteAttachmentSchema]
+    });
+    NotesPermissionsSchema = new import_mongoose2.Schema({
+      mode: { type: String, enum: ["everyone", "host_only", "selected"], default: "everyone" },
+      allowedEditors: [{ type: String }]
+    });
     MeetingSchema = new import_mongoose2.Schema({
       // Original fields
       roomId: { type: String, required: true },
@@ -116,6 +139,8 @@ var init_Meeting = __esm({
       durationSeconds: { type: Number, default: null },
       participantNames: [{ type: String }],
       notes: { type: String, default: "" },
+      notesPermissions: { type: NotesPermissionsSchema, default: () => ({ mode: "everyone", allowedEditors: [] }) },
+      notesList: { type: [NoteItemSchema], default: [] },
       transcript: [TranscriptLineSchema],
       actionItems: [ActionItemSchema],
       // New fields
@@ -131,7 +156,9 @@ var init_Meeting = __esm({
       isRecurring: { type: Boolean, default: false },
       recurrenceRule: { type: String, default: "" },
       isPersonalRoom: { type: Boolean, default: false },
-      waitingRoomEnabled: { type: Boolean, default: false }
+      waitingRoomEnabled: { type: Boolean, default: false },
+      organizationId: { type: import_mongoose2.Schema.Types.ObjectId, ref: "Organization", index: true },
+      projectId: { type: import_mongoose2.Schema.Types.ObjectId, ref: "Project", index: true }
     });
     Meeting = import_mongoose2.default.models.Meeting || import_mongoose2.default.model("Meeting", MeetingSchema);
   }
@@ -141,7 +168,6 @@ var init_Meeting = __esm({
 var import_mongoose3, TaskSchema, Task;
 var init_Task = __esm({
   "../../lib/db/src/models/Task.ts"() {
-    "use strict";
     import_mongoose3 = __toESM(require("mongoose"), 1);
     TaskSchema = new import_mongoose3.Schema({
       title: { type: String, required: true },
@@ -174,7 +200,6 @@ var init_Task = __esm({
 var import_mongoose4, TeamSchema, Team;
 var init_Team = __esm({
   "../../lib/db/src/models/Team.ts"() {
-    "use strict";
     import_mongoose4 = __toESM(require("mongoose"), 1);
     TeamSchema = new import_mongoose4.Schema({
       name: { type: String, required: true },
@@ -198,7 +223,6 @@ var init_Team = __esm({
 var import_mongoose5, InvitationSchema, Invitation;
 var init_Invitation = __esm({
   "../../lib/db/src/models/Invitation.ts"() {
-    "use strict";
     import_mongoose5 = __toESM(require("mongoose"), 1);
     InvitationSchema = new import_mongoose5.Schema({
       email: { type: String, required: true, lowercase: true, trim: true, index: true },
@@ -218,7 +242,6 @@ var init_Invitation = __esm({
 var import_mongoose6, ParticipantSchema, Participant;
 var init_Participant = __esm({
   "../../lib/db/src/models/Participant.ts"() {
-    "use strict";
     import_mongoose6 = __toESM(require("mongoose"), 1);
     ParticipantSchema = new import_mongoose6.Schema({
       meeting: { type: import_mongoose6.Schema.Types.ObjectId, ref: "Meeting", required: true, index: true },
@@ -240,7 +263,6 @@ var init_Participant = __esm({
 var import_mongoose7, RecordingSchema, Recording;
 var init_Recording = __esm({
   "../../lib/db/src/models/Recording.ts"() {
-    "use strict";
     import_mongoose7 = __toESM(require("mongoose"), 1);
     RecordingSchema = new import_mongoose7.Schema({
       meeting: { type: import_mongoose7.Schema.Types.ObjectId, ref: "Meeting", required: true, index: true },
@@ -259,7 +281,6 @@ var init_Recording = __esm({
 var import_mongoose8, MeetingChatSchema, MeetingChat;
 var init_MeetingChat = __esm({
   "../../lib/db/src/models/MeetingChat.ts"() {
-    "use strict";
     import_mongoose8 = __toESM(require("mongoose"), 1);
     MeetingChatSchema = new import_mongoose8.Schema({
       meeting: { type: import_mongoose8.Schema.Types.ObjectId, ref: "Meeting", required: true, index: true },
@@ -276,7 +297,6 @@ var init_MeetingChat = __esm({
 var import_mongoose9, MeetingNotificationSchema, MeetingNotification;
 var init_MeetingNotification = __esm({
   "../../lib/db/src/models/MeetingNotification.ts"() {
-    "use strict";
     import_mongoose9 = __toESM(require("mongoose"), 1);
     MeetingNotificationSchema = new import_mongoose9.Schema({
       recipient: { type: import_mongoose9.Schema.Types.ObjectId, ref: "User", required: true, index: true },
@@ -299,7 +319,6 @@ var init_MeetingNotification = __esm({
 var import_mongoose10, MeetingTranscriptSchema, MeetingTranscript;
 var init_MeetingTranscript = __esm({
   "../../lib/db/src/models/MeetingTranscript.ts"() {
-    "use strict";
     import_mongoose10 = __toESM(require("mongoose"), 1);
     MeetingTranscriptSchema = new import_mongoose10.Schema({
       meetingId: { type: import_mongoose10.Schema.Types.ObjectId, ref: "Meeting", required: true, index: true },
@@ -315,7 +334,6 @@ var init_MeetingTranscript = __esm({
 var import_mongoose11, MeetingSummarySchema, MeetingSummary;
 var init_MeetingSummary = __esm({
   "../../lib/db/src/models/MeetingSummary.ts"() {
-    "use strict";
     import_mongoose11 = __toESM(require("mongoose"), 1);
     MeetingSummarySchema = new import_mongoose11.Schema({
       meetingId: { type: import_mongoose11.Schema.Types.ObjectId, ref: "Meeting", required: true, index: true },
@@ -339,7 +357,6 @@ var init_MeetingSummary = __esm({
 var import_mongoose12, ActionItemSchema2, ActionItem;
 var init_ActionItem = __esm({
   "../../lib/db/src/models/ActionItem.ts"() {
-    "use strict";
     import_mongoose12 = __toESM(require("mongoose"), 1);
     ActionItemSchema2 = new import_mongoose12.Schema({
       meetingId: { type: import_mongoose12.Schema.Types.ObjectId, ref: "Meeting", required: true, index: true },
@@ -361,7 +378,6 @@ var init_ActionItem = __esm({
 var import_mongoose13, MeetingInsightSchema, MeetingInsight;
 var init_MeetingInsight = __esm({
   "../../lib/db/src/models/MeetingInsight.ts"() {
-    "use strict";
     import_mongoose13 = __toESM(require("mongoose"), 1);
     MeetingInsightSchema = new import_mongoose13.Schema({
       meetingId: { type: import_mongoose13.Schema.Types.ObjectId, ref: "Meeting", required: true, index: true },
@@ -384,7 +400,6 @@ var init_MeetingInsight = __esm({
 var import_mongoose14, DecisionSchema, Decision;
 var init_Decision = __esm({
   "../../lib/db/src/models/Decision.ts"() {
-    "use strict";
     import_mongoose14 = __toESM(require("mongoose"), 1);
     DecisionSchema = new import_mongoose14.Schema({
       meetingId: { type: import_mongoose14.Schema.Types.ObjectId, ref: "Meeting", required: true, index: true },
@@ -402,7 +417,6 @@ var init_Decision = __esm({
 var import_mongoose15, MessageSchema, Message;
 var init_Message = __esm({
   "../../lib/db/src/models/Message.ts"() {
-    "use strict";
     import_mongoose15 = __toESM(require("mongoose"), 1);
     MessageSchema = new import_mongoose15.Schema({
       sender: { type: import_mongoose15.Schema.Types.ObjectId, ref: "User", required: true, index: true },
@@ -422,13 +436,14 @@ var init_Message = __esm({
 var import_mongoose16, ChannelSchema, Channel;
 var init_Channel = __esm({
   "../../lib/db/src/models/Channel.ts"() {
-    "use strict";
     import_mongoose16 = __toESM(require("mongoose"), 1);
     ChannelSchema = new import_mongoose16.Schema({
       name: { type: String, required: true },
       description: { type: String, default: "" },
       isPrivate: { type: Boolean, default: false },
       teamId: { type: import_mongoose16.Schema.Types.ObjectId, ref: "Team", required: true, index: true },
+      createdBy: { type: import_mongoose16.Schema.Types.ObjectId, ref: "User", index: true },
+      members: [{ type: import_mongoose16.Schema.Types.ObjectId, ref: "User", index: true }],
       createdAt: { type: Date, default: Date.now }
     });
     Channel = import_mongoose16.default.models.Channel || import_mongoose16.default.model("Channel", ChannelSchema);
@@ -439,13 +454,11 @@ var init_Channel = __esm({
 var import_mongoose17, NotificationSchema, Notification;
 var init_Notification = __esm({
   "../../lib/db/src/models/Notification.ts"() {
-    "use strict";
     import_mongoose17 = __toESM(require("mongoose"), 1);
     NotificationSchema = new import_mongoose17.Schema({
       recipient: { type: import_mongoose17.Schema.Types.ObjectId, ref: "User", required: true, index: true },
       type: {
         type: String,
-        enum: ["mention", "reply", "message", "file_upload", "task_assignment", "meeting_reminder"],
         required: true
       },
       title: { type: String, required: true },
@@ -462,7 +475,6 @@ var init_Notification = __esm({
 var import_mongoose18, FileSchema, FileModel;
 var init_File = __esm({
   "../../lib/db/src/models/File.ts"() {
-    "use strict";
     import_mongoose18 = __toESM(require("mongoose"), 1);
     FileSchema = new import_mongoose18.Schema({
       filename: { type: String, required: true },
@@ -482,7 +494,6 @@ var init_File = __esm({
 var import_mongoose19, MeetingNotesVersionSchema, MeetingNotesVersion;
 var init_MeetingNotesVersion = __esm({
   "../../lib/db/src/models/MeetingNotesVersion.ts"() {
-    "use strict";
     import_mongoose19 = __toESM(require("mongoose"), 1);
     MeetingNotesVersionSchema = new import_mongoose19.Schema({
       meetingId: { type: import_mongoose19.Schema.Types.ObjectId, ref: "Meeting", required: true, index: true },
@@ -498,7 +509,6 @@ var init_MeetingNotesVersion = __esm({
 var import_mongoose20, OrganizationSchema, Organization;
 var init_Organization = __esm({
   "../../lib/db/src/models/Organization.ts"() {
-    "use strict";
     import_mongoose20 = __toESM(require("mongoose"), 1);
     OrganizationSchema = new import_mongoose20.Schema({
       name: { type: String, required: true },
@@ -514,7 +524,6 @@ var init_Organization = __esm({
 var import_mongoose21, MemberSchema, Member;
 var init_Member = __esm({
   "../../lib/db/src/models/Member.ts"() {
-    "use strict";
     import_mongoose21 = __toESM(require("mongoose"), 1);
     MemberSchema = new import_mongoose21.Schema({
       userId: { type: import_mongoose21.Schema.Types.ObjectId, ref: "User", required: true, index: true },
@@ -535,7 +544,6 @@ var init_Member = __esm({
 var import_mongoose22, ProjectSchema, Project;
 var init_Project = __esm({
   "../../lib/db/src/models/Project.ts"() {
-    "use strict";
     import_mongoose22 = __toESM(require("mongoose"), 1);
     ProjectSchema = new import_mongoose22.Schema({
       name: { type: String, required: true },
@@ -563,7 +571,6 @@ var init_Project = __esm({
 var import_mongoose23, SubtaskSchema, Subtask;
 var init_Subtask = __esm({
   "../../lib/db/src/models/Subtask.ts"() {
-    "use strict";
     import_mongoose23 = __toESM(require("mongoose"), 1);
     SubtaskSchema = new import_mongoose23.Schema({
       parentTaskId: { type: import_mongoose23.Schema.Types.ObjectId, ref: "Task", required: true, index: true },
@@ -577,7 +584,6 @@ var init_Subtask = __esm({
 var import_mongoose24, CommentSchema, Comment;
 var init_Comment = __esm({
   "../../lib/db/src/models/Comment.ts"() {
-    "use strict";
     import_mongoose24 = __toESM(require("mongoose"), 1);
     CommentSchema = new import_mongoose24.Schema({
       taskId: { type: import_mongoose24.Schema.Types.ObjectId, ref: "Task", required: true, index: true },
@@ -594,7 +600,6 @@ var init_Comment = __esm({
 var import_mongoose25, AttachmentSchema, Attachment;
 var init_Attachment = __esm({
   "../../lib/db/src/models/Attachment.ts"() {
-    "use strict";
     import_mongoose25 = __toESM(require("mongoose"), 1);
     AttachmentSchema = new import_mongoose25.Schema({
       taskId: { type: import_mongoose25.Schema.Types.ObjectId, ref: "Task", required: true, index: true },
@@ -613,7 +618,6 @@ var init_Attachment = __esm({
 var import_mongoose26, MilestoneSchema, Milestone;
 var init_Milestone = __esm({
   "../../lib/db/src/models/Milestone.ts"() {
-    "use strict";
     import_mongoose26 = __toESM(require("mongoose"), 1);
     MilestoneSchema = new import_mongoose26.Schema({
       projectId: { type: import_mongoose26.Schema.Types.ObjectId, ref: "Project", required: true, index: true },
@@ -630,7 +634,6 @@ var init_Milestone = __esm({
 var import_mongoose27, ActivityLogSchema, ActivityLog;
 var init_ActivityLog = __esm({
   "../../lib/db/src/models/ActivityLog.ts"() {
-    "use strict";
     import_mongoose27 = __toESM(require("mongoose"), 1);
     ActivityLogSchema = new import_mongoose27.Schema({
       userId: { type: import_mongoose27.Schema.Types.ObjectId, ref: "User", required: true, index: true },
@@ -648,7 +651,6 @@ var init_ActivityLog = __esm({
 var import_mongoose28, AnalyticsSchema, Analytics;
 var init_Analytics = __esm({
   "../../lib/db/src/models/Analytics.ts"() {
-    "use strict";
     import_mongoose28 = __toESM(require("mongoose"), 1);
     AnalyticsSchema = new import_mongoose28.Schema({
       entityId: { type: import_mongoose28.Schema.Types.ObjectId, default: null, index: true },
@@ -668,7 +670,6 @@ var init_Analytics = __esm({
 var import_mongoose29, ReportSchema, Report;
 var init_Report = __esm({
   "../../lib/db/src/models/Report.ts"() {
-    "use strict";
     import_mongoose29 = __toESM(require("mongoose"), 1);
     ReportSchema = new import_mongoose29.Schema({
       title: { type: String, required: true },
@@ -694,7 +695,6 @@ var init_Report = __esm({
 var import_mongoose30, ForecastSchema, Forecast;
 var init_Forecast = __esm({
   "../../lib/db/src/models/Forecast.ts"() {
-    "use strict";
     import_mongoose30 = __toESM(require("mongoose"), 1);
     ForecastSchema = new import_mongoose30.Schema({
       projectId: { type: import_mongoose30.Schema.Types.ObjectId, ref: "Project", required: true, index: true },
@@ -746,7 +746,8 @@ __export(src_exports, {
   mongoose: () => import_mongoose31.default
 });
 async function connectDB() {
-  const uri = process.env.MONGODB_URI || "mongodb://rajyagurukinjal27_db_user:kinjal276@ac-47exnzh-shard-00-00.ebbde1m.mongodb.net:27017,ac-47exnzh-shard-00-01.ebbde1m.mongodb.net:27017,ac-47exnzh-shard-00-02.ebbde1m.mongodb.net:27017/intell_meet?ssl=true&authSource=admin&retryWrites=true";
+  const defaultUri = "mongodb://rajyagurukinjal27_db_user:kinjal276@ac-47exnzh-shard-00-00.ebbde1m.mongodb.net:27017,ac-47exnzh-shard-00-01.ebbde1m.mongodb.net:27017,ac-47exnzh-shard-00-02.ebbde1m.mongodb.net:27017/intell_meet?ssl=true&authSource=admin&retryWrites=true";
+  const uri = process.env.MONGODB_URI && !process.env.MONGODB_URI.includes("querySrv") ? process.env.MONGODB_URI : defaultUri;
   if (cached.conn) {
     return cached.conn;
   }
@@ -769,11 +770,11 @@ async function connectDB() {
   }
   return cached.conn;
 }
-var import_mongoose31, cached;
+var import_mongoose31, import_node_dns, cached;
 var init_src = __esm({
   "../../lib/db/src/index.ts"() {
-    "use strict";
     import_mongoose31 = __toESM(require("mongoose"), 1);
+    import_node_dns = __toESM(require("node:dns"), 1);
     init_User();
     init_Meeting();
     init_Task();
@@ -804,6 +805,10 @@ var init_src = __esm({
     init_Analytics();
     init_Report();
     init_Forecast();
+    try {
+      import_node_dns.default.setDefaultResultOrder("ipv4first");
+    } catch (e) {
+    }
     cached = global.mongoose;
     if (!cached) {
       cached = global.mongoose = { conn: null, promise: null };
@@ -814,6 +819,7 @@ var init_src = __esm({
 // src/lib/activity.ts
 var activity_exports = {};
 __export(activity_exports, {
+  detectAndSendMentions: () => detectAndSendMentions,
   logActivity: () => logActivity
 });
 async function logActivity(userId, action, entityId, entityType, details) {
@@ -832,9 +838,42 @@ async function logActivity(userId, action, entityId, entityType, details) {
     logger.error({ error }, "Failed to save ActivityLog");
   }
 }
+async function detectAndSendMentions(text, sender, link) {
+  if (!text || !text.includes("@")) return;
+  try {
+    const { User: User4 } = await Promise.resolve().then(() => (init_src(), src_exports));
+    const { pushNotificationToUser: pushNotificationToUser2 } = await Promise.resolve().then(() => (init_signaling(), signaling_exports));
+    const matches = text.match(/@([a-zA-Z0-9._-]+)/g);
+    if (!matches || matches.length === 0) return;
+    const names = Array.from(new Set(matches.map((m) => m.substring(1).toLowerCase())));
+    for (const nameQuery of names) {
+      const users = await User4.find({
+        $or: [
+          { name: { $regex: nameQuery, $options: "i" } },
+          { email: { $regex: nameQuery, $options: "i" } }
+        ]
+      });
+      for (const u of users) {
+        const uId = u._id.toString();
+        if (uId !== sender.id) {
+          const senderName = sender.name || "Someone";
+          const snippet = text.length > 80 ? text.substring(0, 80) + "..." : text;
+          await pushNotificationToUser2(
+            uId,
+            "mention",
+            `Mentioned by ${senderName}`,
+            `${senderName} mentioned you: "${snippet}"`,
+            link || "/collaboration"
+          );
+        }
+      }
+    }
+  } catch (err) {
+    logger.error({ err }, "Error sending mention notifications");
+  }
+}
 var init_activity = __esm({
   "src/lib/activity.ts"() {
-    "use strict";
     init_src();
     init_logger();
   }
@@ -905,6 +944,7 @@ function initSignaling(httpServer) {
     let currentRoomId = null;
     let currentUserId = null;
     if (user?.id) {
+      socket.join(`user:${user.id}`);
       if (!activeUsers.has(user.id)) {
         activeUsers.set(user.id, /* @__PURE__ */ new Set());
       }
@@ -922,12 +962,13 @@ function initSignaling(httpServer) {
     socket.on(
       "join-room",
       async ({
-        roomId,
+        roomId: rawRoomId,
         userId,
         displayName,
         isMuted,
         isCameraOff
       }) => {
+        const roomId = (rawRoomId || "").trim().toLowerCase();
         currentRoomId = roomId;
         currentUserId = userId;
         try {
@@ -1196,7 +1237,8 @@ function initSignaling(httpServer) {
         logger.error({ err }, "Error updating message read status");
       }
     });
-    socket.on("admit-user", async ({ roomId, userId: targetUserId }) => {
+    socket.on("admit-user", async ({ roomId: rawRoomId, userId: targetUserId }) => {
+      const roomId = (rawRoomId || "").trim().toLowerCase();
       try {
         const meeting = await Meeting.findOne({ roomId, status: { $ne: "ended" } });
         if (!meeting || meeting.host?.toString() !== user?.id) return;
@@ -1225,7 +1267,8 @@ function initSignaling(httpServer) {
         logger.error({ err }, "Error admitting user");
       }
     });
-    socket.on("reject-user", async ({ roomId, userId: targetUserId }) => {
+    socket.on("reject-user", async ({ roomId: rawRoomId, userId: targetUserId }) => {
+      const roomId = (rawRoomId || "").trim().toLowerCase();
       try {
         const meeting = await Meeting.findOne({ roomId, status: { $ne: "ended" } });
         if (!meeting || meeting.host?.toString() !== user?.id) return;
@@ -1255,7 +1298,8 @@ function initSignaling(httpServer) {
         logger.error({ err }, "Error rejecting user");
       }
     });
-    socket.on("mute-user", async ({ roomId, targetUserId }) => {
+    socket.on("mute-user", async ({ roomId: rawRoomId, targetUserId }) => {
+      const roomId = (rawRoomId || "").trim().toLowerCase();
       try {
         const meeting = await Meeting.findOne({ roomId, status: { $ne: "ended" } });
         if (!meeting || meeting.host?.toString() !== user?.id) return;
@@ -1268,7 +1312,8 @@ function initSignaling(httpServer) {
         logger.error({ err }, "Error muting user");
       }
     });
-    socket.on("disable-video", async ({ roomId, targetUserId }) => {
+    socket.on("disable-video", async ({ roomId: rawRoomId, targetUserId }) => {
+      const roomId = (rawRoomId || "").trim().toLowerCase();
       try {
         const meeting = await Meeting.findOne({ roomId, status: { $ne: "ended" } });
         if (!meeting || meeting.host?.toString() !== user?.id) return;
@@ -1281,7 +1326,8 @@ function initSignaling(httpServer) {
         logger.error({ err }, "Error disabling user video");
       }
     });
-    socket.on("remove-user", async ({ roomId, targetUserId }) => {
+    socket.on("remove-user", async ({ roomId: rawRoomId, targetUserId }) => {
+      const roomId = (rawRoomId || "").trim().toLowerCase();
       try {
         const meeting = await Meeting.findOne({ roomId, status: { $ne: "ended" } });
         if (!meeting || meeting.host?.toString() !== user?.id) return;
@@ -1294,7 +1340,8 @@ function initSignaling(httpServer) {
         logger.error({ err }, "Error removing user");
       }
     });
-    socket.on("lock-meeting", async ({ roomId, isLocked }) => {
+    socket.on("lock-meeting", async ({ roomId: rawRoomId, isLocked }) => {
+      const roomId = (rawRoomId || "").trim().toLowerCase();
       try {
         const meeting = await Meeting.findOne({ roomId, status: { $ne: "ended" } });
         if (!meeting || meeting.host?.toString() !== user?.id) return;
@@ -1305,7 +1352,8 @@ function initSignaling(httpServer) {
         logger.error({ err }, "Error locking meeting");
       }
     });
-    socket.on("transfer-host", async ({ roomId, targetUserId }) => {
+    socket.on("transfer-host", async ({ roomId: rawRoomId, targetUserId }) => {
+      const roomId = (rawRoomId || "").trim().toLowerCase();
       try {
         const meeting = await Meeting.findOne({ roomId, status: { $ne: "ended" } });
         if (!meeting || meeting.host?.toString() !== user?.id) return;
@@ -1317,7 +1365,8 @@ function initSignaling(httpServer) {
         logger.error({ err }, "Error transferring host");
       }
     });
-    socket.on("raise-hand", ({ roomId, isRaisedHand }) => {
+    socket.on("raise-hand", ({ roomId: rawRoomId, isRaisedHand }) => {
+      const roomId = (rawRoomId || "").trim().toLowerCase();
       if (!currentUserId) return;
       const room = rooms.get(roomId);
       const participant = room?.get(currentUserId);
@@ -1349,10 +1398,10 @@ function initSignaling(httpServer) {
       if (history.length > MAX_CHAT_HISTORY) history.shift();
       io.to(currentRoomId).emit("chat-message", message);
       try {
-        const { MeetingChat: MeetingChat2 } = await Promise.resolve().then(() => (init_src(), src_exports));
+        const { MeetingChat: MeetingChat3 } = await Promise.resolve().then(() => (init_src(), src_exports));
         const meeting = await Meeting.findOne({ roomId: currentRoomId, status: { $ne: "ended" } });
         if (meeting) {
-          const chatDoc = new MeetingChat2({
+          const chatDoc = new MeetingChat3({
             meeting: meeting._id,
             sender: user?.id,
             displayName: participant.displayName,
@@ -1453,6 +1502,14 @@ function initSignaling(httpServer) {
       if (!currentRoomId) return;
       socket.to(currentRoomId).emit("shared-notes-update", { notes });
     });
+    socket.on("notes-permissions-update", (data) => {
+      if (!currentRoomId) return;
+      socket.to(currentRoomId).emit("notes-permissions-updated", data);
+    });
+    socket.on("notes-list-update", (data) => {
+      if (!currentRoomId) return;
+      socket.to(currentRoomId).emit("notes-list-updated", data);
+    });
     socket.on("task-changed", () => {
       if (!currentRoomId) return;
       socket.to(currentRoomId).emit("task-changed");
@@ -1466,7 +1523,8 @@ function initSignaling(httpServer) {
     socket.on("milestone-alert", (data) => {
       socket.broadcast.emit("milestone-alert", data);
     });
-    socket.on("leave-room", ({ roomId, userId }) => {
+    socket.on("leave-room", ({ roomId: rawRoomId, userId }) => {
+      const roomId = (rawRoomId || "").trim().toLowerCase();
       handleLeave(roomId, userId);
     });
     socket.on("disconnect", () => {
@@ -1490,7 +1548,8 @@ function initSignaling(httpServer) {
       }
       logger.info({ socketId: socket.id }, "Secure socket disconnected");
     });
-    async function handleLeave(roomId, userId) {
+    async function handleLeave(rawRoomId, userId) {
+      const roomId = (rawRoomId || "").trim().toLowerCase();
       const room = rooms.get(roomId);
       if (!room) return;
       room.delete(userId);
@@ -1535,12 +1594,12 @@ function initSignaling(httpServer) {
   return io;
 }
 function getRoomParticipantCount(roomId) {
-  return rooms.get(roomId)?.size ?? 0;
+  const normalizedRoomId = (roomId || "").trim().toLowerCase();
+  return rooms.get(normalizedRoomId)?.size ?? 0;
 }
 var import_socket, import_jsonwebtoken, JWT_SECRET, rooms, chatHistory, waitingUsers, lockedMeetings, activeUsers, userPresence, MAX_CHAT_HISTORY, ioInstance;
 var init_signaling = __esm({
   "src/signaling.ts"() {
-    "use strict";
     import_socket = require("socket.io");
     init_logger();
     import_jsonwebtoken = __toESM(require("jsonwebtoken"), 1);
@@ -1565,7 +1624,6 @@ __export(aiService_exports, {
 var AIService;
 var init_aiService = __esm({
   "src/lib/aiService.ts"() {
-    "use strict";
     init_logger();
     init_src();
     AIService = class {
@@ -1593,6 +1651,12 @@ var init_aiService = __esm({
             });
             if (response.ok) {
               const data = await response.json();
+              await MeetingTranscript.create({
+                meetingId,
+                speaker,
+                text: data.text,
+                timestamp: Date.now()
+              });
               return { text: data.text };
             } else {
               const errText = await response.text();
@@ -1616,32 +1680,71 @@ var init_aiService = __esm({
       /**
        * Generate meeting summaries using GPT or fallback parser.
        */
-      static async generateSummary(meetingId, summaryType) {
-        const transcripts = await MeetingTranscript.find({ meetingId }).sort({ timestamp: 1 });
-        const transcriptText = transcripts.map((t) => `${t.speaker}: ${t.text}`).join("\n");
-        if (!transcriptText.trim()) {
-          throw new Error("Cannot generate summary on empty transcript");
+      static async generateSummary(meetingId, summaryType = "Short") {
+        const meeting = await Meeting.findOne({ $or: [{ meetingId }, { roomId: meetingId }] }) || await Meeting.findById(meetingId).catch(() => null);
+        const collabNotes = meeting?.notes?.trim() || "";
+        const versionTimelineItems = (meeting?.notesList || []).map((item) => `${item.title ? item.title + ": " : ""}${item.content}`).filter((text) => text.trim().length > 0).join("\n");
+        const attachments = [];
+        (meeting?.notesList || []).forEach((item) => {
+          if (Array.isArray(item.attachments)) {
+            item.attachments.forEach((att) => {
+              if (att.name) attachments.push(att.name);
+            });
+          }
+        });
+        const attachmentNote = attachments.length > 0 ? `Shared Attachments & PDFs: ${attachments.join(", ")}` : "Shared Attachments & PDFs: None shared";
+        const hasContent = Boolean(collabNotes || versionTimelineItems);
+        if (!hasContent) {
+          const emptyMessage = "No collaborative notes or version timeline content recorded for this meeting. Please add notes or save a version timeline item to generate an AI summary.";
+          return await MeetingSummary.findOneAndUpdate(
+            { meetingId, summaryType: "Short" },
+            {
+              meetingId,
+              summaryType: "Short",
+              shortSummary: emptyMessage,
+              detailedSummary: emptyMessage,
+              executiveSummary: emptyMessage,
+              keyPoints: [],
+              decisions: [],
+              outcomes: [],
+              highlights: [],
+              risks: [],
+              opportunities: []
+            },
+            { upsert: true, new: true }
+          );
         }
+        const sanitizeText = (str) => {
+          return str.replace(/^#+\s*/gm, "").replace(/#/g, "").trim();
+        };
+        const cleanCollab = collabNotes ? sanitizeText(collabNotes) : "";
+        const cleanTimeline = versionTimelineItems ? sanitizeText(versionTimelineItems) : "";
+        const sourceText = [
+          cleanCollab ? `Collaborative Notes:
+${cleanCollab}` : "",
+          cleanTimeline ? `Version Timeline Entries:
+${cleanTimeline}` : "",
+          attachmentNote
+        ].filter(Boolean).join("\n\n");
         const apiKey = this.getOpenAIKey();
         if (apiKey) {
           try {
-            const prompt = `You are an AI meeting assistant. Summarize the following meeting transcript into a structured format.
-The target audience format is a "${summaryType}" Summary.
+            const prompt = `You are an AI meeting assistant. Summarize the following Collaborative Notes, Version Timeline entries, and Shared Attachments into a clean 3 to 4 line summary without special symbols like '#' or '###'.
 Return the result strictly as a JSON object matching this structure:
 {
-  "shortSummary": "1-2 sentence quick summary",
-  "detailedSummary": "detailed multi-paragraph markdown summary",
-  "executiveSummary": "executive level highlights summary",
-  "keyPoints": ["bullet point 1", "bullet point 2", ...],
-  "decisions": ["decision 1", "decision 2", ...],
-  "outcomes": ["outcome 1", "outcome 2", ...],
-  "highlights": ["highlight 1", "highlight 2", ...],
-  "risks": ["risk 1", "risk 2", ...],
-  "opportunities": ["opportunity 1", "opportunity 2", ...]
+  "shortSummary": "3 to 4 clear professional summary lines summarizing meeting discussions and shared files",
+  "detailedSummary": "Detailed professional breakdown of the notes and attachments",
+  "executiveSummary": "Executive level summary including notes and shared files",
+  "keyPoints": ["3 to 4 clean key takeaway points without special symbols like '#'"],
+  "decisions": [],
+  "outcomes": [],
+  "highlights": [],
+  "risks": [],
+  "opportunities": []
 }
 
-Transcript:
-${transcriptText}`;
+Notes & Timeline Content:
+${sourceText}`;
             const response = await fetch("https://api.openai.com/v1/chat/completions", {
               method: "POST",
               headers: {
@@ -1658,8 +1761,8 @@ ${transcriptText}`;
               const data = await response.json();
               const content = JSON.parse(data.choices[0].message.content);
               return await MeetingSummary.findOneAndUpdate(
-                { meetingId, summaryType },
-                { meetingId, summaryType, ...content },
+                { meetingId, summaryType: "Short" },
+                { meetingId, summaryType: "Short", ...content },
                 { upsert: true, new: true }
               );
             }
@@ -1668,54 +1771,28 @@ ${transcriptText}`;
           }
         }
         const keyPoints = [];
-        const decisions = [];
-        const outcomes = [];
-        const highlights = [];
-        const risks = [];
-        const opportunities = [];
-        transcripts.forEach((line) => {
-          const text = line.text.toLowerCase();
-          if (text.includes("decid") || text.includes("we agreed") || text.includes("choose to")) {
-            decisions.push(`Decided: ${line.text} (stated by ${line.speaker})`);
-          } else if (text.includes("need to") || text.includes("will do") || text.includes("should")) {
-            keyPoints.push(`${line.speaker}: ${line.text}`);
-          } else if (text.includes("risk") || text.includes("issue") || text.includes("delay") || text.includes("bug") || text.includes("warning")) {
-            risks.push(`Risk: ${line.text}`);
-          } else if (text.includes("optimize") || text.includes("improve") || text.includes("opportunity") || text.includes("better")) {
-            opportunities.push(`Opportunity: ${line.text}`);
-          } else {
-            outcomes.push(`${line.speaker} discussed: ${line.text}`);
-          }
-        });
-        if (decisions.length === 0) decisions.push("Finalize workspace setup and code verification routes.");
-        if (keyPoints.length === 0) keyPoints.push("Discussed compiler warning resolutions and WebRTC connection latency.");
-        if (outcomes.length === 0) outcomes.push("Coordinated developmental sprints for Q3 launch timelines.");
-        if (risks.length === 0) risks.push("Database connection timeouts if environment configurations are misaligned.");
-        if (opportunities.length === 0) opportunities.push("Upgrading to HTTP/3 to reduce signaling latency.");
-        highlights.push(...keyPoints.slice(0, 2));
-        const shortSummary = `Meeting reviewed room coordination and developer sprint tasks, focusing on Q3 release preparations.`;
-        const detailedSummary = `### Meeting Recap
-The meeting focused on engineering deliverables and architectural syncs.
-
-### Key Discussion Areas
-- **Engineering Tasks**: Audited compiler warnings and file permissions.
-- **Design Polish**: CSS animations and responsive tile display.
-- **Strategy**: Coordinated client demo timing for upcoming features.`;
-        const executiveSummary = `Executive sync completed successfully. Team has aligned on developmental roadmaps for the upcoming sprint.`;
+        if (cleanCollab) {
+          keyPoints.push(`Discussion Notes: ${cleanCollab}`);
+        }
+        if (cleanTimeline) {
+          keyPoints.push(`Timeline Updates: ${cleanTimeline}`);
+        }
+        keyPoints.push(attachmentNote);
+        const shortSummary = keyPoints.slice(0, 4).join("\n\n");
         return await MeetingSummary.findOneAndUpdate(
-          { meetingId, summaryType },
+          { meetingId, summaryType: "Short" },
           {
             meetingId,
-            summaryType,
+            summaryType: "Short",
             shortSummary,
-            detailedSummary,
-            executiveSummary,
-            keyPoints,
-            decisions,
-            outcomes,
-            highlights,
-            risks,
-            opportunities
+            detailedSummary: shortSummary,
+            executiveSummary: shortSummary,
+            keyPoints: keyPoints.slice(0, 4),
+            decisions: [],
+            outcomes: [],
+            highlights: [],
+            risks: [],
+            opportunities: []
           },
           { upsert: true, new: true }
         );
@@ -6896,6 +6973,7 @@ var health_default = router;
 
 // src/routes/rooms.ts
 var import_express2 = require("express");
+var import_mongoose32 = __toESM(require("mongoose"), 1);
 init_signaling();
 init_logger();
 init_src();
@@ -6982,7 +7060,7 @@ router2.get("/rooms/:roomId", async (req, res) => {
     res.status(400).json({ error: "Invalid room ID" });
     return;
   }
-  const { roomId } = parsed.data;
+  const roomId = parsed.data.roomId.trim().toLowerCase();
   const room = roomStore.get(roomId);
   if (room) {
     res.json({
@@ -7009,6 +7087,185 @@ router2.get("/rooms/:roomId", async (req, res) => {
   }
   res.status(404).json({ error: "Room not found" });
 });
+router2.post("/rooms/:roomId/sync", async (req, res) => {
+  const roomId = (req.params.roomId || "").trim().toLowerCase();
+  const { userId, displayName, isMuted, isCameraOff, isScreenSharing, isRaisedHand } = req.body;
+  if (!userId) {
+    res.status(400).json({ error: "Missing userId" });
+    return;
+  }
+  const db = import_mongoose32.default.connection.db;
+  if (!db) {
+    res.status(500).json({ error: "Database not connected" });
+    return;
+  }
+  const lobbyParticipants = db.collection("lobby_participants");
+  const lobbySignals = db.collection("lobby_signals");
+  const lobbyChats = db.collection("lobby_chats");
+  const now = /* @__PURE__ */ new Date();
+  try {
+    await lobbyParticipants.updateOne(
+      { roomId, userId },
+      {
+        $set: {
+          roomId,
+          userId,
+          displayName,
+          isMuted,
+          isCameraOff,
+          isScreenSharing,
+          isRaisedHand,
+          lastSeen: now
+        }
+      },
+      { upsert: true }
+    );
+    const staleThreshold = new Date(now.getTime() - 6e3);
+    await lobbyParticipants.deleteMany({ roomId, lastSeen: { $lt: staleThreshold } });
+    const participantsCursor = lobbyParticipants.find({ roomId, userId: { $ne: userId } });
+    const activeParticipants = await participantsCursor.toArray();
+    const signalsCursor = lobbySignals.find({ roomId, to: userId });
+    const pendingSignals = await signalsCursor.toArray();
+    if (pendingSignals.length > 0) {
+      await lobbySignals.deleteMany({ roomId, to: userId });
+    }
+    const chatsCursor = lobbyChats.find({ roomId }).sort({ timestamp: 1 }).limit(50);
+    const chats = await chatsCursor.toArray();
+    let roomHostId = "";
+    let isRoomLocked = false;
+    const meeting = await Meeting.findOne({ roomId, endedAt: null }).sort({ startedAt: -1 });
+    if (meeting) {
+      roomHostId = meeting.host?.toString() || "";
+      isRoomLocked = meeting.isLocked || false;
+    }
+    const currentParticipant = await lobbyParticipants.findOne({ roomId, userId });
+    const hostActions = currentParticipant?.hostActions || [];
+    if (hostActions.length > 0) {
+      await lobbyParticipants.updateOne({ roomId, userId }, { $set: { hostActions: [] } });
+    }
+    res.json({
+      participants: activeParticipants.map((p) => ({
+        id: p.userId,
+        displayName: p.displayName,
+        isMuted: p.isMuted,
+        isCameraOff: p.isCameraOff,
+        isScreenSharing: p.isScreenSharing,
+        isRaisedHand: p.isRaisedHand
+      })),
+      signals: pendingSignals.map((s) => ({
+        from: s.from,
+        type: s.type,
+        candidate: s.type === "candidate" ? s.payload : void 0,
+        offer: s.type === "offer" ? s.payload : void 0,
+        answer: s.type === "answer" ? s.payload : void 0
+      })),
+      chatHistory: chats.map((c) => ({
+        id: c._id.toString(),
+        userId: c.userId,
+        displayName: c.displayName,
+        text: c.text,
+        timestamp: c.timestamp
+      })),
+      roomHostId,
+      isRoomLocked,
+      hostActions
+    });
+  } catch (err) {
+    logger.error({ err }, "Error in rooms/sync endpoint");
+    res.status(500).json({ error: err.message || "Failed to sync room" });
+  }
+});
+router2.post("/rooms/:roomId/signal", async (req, res) => {
+  const roomId = (req.params.roomId || "").trim().toLowerCase();
+  const { from, to, type, payload } = req.body;
+  if (!from || !to || !type) {
+    res.status(400).json({ error: "Missing from/to/type signaling fields" });
+    return;
+  }
+  const db = import_mongoose32.default.connection.db;
+  if (!db) {
+    res.status(500).json({ error: "Database not connected" });
+    return;
+  }
+  try {
+    const lobbySignals = db.collection("lobby_signals");
+    await lobbySignals.insertOne({
+      roomId,
+      from,
+      to,
+      type,
+      payload,
+      createdAt: /* @__PURE__ */ new Date()
+    });
+    res.json({ success: true });
+  } catch (err) {
+    logger.error({ err }, "Error inserting signaling message");
+    res.status(500).json({ error: err.message || "Failed to route signal" });
+  }
+});
+router2.post("/rooms/:roomId/chat", async (req, res) => {
+  const roomId = (req.params.roomId || "").trim().toLowerCase();
+  const { userId, displayName, text } = req.body;
+  if (!userId || !text) {
+    res.status(400).json({ error: "Missing userId or text chat fields" });
+    return;
+  }
+  const db = import_mongoose32.default.connection.db;
+  if (!db) {
+    res.status(500).json({ error: "Database not connected" });
+    return;
+  }
+  try {
+    const lobbyChats = db.collection("lobby_chats");
+    await lobbyChats.insertOne({
+      roomId,
+      userId,
+      displayName,
+      text,
+      timestamp: Date.now(),
+      createdAt: /* @__PURE__ */ new Date()
+    });
+    res.json({ success: true });
+  } catch (err) {
+    logger.error({ err }, "Error inserting chat message");
+    res.status(500).json({ error: err.message || "Failed to insert chat" });
+  }
+});
+router2.post("/rooms/:roomId/host-action", async (req, res) => {
+  const roomId = (req.params.roomId || "").trim().toLowerCase();
+  const { action, targetUserId } = req.body;
+  if (!action) {
+    res.status(400).json({ error: "Missing host action field" });
+    return;
+  }
+  const db = import_mongoose32.default.connection.db;
+  if (!db) {
+    res.status(500).json({ error: "Database not connected" });
+    return;
+  }
+  try {
+    const lobbyParticipants = db.collection("lobby_participants");
+    if (action === "mute" && targetUserId) {
+      await lobbyParticipants.updateOne(
+        { roomId, userId: targetUserId },
+        { $addToSet: { hostActions: "force-mute" } }
+      );
+    } else if (action === "disable-video" && targetUserId) {
+      await lobbyParticipants.updateOne(
+        { roomId, userId: targetUserId },
+        { $addToSet: { hostActions: "force-disable-video" } }
+      );
+    } else if (action === "lock") {
+      await Meeting.updateOne({ roomId, endedAt: null }, { $set: { isLocked: true } });
+    } else if (action === "unlock") {
+      await Meeting.updateOne({ roomId, endedAt: null }, { $set: { isLocked: false } });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    logger.error({ err }, "Error executing host action");
+    res.status(500).json({ error: err.message || "Failed to execute host action" });
+  }
+});
 var rooms_default = router2;
 
 // src/routes/meetings.ts
@@ -7017,13 +7274,13 @@ init_src();
 
 // src/lib/authHelpers.ts
 init_src();
-var import_mongoose32 = __toESM(require("mongoose"), 1);
+var import_mongoose33 = __toESM(require("mongoose"), 1);
 async function canAccessMeeting(meetingId, userId) {
   try {
     const mId = meetingId.toString();
     const uId = userId.toString();
     let query = {};
-    if (import_mongoose32.default.Types.ObjectId.isValid(mId)) {
+    if (import_mongoose33.default.Types.ObjectId.isValid(mId)) {
       query._id = mId;
     } else {
       query.$or = [{ meetingId: mId }, { roomId: mId }];
@@ -7052,7 +7309,7 @@ async function canAccessProject(projectId, userId) {
   try {
     const pId = projectId.toString();
     const uId = userId.toString();
-    if (!import_mongoose32.default.Types.ObjectId.isValid(pId)) return false;
+    if (!import_mongoose33.default.Types.ObjectId.isValid(pId)) return false;
     const project = await Project.findById(pId);
     if (!project) return false;
     if (project.owner && project.owner.toString() === uId) {
@@ -7079,7 +7336,7 @@ async function canAccessTask(taskId, userId) {
   try {
     const tId = taskId.toString();
     const uId = userId.toString();
-    if (!import_mongoose32.default.Types.ObjectId.isValid(tId)) return false;
+    if (!import_mongoose33.default.Types.ObjectId.isValid(tId)) return false;
     const task = await Task.findById(tId);
     if (!task) return false;
     if (task.assignee && task.assignee.toString() === uId) {
@@ -7218,6 +7475,15 @@ router3.get("/rooms/:roomId/active-meeting", requireAuth, async (req, res) => {
       res.status(403).json({ error: "Access denied: You are not authorized to access this meeting" });
       return;
     }
+    const currentUserId = req.user.id;
+    const isHost = meeting.host?.toString() === currentUserId;
+    const rawNotesList = meeting.notesList || [];
+    const filteredNotesList = rawNotesList.filter((note) => {
+      if (note.visibility === "everyone" || !note.visibility) return true;
+      if (note.authorId === currentUserId || isHost) return true;
+      if (Array.isArray(note.allowedViewers) && (note.allowedViewers.includes(currentUserId) || note.allowedViewers.includes(req.user?.name || ""))) return true;
+      return false;
+    });
     res.json({
       id: meeting._id.toString(),
       roomId: meeting.roomId,
@@ -7227,6 +7493,8 @@ router3.get("/rooms/:roomId/active-meeting", requireAuth, async (req, res) => {
       durationSeconds: null,
       participantNames: meeting.participantNames,
       notes: meeting.notes || null,
+      notesPermissions: meeting.notesPermissions || { mode: "everyone", allowedEditors: [] },
+      notesList: filteredNotesList,
       transcript: meeting.transcript.map((line) => ({
         speaker: line.speaker,
         text: line.text,
@@ -7252,20 +7520,41 @@ router3.get("/meetings", requireAuth, async (req, res) => {
     const { Participant: Participant2 } = await Promise.resolve().then(() => (init_src(), src_exports));
     const participantMeetings = await Participant2.find({ user: req.user.id }).select("meeting");
     const meetingIds = participantMeetings.map((p) => p.meeting);
-    const meetings = await Meeting.find({
+    const queryFilter = {
       $or: [
         { host: req.user.id },
-        { _id: { $in: meetingIds } }
+        { _id: { $in: meetingIds } },
+        { organizationId: { $exists: true, $ne: null } }
       ]
-    }).sort({ startedAt: -1 });
+    };
+    const { organizationId, projectId } = req.query;
+    if (organizationId && typeof organizationId === "string" && organizationId.trim()) {
+      queryFilter.organizationId = organizationId;
+    }
+    if (projectId && typeof projectId === "string" && projectId.trim()) {
+      queryFilter.projectId = projectId;
+    }
+    const meetings = await Meeting.find(queryFilter).populate("host", "name email avatar").sort({ startedAt: -1 });
     const results = meetings.map((m) => ({
       id: m._id.toString(),
       roomId: m.roomId,
-      name: m.name,
+      meetingId: m.meetingId || m.roomId,
+      name: m.name || m.title,
+      title: m.title || m.name,
+      description: m.description || "",
+      status: m.status || "scheduled",
       startedAt: m.startedAt.toISOString(),
+      startTime: m.startTime ? m.startTime.toISOString() : m.startedAt.toISOString(),
       endedAt: m.endedAt ? m.endedAt.toISOString() : null,
       durationSeconds: m.durationSeconds ?? null,
       participantNames: m.participantNames,
+      organizationId: m.organizationId ? m.organizationId.toString() : null,
+      projectId: m.projectId ? m.projectId.toString() : null,
+      host: m.host ? {
+        id: m.host._id?.toString(),
+        name: m.host.name,
+        email: m.host.email
+      } : null,
       actionItemCount: m.actionItems.length,
       openActionItemCount: m.actionItems.filter((i) => !i.isDone).length,
       hasNotes: !!m.notes,
@@ -7299,6 +7588,15 @@ router3.get("/meetings/:meetingId", requireAuth, async (req, res) => {
       res.status(403).json({ error: "Access denied: You do not have access to this meeting" });
       return;
     }
+    const currentUserId = req.user.id;
+    const isHost = meeting.host?.toString() === currentUserId;
+    const rawNotesList = meeting.notesList || [];
+    const filteredNotesList = rawNotesList.filter((note) => {
+      if (note.visibility === "everyone" || !note.visibility) return true;
+      if (note.authorId === currentUserId || isHost) return true;
+      if (Array.isArray(note.allowedViewers) && (note.allowedViewers.includes(currentUserId) || note.allowedViewers.includes(req.user?.name || ""))) return true;
+      return false;
+    });
     res.json({
       id: meeting._id.toString(),
       roomId: meeting.roomId,
@@ -7308,6 +7606,8 @@ router3.get("/meetings/:meetingId", requireAuth, async (req, res) => {
       durationSeconds: meeting.durationSeconds ?? null,
       participantNames: meeting.participantNames,
       notes: meeting.notes || null,
+      notesPermissions: meeting.notesPermissions || { mode: "everyone", allowedEditors: [] },
+      notesList: filteredNotesList,
       transcript: meeting.transcript.map((line) => ({
         speaker: line.speaker,
         text: line.text,
@@ -7334,11 +7634,6 @@ router3.put("/meetings/:meetingId/notes", requireAuth, async (req, res) => {
     res.status(400).json({ error: "Invalid meeting ID" });
     return;
   }
-  const body = UpsertNotesBody.safeParse(req.body);
-  if (!body.success) {
-    res.status(400).json({ error: "Invalid request body" });
-    return;
-  }
   try {
     const meeting = await Meeting.findById(params.data.meetingId);
     if (!meeting) {
@@ -7350,7 +7645,17 @@ router3.put("/meetings/:meetingId/notes", requireAuth, async (req, res) => {
       res.status(403).json({ error: "Access denied: You do not have permission to modify notes for this meeting" });
       return;
     }
-    meeting.notes = body.data.content;
+    if (req.body.notesList && Array.isArray(req.body.notesList)) {
+      meeting.notesList = req.body.notesList;
+    }
+    if (req.body.notesPermissions) {
+      meeting.notesPermissions = req.body.notesPermissions;
+    }
+    if (typeof req.body.content === "string") {
+      meeting.notes = req.body.content;
+    } else if (req.body.notesList && Array.isArray(req.body.notesList)) {
+      meeting.notes = req.body.notesList.map((n) => n.content).join("\n\n");
+    }
     await meeting.save();
     const { logActivity: logActivity2 } = await Promise.resolve().then(() => (init_activity(), activity_exports));
     await logActivity2(
@@ -7363,7 +7668,7 @@ router3.put("/meetings/:meetingId/notes", requireAuth, async (req, res) => {
     const { MeetingNotesVersion: MeetingNotesVersion2 } = await Promise.resolve().then(() => (init_src(), src_exports));
     const notesVersion = new MeetingNotesVersion2({
       meetingId: meeting._id,
-      content: body.data.content,
+      content: meeting.notes || "",
       author: req.user.id
     });
     await notesVersion.save();
@@ -7371,6 +7676,8 @@ router3.put("/meetings/:meetingId/notes", requireAuth, async (req, res) => {
       id: meeting._id.toString() + "_notes",
       meetingId: meeting._id.toString(),
       content: meeting.notes,
+      notesPermissions: meeting.notesPermissions,
+      notesList: meeting.notesList,
       updatedAt: (/* @__PURE__ */ new Date()).toISOString()
     });
   } catch (error) {
@@ -7803,6 +8110,7 @@ router3.post("/meetings/create", requireAuth, async (req, res) => {
     const meetingId = generateMeetingId();
     const st = startTime ? new Date(startTime) : /* @__PURE__ */ new Date();
     const status = st.getTime() > Date.now() + 6e4 ? "scheduled" : "active";
+    const { organizationId, projectId } = req.body;
     const meeting = new Meeting({
       // Compat fields
       roomId: meetingId,
@@ -7819,9 +8127,47 @@ router3.post("/meetings/create", requireAuth, async (req, res) => {
       isRecurring: !!isRecurring,
       recurrenceRule: recurrenceRule || "",
       isPersonalRoom: false,
-      waitingRoomEnabled: !!waitingRoomEnabled
+      waitingRoomEnabled: !!waitingRoomEnabled,
+      organizationId: organizationId || void 0,
+      projectId: projectId || void 0
     });
     await meeting.save();
+    try {
+      const { pushNotificationToUser: pushNotificationToUser2 } = await Promise.resolve().then(() => (init_signaling(), signaling_exports));
+      const { User: User4, Member: Member2, Team: Team2, Project: Project3 } = await Promise.resolve().then(() => (init_src(), src_exports));
+      let targetUserIds = [];
+      if (organizationId) {
+        const members = await Member2.find({ organizationId });
+        targetUserIds = members.map((m) => m.userId.toString());
+      } else if (projectId) {
+        const proj = await Project3.findById(projectId);
+        if (proj?.teamId) {
+          const team = await Team2.findById(proj.teamId);
+          if (team) {
+            targetUserIds = team.members.map((m) => m.user?.toString()).filter(Boolean);
+          }
+        }
+      }
+      if (targetUserIds.length === 0) {
+        const allUsers = await User4.find({ _id: { $ne: req.user.id } }).select("_id");
+        targetUserIds = allUsers.map((u) => u._id.toString());
+      }
+      const uniqueUserIds = Array.from(new Set(targetUserIds)).filter((id) => id !== req.user.id);
+      const hoursUntilStart = (st.getTime() - Date.now()) / (1e3 * 60 * 60);
+      const notifTitle = hoursUntilStart < 24 ? `Upcoming Meeting: ${title}` : `Meeting Scheduled: ${title}`;
+      const notifContent = hoursUntilStart < 24 ? `You are invited to "${title}" starting at ${st.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.` : `You are invited to "${title}" scheduled for ${st.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}.`;
+      for (const userId of uniqueUserIds) {
+        await pushNotificationToUser2(
+          userId,
+          "meeting_reminder",
+          notifTitle,
+          notifContent,
+          `/room/${meetingId}`
+        );
+      }
+    } catch (notifErr) {
+      req.log.error({ notifErr }, "Failed to send meeting notifications");
+    }
     const { logActivity: logActivity2 } = await Promise.resolve().then(() => (init_activity(), activity_exports));
     await logActivity2(
       req.user.id,
@@ -8009,6 +8355,105 @@ function rateLimiter(windowMs, maxRequests) {
     res.setHeader("X-RateLimit-Reset", Math.ceil(record.resetTime / 1e3));
     next();
   };
+}
+
+// src/lib/mailer.ts
+var import_nodemailer = __toESM(require("nodemailer"), 1);
+var cachedTransporter = null;
+async function getTransporter() {
+  if (cachedTransporter) return cachedTransporter;
+  const smtpHost = process.env.SMTP_HOST;
+  const smtpPort = Number(process.env.SMTP_PORT || 587);
+  const smtpUser = process.env.SMTP_USER || process.env.GMAIL_USER;
+  const smtpPass = process.env.SMTP_PASS || process.env.GMAIL_PASS || process.env.GMAIL_APP_PASSWORD;
+  if (smtpHost && smtpUser && smtpPass) {
+    console.log(`[MAILER] Transporter initialized using SMTP Host: ${smtpHost}, User: ${smtpUser}`);
+    cachedTransporter = import_nodemailer.default.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpPort === 465,
+      auth: {
+        user: smtpUser,
+        pass: smtpPass
+      }
+    });
+  } else if (smtpUser && smtpPass && !smtpHost) {
+    cachedTransporter = import_nodemailer.default.createTransport({
+      service: "gmail",
+      auth: {
+        user: smtpUser,
+        pass: smtpPass
+      }
+    });
+  } else {
+    console.log(`[MAILER LOG] (No SMTP credentials in .env) Password Reset OTP for ${smtpUser || "user"}: OTP Code = ${smtpPass || "configured in auth"}`);
+    return null;
+  }
+  return cachedTransporter;
+}
+async function sendOtpEmail({ to, otp }) {
+  const fromAddress = process.env.SMTP_FROM || process.env.SMTP_USER || process.env.GMAIL_USER || '"Intell Meet" <no-reply@intellmeet.com>';
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Intell Meet OTP Code</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; background-color: #f4f5f7; margin: 0; padding: 20px;">
+      <div style="max-width: 500px; margin: 0 auto; background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #e5e7eb;">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <h2 style="color: #0f172a; margin: 0; font-size: 24px;">Intell Meet</h2>
+          <p style="color: #64748b; font-size: 14px; margin-top: 4px;">Password Reset Verification</p>
+        </div>
+        
+        <p style="color: #334155; font-size: 15px; line-height: 1.5;">Hello,</p>
+        <p style="color: #334155; font-size: 15px; line-height: 1.5;">Your 6-digit OTP code to reset your password is:</p>
+        
+        <div style="text-align: center; margin: 25px 0;">
+          <span style="display: inline-block; background-color: #f0f9ff; border: 2px dashed #0284c7; color: #0284c7; font-size: 32px; font-weight: bold; letter-spacing: 8px; padding: 12px 24px; border-radius: 8px;">
+            ${otp}
+          </span>
+        </div>
+        
+        <p style="color: #64748b; font-size: 13px; text-align: center; margin-bottom: 20px;">
+          This OTP code is valid for <strong>10 minutes</strong>. Do not share this code with anyone.
+        </p>
+
+        <hr style="border: none; border-top: 1px solid #f1f5f9; margin: 20px 0;" />
+        
+        <p style="color: #94a3b8; font-size: 12px; text-align: center; margin: 0;">
+          If you did not request a password reset, please ignore this email.
+        </p>
+      </div>
+    </body>
+    </html>
+  `;
+  try {
+    const transporter = await getTransporter();
+    if (!transporter) {
+      console.warn(`[MAILER] Transporter uninitialized. OTP for ${to} is ${otp}`);
+      return false;
+    }
+    const info = await transporter.sendMail({
+      from: fromAddress,
+      to,
+      subject: `${otp} is your Intell Meet Password Reset Code`,
+      html: htmlContent,
+      text: `Your 6-digit Intell Meet password reset OTP is: ${otp}. It expires in 10 minutes.`
+    });
+    console.log(`[MAILER] Sent OTP mail to ${to} (MessageId: ${info.messageId})`);
+    const previewUrl = import_nodemailer.default.getTestMessageUrl(info);
+    if (previewUrl) {
+      console.log(`=================================================`);
+      console.log(`[ETHEREAL TEST MAIL PREVIEW URL]: ${previewUrl}`);
+      console.log(`=================================================`);
+    }
+    return true;
+  } catch (error) {
+    console.error(`[MAILER] Failed to send email to ${to}:`, error);
+    return false;
+  }
 }
 
 // src/routes/auth.ts
@@ -8204,64 +8649,82 @@ router4.post("/logout", async (req, res) => {
   });
   res.json({ message: "Logged out successfully" });
 });
-router4.post("/forgot-password", rateLimiter(15 * 60 * 1e3, 5), async (req, res) => {
-  const parsed = ForgotPasswordBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: "Invalid forgot password params" });
+router4.post("/forgot-password", rateLimiter(15 * 60 * 1e3, 10), async (req, res) => {
+  const { email } = req.body;
+  if (!email || typeof email !== "string") {
+    res.status(400).json({ error: "Please enter a valid email address." });
     return;
   }
-  const { email } = parsed.data;
   try {
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
-      res.json({ message: "If that email address exists, a password reset link has been generated.", resetLink: "" });
+      res.status(404).json({ error: "No account found with this email address." });
       return;
     }
+    const otp = Math.floor(1e5 + Math.random() * 9e5).toString();
     const resetToken = import_crypto.default.randomBytes(32).toString("hex");
+    user.resetPasswordOtp = otp;
+    user.resetPasswordOtpExpires = new Date(Date.now() + 10 * 60 * 1e3);
     user.resetPasswordToken = resetToken;
     user.resetPasswordExpires = new Date(Date.now() + 36e5);
     await user.save();
-    const resetLink = `${req.protocol}://${req.get("host")?.replace("5000", "5173")}/reset-password?token=${resetToken}`;
+    const resetLink = `${req.protocol}://${req.get("host")?.replace("5000", "5173")}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
     console.log(`
-=========================================
-[SMTP MOCK TRANSPORT] Password Reset Mail
-To: ${user.email}
-Subject: Reset your Intell Meet password
-Reset Link: ${resetLink}
-=========================================
+=================================================
+\u{1F511} GENERATED OTP FOR ${user.email}: ${otp}
+=================================================
     `);
+    const emailSent = await sendOtpEmail({ to: user.email, otp });
+    if (!emailSent) {
+      console.warn(`[MAILER WARNING] Could not send OTP email to ${user.email}. Check SMTP credentials in production environment variables.`);
+    }
     res.json({
-      message: "If that email address exists, a password reset link has been generated.",
-      resetLink
-      // Expose in JSON response during dev/testing for easy automation
+      message: `OTP code successfully sent to ${email}.`
     });
   } catch (error) {
-    req.log.error({ error }, "Error in forgot password request");
+    req.log.error({ error }, "Error in forgot password OTP request");
     res.status(500).json({ error: "Internal server error" });
   }
 });
-router4.post("/reset-password", rateLimiter(15 * 60 * 1e3, 5), async (req, res) => {
-  const parsed = ResetPasswordBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: "Invalid reset parameters" });
+router4.post("/reset-password", rateLimiter(15 * 60 * 1e3, 10), async (req, res) => {
+  const { email, otp, token, password } = req.body;
+  if (!password) {
+    res.status(400).json({ error: "Password is required." });
     return;
   }
-  const { token, password } = parsed.data;
   const passwordError = validatePasswordStrength(password);
   if (passwordError) {
     res.status(400).json({ error: passwordError });
     return;
   }
   try {
-    const user = await User.findOne({
-      resetPasswordToken: token,
-      resetPasswordExpires: { $gt: /* @__PURE__ */ new Date() }
-    });
-    if (!user) {
-      res.status(400).json({ error: "Password reset token is invalid or has expired." });
+    let user = null;
+    if (otp && email) {
+      user = await User.findOne({
+        email: email.toLowerCase(),
+        resetPasswordOtp: otp,
+        resetPasswordOtpExpires: { $gt: /* @__PURE__ */ new Date() }
+      });
+      if (!user) {
+        res.status(400).json({ error: "Invalid or expired OTP code. Please request a new OTP." });
+        return;
+      }
+    } else if (token) {
+      user = await User.findOne({
+        resetPasswordToken: token,
+        resetPasswordExpires: { $gt: /* @__PURE__ */ new Date() }
+      });
+      if (!user) {
+        res.status(400).json({ error: "Password reset token is invalid or has expired." });
+        return;
+      }
+    } else {
+      res.status(400).json({ error: "Please provide either OTP & Email or Reset Token." });
       return;
     }
     user.password = await import_bcryptjs.default.hash(password, 10);
+    user.resetPasswordOtp = void 0;
+    user.resetPasswordOtpExpires = void 0;
     user.resetPasswordToken = void 0;
     user.resetPasswordExpires = void 0;
     user.refreshToken = void 0;
@@ -8367,7 +8830,7 @@ router4.post("/google", rateLimiter(15 * 60 * 1e3, 30), async (req, res) => {
   const { idToken } = parsed.data;
   try {
     let payload;
-    const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+    const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "9261913779-0o8efuvcm121sqc6d3psfkrcg17mggbh.apps.googleusercontent.com";
     if (!GOOGLE_CLIENT_ID) {
       req.log.error("GOOGLE_CLIENT_ID environment variable is missing");
       res.status(500).json({ error: "Google Authentication is not configured on this server" });
@@ -8461,6 +8924,20 @@ var import_express5 = require("express");
 init_src();
 init_signaling();
 init_activity();
+function computeStatusFromDueDate(dueDate, currentStatus) {
+  if (currentStatus === "Done" || currentStatus === "In Progress" || currentStatus === "Review" || currentStatus === "Testing") {
+    return currentStatus === "Review" || currentStatus === "Testing" ? "In Progress" : currentStatus;
+  }
+  if (!dueDate) return currentStatus || "Todo";
+  const todayStr = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+  if (dueDate < todayStr) {
+    return "Done";
+  } else if (dueDate === todayStr) {
+    return "In Progress";
+  } else {
+    return currentStatus || "Todo";
+  }
+}
 var router5 = (0, import_express5.Router)();
 router5.use(requireAuth);
 router5.get("/tasks", async (req, res) => {
@@ -8493,9 +8970,12 @@ router5.get("/tasks", async (req, res) => {
       const totalChildren = children.length;
       const completedChildren = children.filter((c) => c.status === "Done").length;
       const subtaskProgress = totalChildren > 0 ? Math.round(completedChildren / totalChildren * 100) : 0;
+      const obj = t.toObject();
+      const effectiveStatus = computeStatusFromDueDate(obj.dueDate, obj.status);
       results.push({
-        ...t.toObject(),
+        ...obj,
         id: t._id.toString(),
+        status: effectiveStatus,
         totalChildren,
         completedChildren,
         subtaskProgress
@@ -8526,10 +9006,17 @@ router5.get("/tasks/:id", async (req, res) => {
     const totalChildren = children.length;
     const completedChildren = children.filter((c) => c.status === "Done").length;
     const subtaskProgress = totalChildren > 0 ? Math.round(completedChildren / totalChildren * 100) : 0;
+    const obj = task.toObject();
+    const effectiveStatus = computeStatusFromDueDate(obj.dueDate, obj.status);
     res.json({
-      ...task.toObject(),
+      ...obj,
       id: task._id.toString(),
-      subtasks: children.map((c) => ({ ...c.toObject(), id: c._id.toString() })),
+      status: effectiveStatus,
+      subtasks: children.map((c) => ({
+        ...c.toObject(),
+        id: c._id.toString(),
+        status: computeStatusFromDueDate(c.dueDate, c.status)
+      })),
       comments,
       attachments,
       totalChildren,
@@ -8571,10 +9058,11 @@ router5.post("/tasks", async (req, res) => {
         return;
       }
     }
+    const initialStatus = computeStatusFromDueDate(dueDate, status || "Todo");
     const task = new Task({
       title,
       description: description || "",
-      status: status || "Todo",
+      status: initialStatus,
       assignee: assigneeId || null,
       reporter: req.user.id,
       dueDate: dueDate || null,
@@ -8627,6 +9115,7 @@ router5.put("/tasks/:id", async (req, res) => {
       res.status(404).json({ error: "Task not found" });
       return;
     }
+    const oldStatus = task.status;
     const oldAssignee = task.assignee?.toString();
     if (title !== void 0) task.title = title;
     if (description !== void 0) task.description = description;
@@ -8637,8 +9126,32 @@ router5.put("/tasks/:id", async (req, res) => {
     if (projectId !== void 0) task.projectId = projectId || null;
     if (teamId !== void 0) task.teamId = teamId || null;
     if (parentTaskId !== void 0) task.parentTaskId = parentTaskId || null;
+    if (status !== void 0) {
+      task.status = status;
+    } else if (task.dueDate && dueDate !== void 0) {
+      task.status = computeStatusFromDueDate(task.dueDate, task.status);
+    }
     await task.save();
     await logActivity(req.user.id, "task_updated", id, "Task", `Updated task "${task.title}" (Status: ${task.status})`);
+    if (oldStatus && task.status && oldStatus !== task.status) {
+      try {
+        const recipients = /* @__PURE__ */ new Set();
+        if (task.assignee) recipients.add(task.assignee.toString());
+        if (task.reporter) recipients.add(task.reporter.toString());
+        recipients.delete(req.user.id);
+        for (const recipientId of recipients) {
+          await pushNotificationToUser(
+            recipientId,
+            "task_assignment",
+            `Task Status Updated: ${task.title}`,
+            `Status updated: ${oldStatus} \u2192 ${task.status} for task "${task.title}"`,
+            "/todo_manager"
+          );
+        }
+      } catch (err) {
+        req.log.error({ err }, "Error sending task status update notification");
+      }
+    }
     if (assigneeId && assigneeId !== req.user.id && assigneeId !== oldAssignee) {
       await pushNotificationToUser(
         assigneeId,
@@ -9187,6 +9700,7 @@ router7.get("/teams", async (req, res) => {
     const formatted = teams.map((team) => ({
       id: team._id.toString(),
       name: team.name,
+      organizationId: team.organizationId ? team.organizationId.toString() : null,
       members: team.members.map((member) => ({
         user: {
           id: member.user._id.toString(),
@@ -9236,6 +9750,7 @@ router7.post("/teams", async (req, res) => {
     res.status(201).json({
       id: populated._id.toString(),
       name: populated.name,
+      organizationId: populated.organizationId ? populated.organizationId.toString() : null,
       members: populated.members.map((member) => ({
         user: {
           id: member.user._id.toString(),
@@ -9294,6 +9809,20 @@ router7.post("/teams/:teamId/invite", async (req, res) => {
       role
     });
     await team.save();
+    try {
+      const { pushNotificationToUser: pushNotificationToUser2 } = await Promise.resolve().then(() => (init_signaling(), signaling_exports));
+      if (targetUser._id.toString() !== req.user.id) {
+        await pushNotificationToUser2(
+          targetUser._id.toString(),
+          "mention",
+          "Added to Project Workspace",
+          `You were added to project workspace "${team.name}" by ${req.user.name}`,
+          "/kanban"
+        );
+      }
+    } catch (notifErr) {
+      req.log.error({ notifErr }, "Error sending project member addition notification");
+    }
     const populated = await Team.findById(team._id).populate("members.user", "name email role createdAt");
     if (!populated) {
       res.status(500).json({ error: "Failed to reload team after invitation" });
@@ -10163,7 +10692,17 @@ router12.get("/ai/summaries", async (req, res) => {
       res.status(403).json({ error: "Access denied: You do not have permission to view summaries for this meeting" });
       return;
     }
-    const summaries = await MeetingSummary.find({ meetingId });
+    let summaries = await MeetingSummary.find({ meetingId });
+    if (summaries.length === 0) {
+      try {
+        const generated = await AIService.generateSummary(meetingId, "Short");
+        if (generated) {
+          summaries = [generated];
+        }
+      } catch (err) {
+        logger.error({ err }, "Auto-generation of summary on GET /ai/summaries failed");
+      }
+    }
     const formatted = summaries.map((s) => ({
       id: s._id.toString(),
       meetingId: s.meetingId.toString(),
@@ -10589,6 +11128,10 @@ router13.post("/", async (req, res) => {
     }
     const message = new Message(messageData);
     await message.save();
+    if (text) {
+      const { detectAndSendMentions: detectAndSendMentions2 } = await Promise.resolve().then(() => (init_activity(), activity_exports));
+      await detectAndSendMentions2(text, { id: req.user.id, name: req.user.name }, "/collaboration");
+    }
     const populated = await Message.findById(message._id).populate("sender", "name email avatar").populate("recipient", "name email avatar").populate("file");
     res.status(201).json(populated);
   } catch (error) {
@@ -10622,8 +11165,57 @@ var messages_default = router13;
 // src/routes/channels.ts
 var import_express14 = require("express");
 init_src();
+init_signaling();
 var router14 = (0, import_express14.Router)();
 router14.use(requireAuth);
+var broadcastChannelEvent = (eventName, payload, targetUserIds) => {
+  if (!ioInstance) return;
+  if (targetUserIds && targetUserIds.length > 0) {
+    targetUserIds.forEach((uid) => {
+      ioInstance?.to(`user:${uid}`).emit(eventName, payload);
+    });
+  } else {
+    ioInstance.emit(eventName, payload);
+  }
+};
+router14.get("/meeting-attendees", async (req, res) => {
+  if (!req.user) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  try {
+    const participants = await Participant.find().populate("user", "name email avatar");
+    const registeredUsers = await User.find({ _id: { $ne: req.user.id } }).select("name email avatar role");
+    const userMap = /* @__PURE__ */ new Map();
+    registeredUsers.forEach((u) => {
+      userMap.set(u._id.toString(), {
+        id: u._id.toString(),
+        name: u.name,
+        email: u.email,
+        avatar: u.avatar || "",
+        isRegistered: true,
+        source: "Workspace User"
+      });
+    });
+    participants.forEach((p) => {
+      if (p.user && p.user._id.toString() !== req.user?.id) {
+        userMap.set(p.user._id.toString(), {
+          id: p.user._id.toString(),
+          name: p.user.name || p.displayName,
+          email: p.user.email || "",
+          avatar: p.user.avatar || "",
+          isRegistered: true,
+          source: `Meeting Participant (${p.displayName})`
+        });
+      }
+    });
+    const attendees = Array.from(userMap.values());
+    res.json(attendees);
+  } catch (error) {
+    req.log.error({ error }, "Error fetching meeting attendees");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 router14.get("/", async (req, res) => {
   if (!req.user) {
     res.status(401).json({ error: "Unauthorized" });
@@ -10637,7 +11229,15 @@ router14.get("/", async (req, res) => {
       ]
     });
     const teamIds = userTeams.map((t) => t._id);
-    const channels = await Channel.find({ teamId: { $in: teamIds } }).sort({ name: 1 });
+    const channels = await Channel.find({
+      teamId: { $in: teamIds },
+      $or: [
+        { createdBy: req.user.id },
+        { members: req.user.id },
+        { isPrivate: false, members: { $exists: true, $size: 0 } },
+        { createdBy: { $exists: false } }
+      ]
+    }).populate("createdBy", "name email avatar").populate("members", "name email avatar").sort({ name: 1 });
     res.json(channels);
   } catch (error) {
     req.log.error({ error }, "Error fetching channels");
@@ -10662,7 +11262,7 @@ router14.get("/team/:teamId", async (req, res) => {
       res.status(403).json({ error: "Forbidden: You are not a member of this team" });
       return;
     }
-    const channels = await Channel.find({ teamId }).sort({ name: 1 });
+    const channels = await Channel.find({ teamId }).populate("createdBy", "name email avatar").populate("members", "name email avatar").sort({ name: 1 });
     res.json(channels);
   } catch (error) {
     req.log.error({ error }, "Error fetching team channels");
@@ -10674,7 +11274,7 @@ router14.post("/", async (req, res) => {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
-  const { name, description, isPrivate, teamId } = req.body;
+  const { name, description, isPrivate, teamId, initialMembers } = req.body;
   if (!name || !teamId) {
     res.status(400).json({ error: "name and teamId are required fields" });
     return;
@@ -10691,14 +11291,19 @@ router14.post("/", async (req, res) => {
       res.status(403).json({ error: "Forbidden: You are not a member of this team" });
       return;
     }
+    const memberIds = Array.from(/* @__PURE__ */ new Set([req.user.id, ...initialMembers || []]));
     const channel = new Channel({
       name,
       description: description || "",
       isPrivate: !!isPrivate,
-      teamId
+      teamId,
+      createdBy: req.user.id,
+      members: memberIds
     });
     await channel.save();
-    res.status(201).json(channel);
+    const populated = await Channel.findById(channel._id).populate("createdBy", "name email avatar").populate("members", "name email avatar");
+    broadcastChannelEvent("channel-created", populated, memberIds);
+    res.status(201).json(populated);
   } catch (error) {
     req.log.error({ error }, "Error creating channel");
     res.status(500).json({ error: "Internal server error" });
@@ -10717,21 +11322,124 @@ router14.delete("/:channelId", async (req, res) => {
       return;
     }
     const team = await Team.findById(channel.teamId);
-    if (!team) {
-      res.status(404).json({ error: "Team not found" });
+    const isHost = channel.createdBy ? channel.createdBy.toString() === req.user.id : false;
+    const isTeamOwner = team ? team.owner?.toString() === req.user.id : false;
+    const isGlobalAdmin = req.user.role === "Admin";
+    if (!isHost && !isTeamOwner && !isGlobalAdmin) {
+      res.status(403).json({ error: "Forbidden: Only the host (channel creator) can delete this collaboration channel." });
       return;
     }
-    const member = team.members.find((m) => m.user.toString() === req.user?.id);
-    const isOwner = team.owner?.toString() === req.user?.id;
-    const isAuthorized = req.user.role === "Admin" || isOwner || member && (member.role === "Admin" || member.role === "Manager");
-    if (!isAuthorized) {
-      res.status(403).json({ error: "Forbidden: Only team Admin/Manager can delete channels" });
-      return;
-    }
+    const allMemberIds = (channel.members || []).map((m) => m.toString());
+    await Message.deleteMany({ channel: channelId });
     await Channel.findByIdAndDelete(channelId);
-    res.json({ message: "Channel deleted successfully" });
+    if (ioInstance) {
+      ioInstance.to(channelId).emit("channel-deleted", { channelId });
+      ioInstance.emit("channel-deleted", { channelId });
+    }
+    res.json({ message: "Channel and all associated messages permanently deleted." });
   } catch (error) {
     req.log.error({ error }, "Error deleting channel");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+router14.post("/:channelId/leave", async (req, res) => {
+  if (!req.user) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  const { channelId } = req.params;
+  try {
+    const channel = await Channel.findById(channelId);
+    if (!channel) {
+      res.status(404).json({ error: "Channel not found" });
+      return;
+    }
+    const isHost = channel.createdBy ? channel.createdBy.toString() === req.user.id : false;
+    if (isHost) {
+      res.status(400).json({ error: "Host cannot leave the channel. Please delete the channel or transfer host permissions." });
+      return;
+    }
+    channel.members = (channel.members || []).filter((m) => m.toString() !== req.user?.id);
+    await channel.save();
+    const updated = await Channel.findById(channelId).populate("createdBy", "name email avatar").populate("members", "name email avatar");
+    if (ioInstance) {
+      ioInstance.to(`user:${req.user.id}`).emit("channel-removed", { channelId });
+      ioInstance.to(channelId).emit("channel-updated", updated);
+    }
+    res.json({ message: "Successfully left channel", channel: updated });
+  } catch (error) {
+    req.log.error({ error }, "Error leaving channel");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+router14.post("/:channelId/members", async (req, res) => {
+  if (!req.user) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  const { channelId } = req.params;
+  const { userIds } = req.body;
+  if (!Array.isArray(userIds) || userIds.length === 0) {
+    res.status(400).json({ error: "userIds array is required" });
+    return;
+  }
+  try {
+    const channel = await Channel.findById(channelId);
+    if (!channel) {
+      res.status(404).json({ error: "Channel not found" });
+      return;
+    }
+    const team = await Team.findById(channel.teamId);
+    const isHost = channel.createdBy ? channel.createdBy.toString() === req.user.id : false;
+    const isTeamOwner = team ? team.owner?.toString() === req.user.id : false;
+    if (!isHost && !isTeamOwner && req.user.role !== "Admin") {
+      res.status(403).json({ error: "Forbidden: Only the channel host can manage channel members." });
+      return;
+    }
+    const currentMemberIds = (channel.members || []).map((m) => m.toString());
+    const newMemberIds = Array.from(/* @__PURE__ */ new Set([...currentMemberIds, ...userIds]));
+    channel.members = newMemberIds;
+    await channel.save();
+    const updated = await Channel.findById(channelId).populate("createdBy", "name email avatar").populate("members", "name email avatar");
+    broadcastChannelEvent("channel-updated", updated);
+    broadcastChannelEvent("channel-created", updated, userIds);
+    res.json(updated);
+  } catch (error) {
+    req.log.error({ error }, "Error adding members to channel");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+router14.delete("/:channelId/members/:memberId", async (req, res) => {
+  if (!req.user) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  const { channelId, memberId } = req.params;
+  try {
+    const channel = await Channel.findById(channelId);
+    if (!channel) {
+      res.status(404).json({ error: "Channel not found" });
+      return;
+    }
+    const isHost = channel.createdBy ? channel.createdBy.toString() === req.user.id : false;
+    if (!isHost && req.user.role !== "Admin") {
+      res.status(403).json({ error: "Forbidden: Only the host can remove members." });
+      return;
+    }
+    if (channel.createdBy && channel.createdBy.toString() === memberId) {
+      res.status(400).json({ error: "Cannot remove the channel host/creator." });
+      return;
+    }
+    channel.members = (channel.members || []).filter((m) => m.toString() !== memberId);
+    await channel.save();
+    const updated = await Channel.findById(channelId).populate("createdBy", "name email avatar").populate("members", "name email avatar");
+    if (ioInstance) {
+      ioInstance.to(`user:${memberId}`).emit("channel-removed", { channelId });
+      ioInstance.to(channelId).emit("channel-updated", updated);
+    }
+    res.json(updated);
+  } catch (error) {
+    req.log.error({ error }, "Error removing member from channel");
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -11321,6 +12029,21 @@ router18.post("/organizations/:orgId/members/invite", async (req, res) => {
           await team.save();
         }
       }
+    }
+    try {
+      const { pushNotificationToUser: pushNotificationToUser2 } = await Promise.resolve().then(() => (init_signaling(), signaling_exports));
+      const org = await Organization.findById(orgId);
+      if (user._id.toString() !== req.user.id) {
+        await pushNotificationToUser2(
+          user._id.toString(),
+          "mention",
+          "Added to Organization Workspace",
+          `You were added to organization "${org?.name || "Workspace"}" by ${req.user.name}`,
+          "/team-management"
+        );
+      }
+    } catch (notifErr) {
+      req.log.error({ notifErr }, "Error sending org member addition notification");
     }
     res.status(201).json(member);
   } catch (error) {

@@ -289,10 +289,11 @@ router.post("/forgot-password", rateLimiter(15 * 60 * 1000, 10), async (req, res
 =================================================
     `);
 
-    // Dispatch email asynchronously so HTTP response is instant
-    sendOtpEmail({ to: user.email, otp }).catch((err) => {
-      console.error("[MAILER ERROR] Failed background mail dispatch:", err);
-    });
+    // Dispatch email and wait for completion so serverless environments (Vercel) do not kill execution mid-stream
+    const emailSent = await sendOtpEmail({ to: user.email, otp });
+    if (!emailSent) {
+      console.warn(`[MAILER WARNING] Could not send OTP email to ${user.email}. Check SMTP credentials in production environment variables.`);
+    }
 
     res.json({
       message: `OTP code successfully sent to ${email}.`,
